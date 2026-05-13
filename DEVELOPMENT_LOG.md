@@ -76,6 +76,17 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-05-13 — 跨已有词汇高亮拖选：`user-select: text` 与语法一致
+
+**本次完成**
+
+- **`InteractiveArticleReader`**：课文词汇高亮（绿 / 琥珀 **`button`**）由 **`user-select: none`** 改为与语法片段相同的 **`user-select: text`**（`ARTICLE_LEARNING_HIGHLIGHT_TEXT_STYLE`），使选区可**穿过**句内已有高亮，`range.toString()` 与 `resolveUserHighlightInPlain` 偏移一致，整句加入词库可用。
+- **`docs/PRD.md`**、**`docs/READING_HIGHLIGHTS_AND_OVERLAPS.md`**：同步触摸 / 选词策略说明。
+
+**验证**
+
+- `npm test`、`npm run build`：已通过。
+
 ### 2026-05-13 — 长选区加入词库：偏移信任高亮 + AI 补充避免 part_of_speech 唯一冲突
 
 **本次完成**

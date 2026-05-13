@@ -75,21 +75,20 @@ import {
 const DELETE_LEARNING_ITEM_CONFIRM_ZH =
   "确定从本文删除这个学习项吗？这不会表示你已掌握，只是移除误添加的项目。";
 
-const HIGHLIGHT_TOUCH_GUARD_STYLE = {
-  userSelect: "none",
-  WebkitUserSelect: "none",
-  WebkitTouchCallout: "none",
-  touchAction: "manipulation",
-} as CSSProperties;
-
-/** 语法片段需在手机端允许拖选子串加入词库；勿在 touch 上 preventDefault，否则系统选词不触发 */
-const GRAMMAR_ARTICLE_HIGHLIGHT_STYLE = {
+/**
+ * 正文里「可学习」高亮（词汇绿/琥珀、语法蓝/紫）统一允许 **拖选穿过**，
+ * 以便跨多个已有高亮选整句加入词库；与 `resolveUserHighlightInPlain` 依赖的选区文本一致。
+ * 词汇按钮在触摸 `pointerdown` 上仍会 `preventDefault`（见 handler），以保留点按打开详情为主。
+ */
+const ARTICLE_LEARNING_HIGHLIGHT_TEXT_STYLE = {
   WebkitTapHighlightColor: "transparent",
   touchAction: "auto",
   userSelect: "text",
   WebkitUserSelect: "text",
   WebkitTouchCallout: "default",
 } as CSSProperties;
+
+const GRAMMAR_ARTICLE_HIGHLIGHT_STYLE = ARTICLE_LEARNING_HIGHLIGHT_TEXT_STYLE;
 
 const GRAMMAR_EXTERNAL_DEEP_LINKS = {
   chatgpt: "https://chatgpt.com/",
@@ -3185,7 +3184,7 @@ export function InteractiveArticleReader({
               handleHighlightPointerDown(event, onVocab)
             }
             onClick={(event) => handleHighlightClick(event, onVocab)}
-            style={HIGHLIGHT_TOUCH_GUARD_STYLE}
+            style={ARTICLE_LEARNING_HIGHLIGHT_TEXT_STYLE}
             data-marker-id={meta.itemId}
             data-occurrence-id={meta.occurrenceId}
             data-occurrence-index={occurrenceRowIndex(meta)}
@@ -3224,7 +3223,7 @@ export function InteractiveArticleReader({
               handleHighlightPointerDown(event, onVocab)
             }
             onClick={(event) => handleHighlightClick(event, onVocab)}
-            style={HIGHLIGHT_TOUCH_GUARD_STYLE}
+            style={ARTICLE_LEARNING_HIGHLIGHT_TEXT_STYLE}
             data-marker-id={meta.itemId}
             data-occurrence-id={meta.occurrenceId}
             data-occurrence-index={occurrenceRowIndex(meta)}

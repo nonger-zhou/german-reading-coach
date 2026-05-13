@@ -54,6 +54,7 @@ German Reading Coach
 
 ## 最近更新
 
+- **2026-05-13（跨已有高亮选整句）**：词汇正文高亮改为 **`user-select: text`**（原 `none` 导致选区跳过已有绿/琥珀词），可与语法一样拖选穿过多个高亮加入长表达；**`npm test`** / **`npm run build`** 已通过。
 - **2026-05-13（长选区高亮 + enrich 23505）**：用户长选加入词库后，**surface 与正文略不一致**时仍按 occurrence **偏移**画琥珀高亮；AI 补充写 `part_of_speech` 前检测与同 `normalized_key` 的其它行冲突，避免 **23505**；**`npm test`** / **`npm run build`** 已通过。
 - **2026-05-13（用户词 occurrence 勿清空 + 句窗定位）**：`rebuildUserStyleVocabOccurrencesFromArticle` 在无法重算全文 occurrence 时**保留**原 occurrence，避免「本篇出现位置」空白与保存无行；`vocabOccurrenceToRanges` 增加多 hint 与基于 **`sentence`** 的句窗内回退匹配；**`npm test`** / **`npm run build`** 已通过；部署后请硬刷新验证线上。
 - **2026-05-13（导入 UI 讨论文档）**：新增 **`docs/IMPORT_UI_DISCUSSION.md`** 汇总主卡讨论与待确认改动；**`README.md`** 增加交叉引用；**`npm.cmd run build`** 已通过。
