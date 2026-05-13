@@ -189,7 +189,7 @@ function ImportPageContent() {
       setClipboardMessage({
         tone: "success",
         text: nextRawText
-          ? "已从浏览器插件导入当前页面内容，正文已填入下方「将保存的正文」。"
+          ? "已从浏览器插件导入当前页面内容，正文已填入下方编辑区。"
           : "已从浏览器插件带入文章信息。",
       });
     },
@@ -229,12 +229,6 @@ function ImportPageContent() {
     return () => window.clearTimeout(id);
   }, [rawPastedText, runParse]);
 
-  function onCleanBody() {
-    setValidationError(null);
-    setClipboardMessage(null);
-    runParse(rawPastedText);
-  }
-
   async function onReadArticleFromClipboard() {
     setValidationError(null);
     setSaveError(null);
@@ -269,7 +263,7 @@ function ImportPageContent() {
       runParse(text);
       setClipboardMessage({
         tone: "success",
-        text: "已从剪贴板读取正文，并已整理到「将保存的正文」。",
+        text: "已从剪贴板读取正文，并已整理到下方正文编辑区。",
       });
     } catch {
       setClipboardMessage({
@@ -395,7 +389,7 @@ function ImportPageContent() {
       return;
     }
     if (!bodyTrim) {
-      setValidationError("请先在「将保存的正文」中填写正文，或使用「从剪贴板读取」导入。");
+      setValidationError("请先在正文中填写内容，或使用「从剪贴板读取」导入。");
       return;
     }
 
@@ -616,7 +610,7 @@ function ImportPageContent() {
       </Card>
 
       <Card>
-        <CardTitle className="text-base">将保存的正文</CardTitle>
+        <CardTitle className="text-base">正文</CardTitle>
         <CardDescription>
           保存到云端时使用此处的文本。从网页复制全文时，请优先点「从剪贴板读取」，以便自动去掉广告与多余版式；若正文已是干净稿，也可直接在此编辑或粘贴。阅读水平请在下方「本篇阅读水平」中选择。
         </CardDescription>
@@ -626,7 +620,7 @@ function ImportPageContent() {
           rows={12}
           placeholder={
             mode === "paste"
-              ? "在此编辑定稿正文，或使用「从剪贴板读取」导入网页全文…"
+              ? "在此编辑正文，或使用「从剪贴板读取」导入网页全文…"
               : "链接抓取成功后，正文会出现在这里；也可直接在此编辑…"
           }
           className="mt-3 w-full resize-y rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none ring-emerald-500/30 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
@@ -634,11 +628,7 @@ function ImportPageContent() {
         <div className="mt-3 flex flex-wrap gap-2">
           <Button
             type="button"
-            className={
-              mode === "paste"
-                ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                : undefined
-            }
+            variant={mode === "paste" ? "primary" : "secondary"}
             onClick={() => void onReadArticleFromClipboard()}
             disabled={readingClipboard}
           >
@@ -646,11 +636,11 @@ function ImportPageContent() {
           </Button>
           <Button
             type="button"
-            variant="secondary"
-            onClick={onCleanBody}
-            disabled={!hasPaste}
+            className="bg-emerald-600 text-white hover:bg-emerald-700"
+            onClick={() => void onSaveArticle()}
+            disabled={saving}
           >
-            重新整理
+            {saving ? "保存中…" : "保存文章"}
           </Button>
         </div>
         {clipboardMessage ? (
@@ -677,7 +667,7 @@ function ImportPageContent() {
               来源稿（可选）
               {sourceDiffers ? (
                 <span className="ml-2 text-xs font-normal text-amber-800 dark:text-amber-200">
-                  与将保存的正文不一致，抓取/整理后常见
+                  与上方正文不一致，抓取/整理后常见
                 </span>
               ) : (
                 <span className="ml-2 text-xs font-normal text-zinc-500 dark:text-zinc-400">
@@ -686,7 +676,7 @@ function ImportPageContent() {
               )}
             </summary>
             <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">
-              此处为抓取或剪贴板导入的原始文本。修改后约半秒会重新整理到上方「将保存的正文」；也可先改上方定稿再保存。
+              此处为抓取或剪贴板导入的原始文本。修改后约半秒会自动同步到上方正文；也可先改上方正文再保存。
             </p>
             <textarea
               value={rawPastedText}
@@ -699,14 +689,6 @@ function ImportPageContent() {
             />
           </details>
         ) : null}
-        <Button
-          type="button"
-          className="mt-4 w-full sm:w-auto"
-          onClick={() => void onSaveArticle()}
-          disabled={saving}
-        >
-          {saving ? "保存中…" : "保存文章"}
-        </Button>
       </Card>
 
       <Card>

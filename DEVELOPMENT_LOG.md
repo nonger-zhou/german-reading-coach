@@ -76,6 +76,78 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-05-13 — 词汇持久化：23505 唯一约束与重复卡片
+
+**本次完成**
+
+- **`src/lib/supabase/vocabularyItemUniqueKey.ts`**：`sameVocabPartOfSpeechForUnique`（库 `part_of_speech` 为 **null** 与 UI 空串 **""** 对齐）、`isPostgresUniqueViolation`。
+- **`src/lib/supabase/vocabulary.ts`**：`persistManualVocabularyItem` 按 **`user_id + normalized_key`** 拉候选行，用上述匹配选已有行；**UPDATE** 时写回 **`part_of_speech`**；**INSERT** 遇 **23505** 时回查并走更新路径。
+- **`src/components/InteractiveArticleReader.tsx`**：保存成功后 **`applyPersistedVocabToLocalItems`**，按 `normalized_key` **Map 去重**，避免同 key 两条卡片。
+- **`src/lib/supabase/vocabularyPartOfSpeechMatch.test.ts`**：Vitest。
+
+**验证**
+
+- `npm.cmd test`、`npm.cmd run build`：已通过。
+
+### 2026-05-13 — 阅读页：可分动词 / 句选用户词高亮与 occurrence 保留
+
+**本次完成**
+
+- **`src/lib/articleReadingModel.ts`**：`vocabOccurrenceToRanges` 支持在 occurrence 偏移窗口内按卡面 **「前段 … 后段」** 拆成**双段**高亮；`buildRunsFromReadingItems` 传入 `display_word`/`lemma` 上下文；`rebuildUserStyleVocabOccurrencesFromArticle` 在词典形无法全文连续匹配时**保留**仍可通过上述逻辑定位的 occurrence，避免误清空导致无高亮与保存失败；导出 **`splitEllipsisDisplayIntoTwoSurfaceParts`**（测试与将来复用）。
+- **`src/components/InteractiveArticleReader.tsx`**：用户词重叠检测处传入相同上下文。
+- **`src/app/api/enrich-vocabulary/route.ts`**：system prompt 收紧可分动词 **`surface_form`** 输出格式说明。
+- **`src/lib/articleReadingModel.vocabRanges.test.ts`**：Vitest 覆盖省略号解析、双段范围与「词典形 + 句选」保留路径。
+- **`docs/READING_HIGHLIGHTS_AND_OVERLAPS.md`**：新增 §6 说明。
+
+**验证**
+
+- `npm.cmd test`、`npm.cmd run build`：已通过。
+
+### 2026-05-13 — `/import`：链接模式下「从剪贴板读取」为 secondary
+
+**本次完成**
+
+- **`src/app/import/page.tsx`**：`mode === "url"` 时剪贴板按钮 **`variant="secondary"`**；手动粘贴模式仍为 **`primary`**。
+- **`src/app/import/mock/page.tsx`**：A 栏剪贴板按钮与默认链接态一致为 **secondary**；页脚说明补充。
+- **`README.md`**、**`docs/PRD.md`**、**`PROJECT_STATUS.md`**、**`docs/IMPORT_UI_DISCUSSION.md`**：补充链接/粘贴模式下剪贴板按钮层级说明。
+
+**验证**
+
+- `npm.cmd run build`：已通过。
+
+### 2026-05-13 — `/import`：移除「重新整理」、主卡标题「正文」、保存与剪贴板同排
+
+**本次完成**
+
+- **`src/app/import/page.tsx`**：删除 **`onCleanBody`** 与 **「重新整理」** 按钮；**`CardTitle`** 与相关用户可见文案由「将保存的正文」改为 **「正文」**；**「保存文章」** 与 **「从剪贴板读取」** 同一 `flex` 行（主按钮样式），去掉卡片底部重复的保存行；来源稿说明与校验/剪贴板/插件提示用语同步。
+- **`src/app/import/mock/page.tsx`**：A 栏与正式页对齐；B 栏保留历史草案对照；页脚说明更新。
+- **`docs/PRD.md`**、**`README.md`**、**`PROJECT_STATUS.md`**、**`docs/IMPORT_UI_DISCUSSION.md`**、**`docs/PERSONAL_USE_CHECKLIST.md`**：用语与行为描述同步。
+
+**验证**
+
+- `npm.cmd run build`：已通过。
+
+### 2026-05-13 — 文档：`docs/IMPORT_UI_DISCUSSION.md`（导入主卡讨论备忘）
+
+**本次完成**
+
+- **`docs/IMPORT_UI_DISCUSSION.md`**：汇总来源稿 / 重新整理 / 剪贴板路径说明、去掉各块的利弊、与 **`/import/mock`** 关系；**「待实现摘要」** 以用户待确认项为准（**未改** `/import` 代码）。
+
+**验证**
+
+- `npm.cmd run build`：已通过。
+
+### 2026-05-13 — `/import/mock`：导入主卡布局对照示意（静态）
+
+**本次完成**
+
+- **`src/app/import/mock/page.tsx`**：双栏静态示意（A≈当前主卡、B≈草案），无 Supabase、无抓取；顶栏不新增入口，路径 **`/import/mock`**。
+- **`PROJECT_STATUS.md`**：可访问页面表增一行；**`DEVELOPMENT_LOG.md`** 本条。
+
+**验证**
+
+- `npm.cmd run build`：已通过。
+
 ### 2026-05-13 — 文档：线上仍为旧版阅读页时的部署排查
 
 **本次完成**

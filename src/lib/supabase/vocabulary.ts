@@ -7,6 +7,10 @@ import type {
 import { extractSentence } from "@/lib/articleReadingModel";
 import type { MasteryStatus } from "@/lib/types";
 import { formatSupabaseOrUnknownError } from "@/lib/supabase/errors";
+import {
+  isPostgresUniqueViolation,
+  sameVocabPartOfSpeechForUnique,
+} from "@/lib/supabase/vocabularyItemUniqueKey";
 import { mergeLemmaForVocabularyPersist } from "@/lib/supabase/vocabularyLemmaMerge";
 import { parseGrammaticalGender } from "@/lib/vocabulary/grammaticalGender";
 
@@ -312,17 +316,21 @@ export async function persistManualVocabularyItem(
       : (item.needs_ai_enrichment ?? true);
 
   try {
-    const { data: existingRow, error: findErr } = await supabase
+    const { data: rowsByKey, error: findErr } = await supabase
       .from("vocabulary_items")
       .select(
         "id,mastery_status,lemma,display_word,normalized_key,part_of_speech",
       )
       .eq("user_id", userId)
-      .eq("normalized_key", item.normalized_key)
-      .eq("part_of_speech", pos)
-      .maybeSingle();
+      .eq("normalized_key", item.normalized_key);
 
     if (findErr) throw findErr;
+
+    const candidates = rowsByKey ?? [];
+    const existingRow =
+      candidates.find((r) => sameVocabPartOfSpeechForUnique(r.part_of_speech, pos)) ??
+      candidates[0] ??
+      null;
 
     let vocabularyItemId: string;
 
@@ -339,6 +347,7 @@ export async function persistManualVocabularyItem(
           last_seen_at: new Date().toISOString(),
           display_word: item.display_word,
           lemma: lemmaToWrite,
+          part_of_speech: pos,
           zh_meaning: item.zh_meaning,
           simple_de_explanation: item.simple_de_explanation,
           needs_ai_enrichment: item.needs_ai_enrichment ?? false,
@@ -374,8 +383,48 @@ export async function persistManualVocabularyItem(
         .select("id")
         .single();
 
-      if (insErr) throw insErr;
-      vocabularyItemId = inserted!.id as string;
+      if (insErr && isPostgresUniqueViolation(insErr)) {
+        const { data: again, error: againErr } = await supabase
+          .from("vocabulary_items")
+          .select(
+            "id,mastery_status,lemma,display_word,normalized_key,part_of_speech",
+          )
+          .eq("user_id", userId)
+          .eq("normalized_key", item.normalized_key)
+          .limit(1)
+          .maybeSingle();
+        if (againErr) throw againErr;
+        if (!again?.id) throw insErr;
+        vocabularyItemId = again.id as string;
+        const lemmaToWrite = mergeLemmaForVocabularyPersist(
+          again.lemma as string | null,
+          lemmaForStorage,
+          item.display_word,
+        );
+        const { error: upAfterDup } = await supabase
+          .from("vocabulary_items")
+          .update({
+            last_seen_at: new Date().toISOString(),
+            display_word: item.display_word,
+            lemma: lemmaToWrite,
+            part_of_speech: pos,
+            zh_meaning: item.zh_meaning,
+            simple_de_explanation: item.simple_de_explanation,
+            needs_ai_enrichment: item.needs_ai_enrichment ?? false,
+            level_estimate: item.level_estimate ?? null,
+            gender: vocabularyGenderForDb(item),
+            ...(item.source === "ai"
+              ? { source: DB_SOURCE_AI, needs_ai_enrichment: false }
+              : {}),
+          })
+          .eq("id", vocabularyItemId)
+          .eq("user_id", userId);
+        if (upAfterDup) throw upAfterDup;
+      } else if (insErr) {
+        throw insErr;
+      } else {
+        vocabularyItemId = inserted!.id as string;
+      }
     }
 
     const defaultSenseId = await ensureDefaultSense(

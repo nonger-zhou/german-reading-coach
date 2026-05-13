@@ -10,7 +10,7 @@ German Reading Coach
 
 ## 当前状态
 
-- **阶段**：**Phase 2.5** + **Phase 3.0（Mock 阅读演示）** + **Phase 3.1/3.2（OpenAI）** + **Phase 3.4（摘要与阅读问题入库）** + **Phase 3.5（文章页 AI 区整理）** + **Phase 3.6（删除学习项）** + **Phase 3.7（状态语义 UI）** + **Phase 3.8（全局总库）** + **Phase 3.15（深度笔记）** + **Phase 4.0（URL 自动导入 + 剪贴板读取）** + **Phase 4.1（删除文章 v1）** — **`/import`** 支持「手动粘贴 / 链接导入」：链接导入经 **`POST /api/import-url`** 在服务端抓取网页并提取标题/来源/发布时间文本/正文，清理后填入主编辑区「将保存的正文」；用户确认后沿用既有保存逻辑写入 `articles`；该流程**不调用 OpenAI**。当站点拒绝抓取或可能需要登录时，页面在 URL 输入框下方给出轻提示，并引导用户改用手动粘贴；手动粘贴模式支持 **「从剪贴板读取」**，用户复制正文后可一键填入来源稿并整理到主正文，浏览器拒绝权限时回退手动粘贴。**`/articles/[id]`**：**真实 AI** 为主流程（主按钮、状态行、**API 成本**提示）；**Mock 文章分析**仅在 **`development`** 下 **「开发工具」** 折叠区内，**不入库**、不触发「保存 AI 结果」。手动词条与确认保存的真实 AI 写入 **`vocabulary_*` / `grammar_*`**（**`source = ai`** 等）及 **`articles.summary_zh` / `summary_de_simple` / `reading_questions`**（须 **`007_article_analysis_fields.sql`**）；词汇/语法卡支持“我的深度笔记”，用户可粘贴外部 AI 解释或自己的补充笔记保存到 **`008`** 字段，**不调用本应用 AI API**；未执行 **`008_learning_item_deep_notes.sql`** 时，旧的词汇/语法读取与保存仍应可用，保存深度笔记会提示先迁移。学习项删除仍是按本文 occurrence 删除。**Phase 4.1**：文章页支持删除文章，确认后删除本文 `articles` 与本文 `vocabulary_occurrences` / `grammar_occurrences`，并保留长期 `vocabulary_items` / `vocabulary_senses` / `grammar_items`。**Phase 3.7**：UI 默认状态文案显示为**学习中**，`mastered` 条目默认折叠到已掌握分组，可展开与恢复学习。**Phase 3.8**：`/vocabulary` 与 `/grammar` 已读取当前登录用户真实 Supabase 数据，支持搜索、状态筛选、等级筛选、来源文章跳转；状态统一显示 **学习中 / 已掌握 / 暂忽略**。右侧 **摘要 / 阅读问题** Tab **已保存**优先；仍**不**自动保存 OpenAI 预览。**`OPENAI_API_KEY`** 仅服务端。**Chrome 插件 MVP** 暂缓。
+- **阶段**：**Phase 2.5** + **Phase 3.0（Mock 阅读演示）** + **Phase 3.1/3.2（OpenAI）** + **Phase 3.4（摘要与阅读问题入库）** + **Phase 3.5（文章页 AI 区整理）** + **Phase 3.6（删除学习项）** + **Phase 3.7（状态语义 UI）** + **Phase 3.8（全局总库）** + **Phase 3.15（深度笔记）** + **Phase 4.0（URL 自动导入 + 剪贴板读取）** + **Phase 4.1（删除文章 v1）** — **`/import`** 支持「手动粘贴 / 链接导入」：链接导入经 **`POST /api/import-url`** 在服务端抓取网页并提取标题/来源/发布时间文本/正文，清理后填入主编辑区「正文」；用户确认后沿用既有保存逻辑写入 `articles`；该流程**不调用 OpenAI**。当站点拒绝抓取或可能需要登录时，页面在 URL 输入框下方给出轻提示，并引导用户改用手动粘贴；手动粘贴模式支持 **「从剪贴板读取」**，用户复制正文后可一键填入来源稿并整理到主正文，浏览器拒绝权限时回退手动粘贴。**`/articles/[id]`**：**真实 AI** 为主流程（主按钮、状态行、**API 成本**提示）；**Mock 文章分析**仅在 **`development`** 下 **「开发工具」** 折叠区内，**不入库**、不触发「保存 AI 结果」。手动词条与确认保存的真实 AI 写入 **`vocabulary_*` / `grammar_*`**（**`source = ai`** 等）及 **`articles.summary_zh` / `summary_de_simple` / `reading_questions`**（须 **`007_article_analysis_fields.sql`**）；词汇/语法卡支持“我的深度笔记”，用户可粘贴外部 AI 解释或自己的补充笔记保存到 **`008`** 字段，**不调用本应用 AI API**；未执行 **`008_learning_item_deep_notes.sql`** 时，旧的词汇/语法读取与保存仍应可用，保存深度笔记会提示先迁移。学习项删除仍是按本文 occurrence 删除。**Phase 4.1**：文章页支持删除文章，确认后删除本文 `articles` 与本文 `vocabulary_occurrences` / `grammar_occurrences`，并保留长期 `vocabulary_items` / `vocabulary_senses` / `grammar_items`。**Phase 3.7**：UI 默认状态文案显示为**学习中**，`mastered` 条目默认折叠到已掌握分组，可展开与恢复学习。**Phase 3.8**：`/vocabulary` 与 `/grammar` 已读取当前登录用户真实 Supabase 数据，支持搜索、状态筛选、等级筛选、来源文章跳转；状态统一显示 **学习中 / 已掌握 / 暂忽略**。右侧 **摘要 / 阅读问题** Tab **已保存**优先；仍**不**自动保存 OpenAI 预览。**`OPENAI_API_KEY`** 仅服务端。**Chrome 插件 MVP** 暂缓。
 - **Phase 3.4 验证状态**：文章级三字段与阅读页读写、**42703** 规避、Tab 持久化及与词汇/语法回归范围，见 **`DEVELOPMENT_LOG.md`**「**Phase 3.4 验证状态（仅文档）**」表；**前提**为远程库已跑 **007**。
 - **Phase 3.4 学习闭环（文章页）**：真实 **AI** / 保存 / 刷新、手动 **enrich**、摘要三字段、高亮与左右定位、掌握状态、**`/import`** 与 **`/dashboard`** 未在本次任务改动——完整清单与「静态核对 / 实机前提」见 **`DEVELOPMENT_LOG.md`**「**Phase 3.4 学习闭环验证与状态（仅文档）**」。**当前不做**总词库/总语法业务页接库。
 - **数据库**：**`articles`** 使用 **RLS（`user_id = auth.uid()`）** + **`GRANT … TO authenticated`**（**`schema.sql`** / **`003_articles_grants_fix.sql`**）；策略异常可跑 **`004_articles_rls_fix.sql`**。**不向 anon 授予 articles**。
@@ -35,7 +35,8 @@ German Reading Coach
 | `/` | 首页与功能入口卡片（不展示登录状态、云端文章数量或开发说明） |
 | `/dashboard` | 仪表盘（当前账户真实统计、最近 10 篇文章列表、查看全部文章入口、列表内直接删除文章） |
 | `/articles` | 文章库（当前账户全部已保存文章，按保存时间倒序分页，每页 10 篇；支持继续阅读与删除） |
-| `/import` | 导入文章：默认 **链接导入**（服务端抓取后填入「将保存的正文」），可切换手动粘贴；支持 Chrome 插件预填草稿；**从剪贴板读取 / 重新整理** 与主正文同卡；有来源稿时可展开 **「来源稿（可选）」**；标题必填但优先自动抓取，手填可覆盖；自动带入设置页默认阅读水平，并允许本篇临时修改；保存按钮紧随主正文；不向普通用户展示清理详情 / 字符统计；登录后保存到 **`articles`**，跳转 **`/articles/[id]`** |
+| `/import` | 导入文章：默认 **链接导入**（服务端抓取后填入「正文」），可切换手动粘贴；支持 Chrome 插件预填草稿；**从剪贴板读取**（链接导入下为次要按钮样式，手动粘贴下为主色）与 **保存文章** 与主正文同卡；有来源稿时可展开 **「来源稿（可选）」**；标题必填但优先自动抓取，手填可覆盖；自动带入设置页默认阅读水平，并允许本篇临时修改；不向普通用户展示清理详情 / 字符统计；登录后保存到 **`articles`**，跳转 **`/articles/[id]`** |
+| `/import/mock` | **静态示意页**（无保存、无抓取）：左右对比「当前导入主卡」与「减认知负荷草案」按钮与文案，便于与 **`/import`** 对照；不列入顶栏导航，需直接访问路径 |
 | `/articles/[id]` | 已保存文章：读库正文 + **手动 / Mock（ai_mock）/ 真实 AI（ai）** 词汇语法；左侧高亮图例与演示课文一致，说明绿色系统词汇、琥珀用户/确认词汇、蓝色系统语法、紫色用户语法；OpenAI 预览可 **确认保存**；**摘要 / 阅读问题** 持久化至 **`articles`**（**Phase 3.4**）；学习项在**卡片标题行右侧**用状态下拉修改，同列 **删除** occurrence；支持删除文章 v1（删本文与 occurrences，保留长期词/语法主记录） |
 | `/articles/mock` | 演示课文（固定 Mock；分栏、高亮、Tabs、发音） |
 | `/vocabulary` | 总词库（真实 Supabase 汇总：默认全部、时间分组 Tab、本周复盘小卡、搜索、状态筛选、等级筛选、单词状态下拉菜单、来源文章精确跳转到对应词条/occurrence；暂不做总库删除） |
@@ -53,6 +54,8 @@ German Reading Coach
 
 ## 最近更新
 
+- **2026-05-13（导入 UI 讨论文档）**：新增 **`docs/IMPORT_UI_DISCUSSION.md`** 汇总主卡讨论与待确认改动；**`README.md`** 增加交叉引用；**`npm.cmd run build`** 已通过。
+- **2026-05-13（`/import/mock` 导入主卡对照示意）**：新增 **`/import/mock`** 静态双栏页，对比当前「正文」主卡与历史草案示意；**`npm.cmd run build`** 已通过。
 - **2026-05-13（部署排查文档）**：**`README.md`**、**`docs/DEPLOY_VERCEL.md`** 补充「线上仍为旧版阅读页 UI」时的 Vercel / 硬刷新 / 无 `.git` 须 CLI 部署说明；**`npm.cmd run build`** 已通过。
 - **2026-05-13（词汇名词性副标）**：主标题已 **der/die/das** 开头时**不再**显示「名词性：阴性（die）」等重复副标；**unclear** 且无冠词标题时**保留**「名词性未标注或不确定」；列表与详情及 AI 预览一致；**`npm.cmd test`** / **`npm.cmd run build`** 已通过。
 - **2026-05-13（阅读页删除顶行）**：**删除** 与状态下拉同在**标题行右侧**；去掉底栏；长词 **`min-w-0` / `break-words`** 在左侧换行，右侧 **`flex-nowrap`**；**`npm.cmd test`** / **`npm.cmd run build`** 已通过。
@@ -60,7 +63,11 @@ German Reading Coach
 - **2026-05-13（用户词汇徽标）**：**「用户词汇」** 改为 **「用户」**（徽标与 tooltip）；**`npm.cmd run build`** 已通过。
 - **2026-05-13（阅读页徽标文案）**：**`ai`/`ai_mock`** 徽标 **「AI 推荐」→「AI」**；出现次数 **「出现 n 次」→「n 次」**；**`npm.cmd run build`** 已通过。
 - **2026-05-13（Vercel CLI 系统 CA）**：新增 **`npm.cmd run vercel:prod:system-ca`**（`scripts/vercel-prod-use-system-ca.cjs`），减轻本机 **`vercel:prod`** TLS 证书错误；**`npm.cmd run build`** 已通过。
-- **2026-05-13（`/import` 单一主正文）**：去掉与「将保存的正文」重复的「粘贴文章内容」大卡；**从剪贴板读取 / 重新整理** 与主正文同卡；**来源稿**折叠于有 `raw` 时；**`npm.cmd test`** / **`npm.cmd run build`** 已通过；**`vercel:prod`** 本机 TLS 失败未推线上。
+- **2026-05-13（词汇保存 23505 + 重复卡片）**：`persist` 查找已有行时 **null / "" `part_of_speech`** 与唯一键对齐；INSERT 遇唯一冲突回退为更新；保存后列表按 **`normalized_key` 去重**；**`npm.cmd test`** / **`npm.cmd run build`** 已通过。
+- **2026-05-13（阅读页：可分动词双段高亮）**：用户以句选等方式添加可分动词并经 AI 补全为词典形后，正文按卡面 **「前段 … 后段」** 在 occurrence 窗口内拆成**两处**高亮；词典形无法连续匹配时**保留** occurrence，避免误清空与保存失败；**`npm.cmd test`** / **`npm.cmd run build`** 已通过。
+- **2026-05-13（`/import` 链接模式剪贴板 secondary）**：默认 **链接导入** 下 **「从剪贴板读取」** 使用 **`Button` `variant="secondary"`**，**「保存文章」** 保持主色；手动粘贴模式剪贴板仍为主色；**`npm.cmd run build`** 已通过。
+- **2026-05-13（`/import` 正文卡：去重新整理 + 标题「正文」）**：主卡标题 **「正文」**；移除 **「重新整理」** 按钮与 `onCleanBody`；**「从剪贴板读取」与「保存文章」**同一行且去掉底部重复保存；相关提示与来源稿说明用语同步；**`/import/mock`** A 栏与正式页对齐；**`npm.cmd run build`** 已通过。
+- **2026-05-13（`/import` 单一主正文）**：去掉与主编辑区重复的「粘贴文章内容」大卡；**从剪贴板读取** 等与主正文同卡；**来源稿**折叠于有 `raw` 时；**`npm.cmd test`** / **`npm.cmd run build`** 已通过；**`vercel:prod`** 本机 TLS 失败未推线上。
 - **2026-05-13（词汇主标题定冠词）**：**`vocabularyHeadwordDe`**：AI 预览与阅读页词汇 **主标题** 在 **m/f/n** 且 lemma 无 **der/die/das** 时显示 **die Gymiprüfung** 等形式；**`npm.cmd test`** / **`npm.cmd run build`** 已通过。
 - **2026-05-13（名词性展示 + 部署流程）**：词汇卡 **名词性（der/die/das）** 在 **已写入 gender**、**lemma 带冠词** 或 **词类像名词** 时显示，并从 lemma 推断展示；AI 提示收紧 **名词 part_of_speech**；新增 **`.github/workflows/vercel-production.yml`** 与 **`docs/DEPLOY_VERCEL.md` §七**；**`AGENTS.md` / `CLAUDE.md`** 要求 build 通过后尽量 **`vercel:prod`**。本机 **`vercel:prod`** 因 TLS 校验失败未推线上；**`npm.cmd test`** / **`npm.cmd run build`** 已通过。
 - **2026-05-13（文档：PowerShell 与 npm）**：**`README.md`**、**`docs/PERSONAL_USE_CHECKLIST.md`** 强化 Windows PowerShell 下 **`npm.ps1` 被拦截**时的 **`npm.cmd`** 用法与可选 **`RemoteSigned`（CurrentUser）** 说明；**`npm.cmd run build`** 已通过。
@@ -130,7 +137,7 @@ German Reading Coach
 - **2026-05-06（Phase 4.1 增量：删除反馈与词库来源文案）**：`/dashboard` 列表删除成功后新增轻提示；`/vocabulary` 在来源文章已不存在时，来源文案显示“原文已被用户删除”。未改导入、AI 分析、schema 与 RLS。**`npm.cmd run build`** 已通过。
 - **2026-05-06（Phase 4.1 增量：Dashboard 直接删除）**：`/dashboard` 的「最近保存的文章」列表新增每行删除按钮；确认后删除本文 `articles` 与对应 `vocabulary_occurrences` / `grammar_occurrences`，并保留长期 `vocabulary_items` / `vocabulary_senses` / `grammar_items`。未改导入、AI 分析、schema 与 RLS。**`npm.cmd run build`** 已通过。
 - **2026-05-06（Phase 4.1：删除文章 v1）**：`/articles/[id]` 新增“删除文章”入口与确认提示；执行删除本文 `articles` 以及本文 `vocabulary_occurrences` / `grammar_occurrences`，并保留 `vocabulary_items` / `vocabulary_senses` / `grammar_items`。未改导入、AI 分析、schema 与 RLS。**`npm.cmd run build`** 已通过。
-- **2026-05-06（/import 模式联动高亮增强）**：导入页操作区与模式选择联动高亮：选择“链接导入”时突出 URL 输入框与“抓取文章”；选择“手动粘贴”时突出粘贴框与“重新整理”；“重新整理”按钮在空文本时也保持可点击，避免误判为未联动。**`npm.cmd run build`** 已通过。
+- **2026-05-06（/import 模式联动高亮增强）**：导入页操作区与模式选择联动高亮：选择“链接导入”时突出 URL 输入框与“抓取文章”；选择“手动粘贴”时突出主正文与「从剪贴板读取」。**`npm.cmd run build`** 已通过。
 - **2026-05-06（/import 默认模式与标题策略）**：`/import` 默认导入方式改为“链接导入”；标题文案改为“未手填则自动抓取，手填可覆盖且不再被自动覆盖”。未改保存链路与 schema/RLS。**`npm.cmd run build`** 已通过。
 - **2026-05-06（外部深入解释提示增强）**：词汇/语法外部解释区的常驻提示改为高对比提示条，强调“先复制 Prompt，再在外部页面 Ctrl+V 粘贴发送”；点击后反馈文案可见性同步提升。**`npm.cmd run build`** 已通过。
 - **2026-05-06（外部深入解释修复）**：恢复“先复制 Prompt 再跳转外站”的顺序，修复跳转后剪贴板为空的问题；词汇/语法外部解释区新增常驻提示“可直接 Ctrl+V 粘贴发送”。**`npm.cmd run build`** 已通过。

@@ -215,6 +215,20 @@ function mergeVocabFromEnrichmentApi(
   };
 }
 
+/** 保存成功后合并同 normalized_key 的重复卡片（避免 map 后列表中出现两条相同 key） */
+function applyPersistedVocabToLocalItems(
+  items: ArticleVocabItem[],
+  saved: ArticleVocabItem,
+): ArticleVocabItem[] {
+  const nk = saved.normalized_key;
+  const byKey = new Map<string, ArticleVocabItem>();
+  for (const v of items) {
+    const k = v.normalized_key;
+    byKey.set(k, k === nk ? saved : v);
+  }
+  return [...byKey.values()];
+}
+
 function mergeGrammarFromEnrichmentApi(
   item: ArticleGrammarItem,
   data: {
@@ -772,7 +786,10 @@ export function InteractiveArticleReader({
       .filter((v) => vocabUserStyle(v))
       .filter((v) =>
         v.occurrences.some((uo) => {
-          for (const r of vocabOccurrenceToRanges(uo, articlePlain)) {
+          for (const r of vocabOccurrenceToRanges(uo, articlePlain, {
+            displayWord: v.display_word,
+            lemma: v.lemma,
+          })) {
             if (r.start < occ.end_offset! && r.end > occ.start_offset!)
               return true;
           }
@@ -1815,9 +1832,7 @@ export function InteractiveArticleReader({
       if (error) {
         emitPersistError(`词汇保存失败：${error}`);
       } else if (saved) {
-        merged = merged.map((v) =>
-          v.normalized_key === saved.normalized_key ? saved : v,
-        );
+        merged = applyPersistedVocabToLocalItems(merged, saved);
         selectItemId = saved.id;
         selectOccId = alignVocabOccurrenceIdAfterPersist(
           preOcc,
@@ -3553,9 +3568,7 @@ export function InteractiveArticleReader({
                     if (error) {
                       emitPersistError(`词汇保存失败：${error}`);
                     } else if (saved) {
-                      merged = merged.map((v) =>
-                        v.normalized_key === saved.normalized_key ? saved : v,
-                      );
+                      merged = applyPersistedVocabToLocalItems(merged, saved);
                       selectItemId = saved.id;
                       selectOccId = alignVocabOccurrenceIdAfterPersist(
                         preOcc,

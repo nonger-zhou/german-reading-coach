@@ -40,6 +40,7 @@ const SYSTEM_PROMPT = `你是德语阅读教练。用户自己在文章中标记
   - 可分动词必须给完整词典形式（如 einrichten，而不是 richtet）。
   - 名词尽量给带冠词的形式（如 das Mandat / die Entscheidung）。
 - surface_form：原文形式（来自文章出现的形式），可用于显示「原文形式：...」。
+  - 若是**可分动词**，请用「句中实际两段文字 + 省略号」的固定格式：**前段** … **后段**（中间为 Unicode 省略号 U+2026 字符 …，不要用三个英文句点冒充）。前段、后段必须是用户原文里**各自连续、可逐字复制**的子串（例如 knöpfte … ab，不要夹进中文或空格版省略号以外的说明文字）。
 - zh_meaning：结合上下文的中文释义，具体可读，若是表达/搭配请解释整个表达的意思。
 - simple_de_explanation：用简单德语解释该表达在此处的意思（初学者可懂），可简要提及这是固定搭配、可分动词等。
 - part_of_speech：英文小写，从 noun / verb / adjective / adverb / phrase / conjunction / preposition / other 中选最贴切的一项；对于多词表达，可用 phrase。

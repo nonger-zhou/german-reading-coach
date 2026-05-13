@@ -211,17 +211,117 @@ export function resolveUserHighlightInPlain(
   return null;
 }
 
+/** 可选：可分动词等场景下，用卡面 `display_word`（如「knöpfte … ab」）在 occurrence 窗口内拆成双段高亮 */
+export type VocabOccurrenceRangeContext = {
+  displayWord?: string;
+  lemma?: string;
+};
+
 /**
- * 单个 occurrence 在文中对应的区间（至多一处）。
+ * 解析「前段 … 后段」示意（模型或 UI 常用省略号，非正文中的字）。
+ * 返回两段须在原文中各自连续出现。
+ */
+export function splitEllipsisDisplayIntoTwoSurfaceParts(
+  surfaceHint: string,
+): [string, string] | null {
+  const t = surfaceHint.trim();
+  if (!t) return null;
+  const m = t.match(/^(.+?)\s*(?:…|\.{2,3}|⋯)\s*(.+)$/u);
+  if (!m) return null;
+  const left = m[1]!.trim();
+  const right = m[2]!.trim();
+  if (!left || !right) return null;
+  return [left, right];
+}
+
+function findTwoPartsInWindow(
+  articlePlain: string,
+  left: string,
+  right: string,
+  winStart: number,
+  winEnd: number,
+): { start: number; end: number }[] {
+  const ws = Math.max(0, winStart);
+  const we = Math.min(articlePlain.length, winEnd);
+  if (we <= ws || !left || !right) return [];
+
+  const findIn = (from: number, to: number, token: string): { start: number; len: number } | null => {
+    const slice = articlePlain.slice(from, to);
+    let i = slice.indexOf(token);
+    if (i !== -1) return { start: from + i, len: token.length };
+    const sl = slice.toLowerCase();
+    const tl = token.toLowerCase();
+    i = sl.indexOf(tl);
+    if (i !== -1) return { start: from + i, len: token.length };
+    return null;
+  };
+
+  const hitL = findIn(ws, we, left);
+  if (!hitL) return [];
+  const afterL = hitL.start + hitL.len;
+  const hitR = findIn(afterL, we, right);
+  if (!hitR) return [];
+  if (hitR.start + hitR.len > we) return [];
+  return [
+    { start: hitL.start, end: hitL.start + hitL.len },
+    { start: hitR.start, end: hitR.start + hitR.len },
+  ];
+}
+
+function tryEllipsisDualRanges(
+  occ: VocabOccurrence,
+  articlePlain: string,
+  ctx?: VocabOccurrenceRangeContext,
+): { start: number; end: number }[] {
+  const hint = ctx?.displayWord?.trim();
+  if (!hint) return [];
+  const parts = splitEllipsisDisplayIntoTwoSurfaceParts(hint);
+  if (!parts) return [];
+  const [left, right] = parts;
+  let winStart = 0;
+  let winEnd = articlePlain.length;
+  if (
+    occ.start_offset !== undefined &&
+    occ.end_offset !== undefined &&
+    occ.start_offset >= 0 &&
+    occ.end_offset <= articlePlain.length &&
+    occ.end_offset > occ.start_offset
+  ) {
+    winStart = occ.start_offset;
+    winEnd = occ.end_offset;
+  }
+  return findTwoPartsInWindow(articlePlain, left, right, winStart, winEnd);
+}
+
+/**
+ * 单个 occurrence 在文中对应的区间（通常一处；可分动词等可为两处）。
  * 必须与右侧 occurrence 列表一一对应：同一 surface 多次出现时，各有独立 occurrence 行与 id，
  * 不得再对全文做 indexOf 全匹配，否则多处区间会与多条 occurrence 争抢字符栅格，导致左侧 DOM 均为第一条 id、点击列表无法定位。
  */
 export function vocabOccurrenceToRanges(
   occ: VocabOccurrence,
   articlePlain: string,
+  ctx?: VocabOccurrenceRangeContext,
 ): { start: number; end: number }[] {
-  const needle = occ.fallbackMatchText;
-  if (!needle) return [];
+  const needle = (occ.fallbackMatchText ?? "").trim();
+  const sliceMatchesStoredOffsets = (): boolean => {
+    if (
+      occ.start_offset === undefined ||
+      occ.end_offset === undefined ||
+      occ.start_offset < 0 ||
+      occ.end_offset > articlePlain.length ||
+      occ.end_offset <= occ.start_offset
+    ) {
+      return false;
+    }
+    const slice = articlePlain.slice(occ.start_offset, occ.end_offset);
+    return (
+      slice === occ.surface_form ||
+      (needle.length > 0 && slice === needle) ||
+      slice.toLowerCase() === (occ.surface_form || "").toLowerCase() ||
+      (needle.length > 0 && slice.toLowerCase() === needle.toLowerCase())
+    );
+  };
 
   if (
     occ.start_offset !== undefined &&
@@ -230,20 +330,26 @@ export function vocabOccurrenceToRanges(
     occ.end_offset <= articlePlain.length &&
     occ.end_offset > occ.start_offset
   ) {
-    const slice = articlePlain.slice(occ.start_offset, occ.end_offset);
-    if (slice === occ.surface_form || slice === needle) {
+    const dual = tryEllipsisDualRanges(occ, articlePlain, ctx);
+    if (dual.length === 2) return dual;
+    if (sliceMatchesStoredOffsets()) {
       return [{ start: occ.start_offset, end: occ.end_offset }];
     }
   }
 
+  if (!needle) return [];
+
   const idx = articlePlain.indexOf(needle);
-  if (idx === -1) return [];
-  return [{ start: idx, end: idx + needle.length }];
+  if (idx !== -1) return [{ start: idx, end: idx + needle.length }];
+  const loose = findLooseWhitespaceOccurrence(articlePlain, needle);
+  if (loose) return [loose];
+  return [];
 }
 
 export function grammarOccurrenceToRanges(
   occ: GrammarOccurrence,
   articlePlain: string,
+  ctx?: VocabOccurrenceRangeContext,
 ): { start: number; end: number }[] {
   return vocabOccurrenceToRanges(
     {
@@ -256,6 +362,7 @@ export function grammarOccurrenceToRanges(
       source: occ.source,
     },
     articlePlain,
+    ctx,
   );
 }
 
@@ -349,7 +456,10 @@ export function buildRunsFromReadingItems(
           : PRI_AI_VOCAB;
     const kind = user ? "user_vocab" : "ai_vocab";
     for (const occ of item.occurrences) {
-      for (const r of vocabOccurrenceToRanges(occ, articlePlain)) {
+      for (const r of vocabOccurrenceToRanges(occ, articlePlain, {
+        displayWord: item.display_word,
+        lemma: item.lemma,
+      })) {
         setRange(r.start, r.end, pri, {
           kind,
           itemId: item.id,
@@ -430,18 +540,36 @@ export function rebuildUserStyleVocabOccurrencesFromArticle(
   ranges.sort((a, b) => a.start - b.start);
 
   const senseId = item.senses[0]?.id;
-  const occurrences: VocabOccurrence[] = ranges.map(({ start, end }) => ({
-    id: `${item.id}-${start}-${end}`,
-    surface_form: articlePlain.slice(start, end),
-    sentence: extractSentence(articlePlain, start, end),
-    start_offset: start,
-    end_offset: end,
-    fallbackMatchText: needle,
-    source: "user_added",
-    sense_id: senseId,
-  }));
+  const ctx: VocabOccurrenceRangeContext = {
+    displayWord: item.display_word,
+    lemma: item.lemma,
+  };
 
-  return { ...item, occurrences };
+  if (ranges.length > 0) {
+    const occurrences: VocabOccurrence[] = ranges.map(({ start, end }) => ({
+      id: `${item.id}-${start}-${end}`,
+      surface_form: articlePlain.slice(start, end),
+      sentence: extractSentence(articlePlain, start, end),
+      start_offset: start,
+      end_offset: end,
+      fallbackMatchText: needle,
+      source: "user_added",
+      sense_id: senseId,
+    }));
+    return { ...item, occurrences };
+  }
+
+  /** 词典形 / 带省略号示意无法在文中连续匹配时，保留仍能通过 `vocabOccurrenceToRanges` 定位的 occurrence（可分动词、句选等） */
+  if (item.occurrences.length > 0) {
+    const kept = item.occurrences.filter(
+      (occ) => vocabOccurrenceToRanges(occ, articlePlain, ctx).length > 0,
+    );
+    if (kept.length > 0) {
+      return { ...item, occurrences: kept };
+    }
+  }
+
+  return { ...item, occurrences: [] };
 }
 
 /**

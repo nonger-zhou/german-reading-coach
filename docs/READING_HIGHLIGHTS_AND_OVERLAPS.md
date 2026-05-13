@@ -58,3 +58,9 @@ PRD §8.0 原则：**用户手动词汇**与**系统推荐**重叠时，原文�
 - 在 Cursor **设置**中查看与 **Terminal / Agent / Sandbox / 命令批准** 相关的选项（名称随版本变化）。
 
 若你希望少点确认，以你本机 Cursor 当前版本的官方说明为准。
+
+## 6. 可分动词（句选 / AI 补全后词典形）
+
+- 用户以**整句或长片段**添加可分动词后，AI 补全常把卡面 `display_word` / `lemma` 写成词典形（如 **abknöpfen**），而文中实际为 **knöpfte … ab** 两段不连续形式。
+- 阅读页用 `vocabOccurrenceToRanges`：若卡面 `display_word` 为 **「前段 … 后段」**（Unicode `…` 或 `...` 分隔），在**该 occurrence 已保存的 start/end 窗口**内拆成**两处**高亮；若词典形无法在全文连续匹配，则**保留**库里的 occurrence 记录，不再误清空（避免无高亮、保存无 occurrence）。
+- 词汇补充 API 的 system prompt 要求：可分动词的 `surface_form` 尽量输出 **前段 … 后段** 格式，且两段均须能在用户原文中逐字复制。
