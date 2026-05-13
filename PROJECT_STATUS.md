@@ -63,6 +63,7 @@ German Reading Coach
 - **2026-05-13（用户词汇徽标）**：**「用户词汇」** 改为 **「用户」**（徽标与 tooltip）；**`npm.cmd run build`** 已通过。
 - **2026-05-13（阅读页徽标文案）**：**`ai`/`ai_mock`** 徽标 **「AI 推荐」→「AI」**；出现次数 **「出现 n 次」→「n 次」**；**`npm.cmd run build`** 已通过。
 - **2026-05-13（Vercel CLI 系统 CA）**：新增 **`npm.cmd run vercel:prod:system-ca`**（`scripts/vercel-prod-use-system-ca.cjs`），减轻本机 **`vercel:prod`** TLS 证书错误；**`npm.cmd run build`** 已通过。
+- **2026-05-13（enrich 写入 display_word + occurrence 回退定位）**：AI 补充词汇时把 **`surface_form` 写入库 `display_word`**；正文高亮在 offset 与切片不一致时按 **`surface_form`** 回退匹配；**`npm.cmd test`** / **`npm.cmd run build`** 已通过。
 - **2026-05-13（词汇保存 23505 + 重复卡片）**：`persist` 查找已有行时 **null / "" `part_of_speech`** 与唯一键对齐；INSERT 遇唯一冲突回退为更新；保存后列表按 **`normalized_key` 去重**；**`npm.cmd test`** / **`npm.cmd run build`** 已通过。
 - **2026-05-13（阅读页：可分动词双段高亮）**：用户以句选等方式添加可分动词并经 AI 补全为词典形后，正文按卡面 **「前段 … 后段」** 在 occurrence 窗口内拆成**两处**高亮；词典形无法连续匹配时**保留** occurrence，避免误清空与保存失败；**`npm.cmd test`** / **`npm.cmd run build`** 已通过。
 - **2026-05-13（`/import` 链接模式剪贴板 secondary）**：默认 **链接导入** 下 **「从剪贴板读取」** 使用 **`Button` `variant="secondary"`**，**「保存文章」** 保持主色；手动粘贴模式剪贴板仍为主色；**`npm.cmd run build`** 已通过。

@@ -625,6 +625,8 @@ export async function applyVocabularyAiEnrichment(
     userId: string;
     vocabularyItemId: string;
     canonical_form: string;
+    /** 卡面「原文形式」；可分动词可为「knöpfte … ab」，写入 DB 后刷新页仍能双段高亮 */
+    display_surface?: string | null;
     zh_meaning: string;
     simple_de_explanation: string;
     part_of_speech: string;
@@ -636,6 +638,7 @@ export async function applyVocabularyAiEnrichment(
     userId,
     vocabularyItemId,
     canonical_form,
+    display_surface,
     zh_meaning,
     simple_de_explanation,
     part_of_speech,
@@ -676,6 +679,9 @@ export async function applyVocabularyAiEnrichment(
       .from("vocabulary_items")
       .update({
         lemma: canonical_form,
+        ...(display_surface?.trim()
+          ? { display_word: display_surface.trim() }
+          : {}),
         zh_meaning,
         simple_de_explanation,
         part_of_speech: pos,

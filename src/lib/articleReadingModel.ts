@@ -335,6 +335,27 @@ export function vocabOccurrenceToRanges(
     if (sliceMatchesStoredOffsets()) {
       return [{ start: occ.start_offset, end: occ.end_offset }];
     }
+    const surf = (occ.surface_form ?? "").trim();
+    if (surf && occ.start_offset !== undefined) {
+      const rel = findBestTextOccurrence(articlePlain, surf, occ.start_offset);
+      if (rel) {
+        const got = articlePlain.slice(rel.start, rel.end);
+        if (got === surf || got.toLowerCase() === surf.toLowerCase()) {
+          return [rel];
+        }
+      }
+      const looseSurf = findLooseWhitespaceOccurrence(articlePlain, surf);
+      if (looseSurf) return [looseSurf];
+    }
+  }
+
+  const surfaceTry = (occ.surface_form ?? "").trim();
+  if (surfaceTry) {
+    const hint = occ.start_offset ?? 0;
+    const rel2 = findBestTextOccurrence(articlePlain, surfaceTry, hint);
+    if (rel2) return [rel2];
+    const loose2 = findLooseWhitespaceOccurrence(articlePlain, surfaceTry);
+    if (loose2) return [loose2];
   }
 
   if (!needle) return [];

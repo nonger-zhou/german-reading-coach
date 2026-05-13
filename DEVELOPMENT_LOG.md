@@ -76,6 +76,18 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-05-13 — 词汇 AI 补充：`display_word` 入库 + occurrence 偏移回退定位
+
+**本次完成**
+
+- **`applyVocabularyAiEnrichment`**：可选 **`display_surface`**，非空时同步写入 **`vocabulary_items.display_word`**（刷新后仍可用「前段 … 后段」双段高亮）。
+- **`/api/enrich-vocabulary`**：将模型返回的 **`surface_form`** 传入上述字段。
+- **`vocabOccurrenceToRanges`**：在 offset 切片与正文不一致时，按 **`surface_form`** 用 **`findBestTextOccurrence` / 宽松空白** 回退定位；无 offset 时亦尝试按 **`surface_form`** 定位。
+
+**验证**
+
+- `npm.cmd test`、`npm.cmd run build`：已通过。
+
 ### 2026-05-13 — 词汇持久化：23505 唯一约束与重复卡片
 
 **本次完成**

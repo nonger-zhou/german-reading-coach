@@ -269,6 +269,7 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
       userId: user.id,
       vocabularyItemId,
       canonical_form: canonical_form || vrow.lemma || vrow.display_word || surface,
+      display_surface: surface_form || surface,
       zh_meaning,
       simple_de_explanation,
       part_of_speech,
