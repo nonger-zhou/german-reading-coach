@@ -194,4 +194,24 @@ describe("vocabOccurrenceToRanges sentence window + stale offset", () => {
     expect(ranges).toHaveLength(1);
     expect(article.slice(ranges[0]!.start, ranges[0]!.end)).toBe("foo");
   });
+
+  it("trusts user occurrence offsets when surface does not match articlePlain", () => {
+    const article = "Mit Fake-Nachrichten knöpfte eine Gang den Opfern Geld ab.";
+    const s = article.indexOf("knöpfte");
+    const e = s + "knöpfte".length;
+    const occ: VocabOccurrence = {
+      id: "occ-trust",
+      surface_form: "wrong surface text",
+      sentence: "short",
+      start_offset: s,
+      end_offset: e,
+      fallbackMatchText: "wrong surface text",
+      source: "user_added",
+    };
+    const ranges = vocabOccurrenceToRanges(occ, article, {});
+    expect(ranges).toHaveLength(1);
+    expect(ranges[0]!.start).toBe(s);
+    expect(ranges[0]!.end).toBe(e);
+    expect(article.slice(s, e)).toBe("knöpfte");
+  });
 });

@@ -76,6 +76,18 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-05-13 — 长选区加入词库：偏移信任高亮 + AI 补充避免 part_of_speech 唯一冲突
+
+**本次完成**
+
+- **`vocabOccurrenceToRanges`**：在 `surface` / `needle` 与 `articlePlain` 无法对齐时，对用户类 occurrence（`user_added` / `ai_detected_then_user_confirmed`）增加 **偏移信任回退**（选区 start/end 在范围内且切片非空即高亮），避免长句选后卡面与正文略不一致时左侧无色。
+- **`applyVocabularyAiEnrichment`**：更新 `part_of_speech` 前检查是否已有**另一条**同 `user_id + normalized_key + 新词性` 的行；若有则**保留原词性**，避免 **`vocabulary_items_user_norm_pos_unique`**（23505）导致「补充 AI 解释」失败。
+- **`src/lib/articleReadingModel.vocabRanges.test.ts`**：偏移信任用例。
+
+**验证**
+
+- `npm test`、`npm run build`：已通过。
+
 ### 2026-05-13 — 用户词 occurrence：禁止误清空 + 句窗回退定位
 
 **本次完成**

@@ -376,13 +376,43 @@ export function vocabOccurrenceToRanges(
   );
   if (sentenceWindowRanges.length > 0) return sentenceWindowRanges;
 
-  if (!needle) return [];
+  if (!needle) {
+    const fb = offsetTrustFallbackForUserVocabOcc(occ, articlePlain);
+    return fb.length ? fb : [];
+  }
 
   const idx = articlePlain.indexOf(needle);
   if (idx !== -1) return [{ start: idx, end: idx + needle.length }];
   const loose = findLooseWhitespaceOccurrence(articlePlain, needle);
   if (loose) return [loose];
-  return [];
+  const trust = offsetTrustFallbackForUserVocabOcc(occ, articlePlain);
+  return trust.length ? trust : [];
+}
+
+/**
+ * 用户侧 occurrence 的 start/end 来自选区，应与 `articlePlain` 一致；当 surface / needle 与正文略不一致
+ *（空白、断词、模型改写卡面等）时仍用偏移画高亮，避免「已加入词库但正文无色」。
+ * occurrence 的 `source` 为 `user_added`（含从 AI 词确认后合并进来的新 occurrence）。
+ */
+function offsetTrustFallbackForUserVocabOcc(
+  occ: VocabOccurrence,
+  articlePlain: string,
+): { start: number; end: number }[] {
+  if (occ.source !== "user_added") {
+    return [];
+  }
+  if (
+    occ.start_offset === undefined ||
+    occ.end_offset === undefined ||
+    occ.start_offset < 0 ||
+    occ.end_offset > articlePlain.length ||
+    occ.end_offset <= occ.start_offset
+  ) {
+    return [];
+  }
+  const slice = articlePlain.slice(occ.start_offset, occ.end_offset);
+  if (!slice.trim()) return [];
+  return [{ start: occ.start_offset, end: occ.end_offset }];
 }
 
 /**

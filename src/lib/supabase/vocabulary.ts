@@ -675,6 +675,42 @@ export async function applyVocabularyAiEnrichment(
 
     if (senseUpErr) throw senseUpErr;
 
+    const { data: selfItem, error: selfItemErr } = await supabase
+      .from("vocabulary_items")
+      .select("normalized_key, part_of_speech")
+      .eq("id", vocabularyItemId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (selfItemErr) throw selfItemErr;
+    if (!selfItem?.normalized_key) {
+      return { error: "无法读取词汇项 normalized_key。" };
+    }
+
+    let partOfSpeechToPersist = pos;
+    if (
+      !sameVocabPartOfSpeechForUnique(
+        selfItem.part_of_speech as string | null,
+        pos,
+      )
+    ) {
+      const { data: clash, error: clashErr } = await supabase
+        .from("vocabulary_items")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("normalized_key", selfItem.normalized_key)
+        .eq("part_of_speech", pos)
+        .neq("id", vocabularyItemId)
+        .maybeSingle();
+
+      if (clashErr) throw clashErr;
+      if (clash?.id) {
+        partOfSpeechToPersist = vocabPartOfSpeechForDb(
+          String(selfItem.part_of_speech ?? ""),
+        );
+      }
+    }
+
     const { error: itemUpErr } = await supabase
       .from("vocabulary_items")
       .update({
@@ -684,7 +720,7 @@ export async function applyVocabularyAiEnrichment(
           : {}),
         zh_meaning,
         simple_de_explanation,
-        part_of_speech: pos,
+        part_of_speech: partOfSpeechToPersist,
         level_estimate: level_estimate ?? null,
         needs_ai_enrichment: false,
       })
