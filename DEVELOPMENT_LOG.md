@@ -76,6 +76,18 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-05-13 — 用户词 occurrence：禁止误清空 + 句窗回退定位
+
+**本次完成**
+
+- **`rebuildUserStyleVocabOccurrencesFromArticle`**：当全文无法按 `display_word` 扫描、且 `vocabOccurrenceToRanges` 对**所有**已有 occurrence 仍无法定位时，**保留数据库中的 occurrence 列表**，不再写成空数组（修复右侧「本篇出现位置」空白、持久化无 occurrence 行可写、左侧无高亮栅格）。
+- **`vocabOccurrenceToRanges`**：`surface_form` 在偏移窗口内失败时增加 **0 / 文长中点** 等 hint 重试；新增 **`tryOccurrenceSentenceWindow`**：用 **`sentence`** 定位句窗后在窗内匹配 **`surface_form`** 或 **`fallbackMatchText`**，全文多次出现时可消歧。
+- **`src/lib/articleReadingModel.vocabRanges.test.ts`**：补充「误清空保留」、句窗消歧、远偏移 hint 回归。
+
+**验证**
+
+- `npm test`、`npm run build`：已通过。
+
 ### 2026-05-13 — 词汇 AI 补充：`display_word` 入库 + occurrence 偏移回退定位
 
 **本次完成**

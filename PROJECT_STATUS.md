@@ -54,6 +54,7 @@ German Reading Coach
 
 ## 最近更新
 
+- **2026-05-13（用户词 occurrence 勿清空 + 句窗定位）**：`rebuildUserStyleVocabOccurrencesFromArticle` 在无法重算全文 occurrence 时**保留**原 occurrence，避免「本篇出现位置」空白与保存无行；`vocabOccurrenceToRanges` 增加多 hint 与基于 **`sentence`** 的句窗内回退匹配；**`npm test`** / **`npm run build`** 已通过；部署后请硬刷新验证线上。
 - **2026-05-13（导入 UI 讨论文档）**：新增 **`docs/IMPORT_UI_DISCUSSION.md`** 汇总主卡讨论与待确认改动；**`README.md`** 增加交叉引用；**`npm.cmd run build`** 已通过。
 - **2026-05-13（`/import/mock` 导入主卡对照示意）**：新增 **`/import/mock`** 静态双栏页，对比当前「正文」主卡与历史草案示意；**`npm.cmd run build`** 已通过。
 - **2026-05-13（部署排查文档）**：**`README.md`**、**`docs/DEPLOY_VERCEL.md`** 补充「线上仍为旧版阅读页 UI」时的 Vercel / 硬刷新 / 无 `.git` 须 CLI 部署说明；**`npm.cmd run build`** 已通过。

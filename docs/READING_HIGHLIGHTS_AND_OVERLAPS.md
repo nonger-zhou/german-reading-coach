@@ -63,4 +63,5 @@ PRD §8.0 原则：**用户手动词汇**与**系统推荐**重叠时，原文�
 
 - 用户以**整句或长片段**添加可分动词后，AI 补全常把卡面 `display_word` / `lemma` 写成词典形（如 **abknöpfen**），而文中实际为 **knöpfte … ab** 两段不连续形式。
 - 阅读页用 `vocabOccurrenceToRanges`：若卡面 `display_word` 为 **「前段 … 后段」**（Unicode `…` 或 `...` 分隔），在**该 occurrence 已保存的 start/end 窗口**内拆成**两处**高亮；若词典形无法在全文连续匹配，则**保留**库里的 occurrence 记录，不再误清空（避免无高亮、保存无 occurrence）。
+- 当偏移不可靠或 `surface_form` 与正文略不一致时：先多 hint 重定位 `surface_form`；仍失败时用 occurrence 自带的 **`sentence`** 在全文定位句窗，再在句窗内匹配 `surface_form` 或 **`fallbackMatchText`**，避免全文同名词误高亮。
 - 词汇补充 API 的 system prompt 要求：可分动词的 `surface_form` 尽量输出 **前段 … 后段** 格式，且两段均须能在用户原文中逐字复制。

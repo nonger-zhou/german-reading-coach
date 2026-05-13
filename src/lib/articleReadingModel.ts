@@ -337,13 +337,16 @@ export function vocabOccurrenceToRanges(
     }
     const surf = (occ.surface_form ?? "").trim();
     if (surf && occ.start_offset !== undefined) {
-      const rel = findBestTextOccurrence(articlePlain, surf, occ.start_offset);
-      if (rel) {
+      const trySurfAt = (hintStart: number) => {
+        const rel = findBestTextOccurrence(articlePlain, surf, hintStart);
+        if (!rel) return null;
         const got = articlePlain.slice(rel.start, rel.end);
-        if (got === surf || got.toLowerCase() === surf.toLowerCase()) {
-          return [rel];
-        }
-      }
+        if (got === surf || got.toLowerCase() === surf.toLowerCase()) return rel;
+        return null;
+      };
+      const relHint =
+        trySurfAt(occ.start_offset) ?? trySurfAt(0) ?? trySurfAt(articlePlain.length);
+      if (relHint) return [relHint];
       const looseSurf = findLooseWhitespaceOccurrence(articlePlain, surf);
       if (looseSurf) return [looseSurf];
     }
@@ -351,12 +354,27 @@ export function vocabOccurrenceToRanges(
 
   const surfaceTry = (occ.surface_form ?? "").trim();
   if (surfaceTry) {
-    const hint = occ.start_offset ?? 0;
-    const rel2 = findBestTextOccurrence(articlePlain, surfaceTry, hint);
-    if (rel2) return [rel2];
+    const hintStarts = Array.from(
+      new Set(
+        [occ.start_offset ?? 0, 0, Math.floor(articlePlain.length / 2)].filter(
+          (h) => typeof h === "number" && h >= 0,
+        ),
+      ),
+    );
+    for (const hint of hintStarts) {
+      const rel2 = findBestTextOccurrence(articlePlain, surfaceTry, hint);
+      if (rel2) return [rel2];
+    }
     const loose2 = findLooseWhitespaceOccurrence(articlePlain, surfaceTry);
     if (loose2) return [loose2];
   }
+
+  const sentenceWindowRanges = tryOccurrenceSentenceWindow(
+    occ,
+    articlePlain,
+    needle,
+  );
+  if (sentenceWindowRanges.length > 0) return sentenceWindowRanges;
 
   if (!needle) return [];
 
@@ -364,6 +382,68 @@ export function vocabOccurrenceToRanges(
   if (idx !== -1) return [{ start: idx, end: idx + needle.length }];
   const loose = findLooseWhitespaceOccurrence(articlePlain, needle);
   if (loose) return [loose];
+  return [];
+}
+
+/**
+ * 当 surface / 偏移与正文略不一致时，用 occurrence 自带的句子文本在全文定位，
+ * 再在该句窗口内匹配 surface 或 fallbackMatchText，避免整句高亮且尽量落在词上。
+ */
+function tryOccurrenceSentenceWindow(
+  occ: VocabOccurrence,
+  articlePlain: string,
+  fallbackNeedle: string,
+): { start: number; end: number }[] {
+  const sentenceTry = (occ.sentence ?? "").trim();
+  if (sentenceTry.length < 10) return [];
+  const hintStarts = Array.from(
+    new Set(
+      [occ.start_offset ?? 0, 0, Math.floor(articlePlain.length / 2)].filter(
+        (h) => typeof h === "number" && h >= 0,
+      ),
+    ),
+  );
+  for (const h of hintStarts) {
+    const sentRange = findBestTextOccurrence(articlePlain, sentenceTry, h);
+    if (!sentRange) continue;
+    const got = articlePlain.slice(sentRange.start, sentRange.end);
+    if (got !== sentenceTry && got.toLowerCase() !== sentenceTry.toLowerCase()) {
+      continue;
+    }
+    const surf = (occ.surface_form ?? "").trim();
+    if (surf) {
+      const local = findBestTextOccurrence(got, surf, 0);
+      if (local) {
+        return [
+          {
+            start: sentRange.start + local.start,
+            end: sentRange.start + local.end,
+          },
+        ];
+      }
+      const looseL = findLooseWhitespaceOccurrence(got, surf);
+      if (looseL) {
+        return [
+          {
+            start: sentRange.start + looseL.start,
+            end: sentRange.start + looseL.end,
+          },
+        ];
+      }
+    }
+    const fb = fallbackNeedle.trim();
+    if (fb) {
+      const local = findBestTextOccurrence(got, fb, 0);
+      if (local) {
+        return [
+          {
+            start: sentRange.start + local.start,
+            end: sentRange.start + local.end,
+          },
+        ];
+      }
+    }
+  }
   return [];
 }
 
@@ -588,6 +668,8 @@ export function rebuildUserStyleVocabOccurrencesFromArticle(
     if (kept.length > 0) {
       return { ...item, occurrences: kept };
     }
+    /** 无法在正文重算区间时仍保留库里的 occurrence，避免右侧「本篇出现位置」空白与持久化无行可写 */
+    return { ...item, occurrences: item.occurrences };
   }
 
   return { ...item, occurrences: [] };
