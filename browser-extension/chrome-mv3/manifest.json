@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "German Reading Coach Importer",
+  "version": "0.1.5",
+  "description": "Import the currently visible article into German Reading Coach.",
+  "permissions": ["activeTab", "contextMenus", "scripting", "storage"],
+  "host_permissions": ["http://*/*", "https://*/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "导入到 German Reading Coach"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://german-reading-coach.vercel.app/import*",
+        "http://localhost:3000/import*"
+      ],
+      "js": ["app-import-bridge.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

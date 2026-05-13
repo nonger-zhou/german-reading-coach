@@ -1,0 +1,2 @@
+-- 已合并到 **`007_article_analysis_fields.sql`**（一并补齐 summary_zh / summary_de_simple / reading_questions）。
+-- 保留本文件仅为历史引用；新环境请只执行 **`007_article_analysis_fields.sql`**。
