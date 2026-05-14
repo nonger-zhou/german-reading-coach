@@ -503,6 +503,11 @@ function ArticleDetailPageContent() {
 
   const runRealAiAnalysis = useCallback(async () => {
     if (!session?.user?.id || !article?.id || realAiRunning) return;
+    const token = session.access_token?.trim();
+    if (!token) {
+      setRealAiError("登录已过期，请重新登录后再使用真实 AI 分析。");
+      return;
+    }
     setRealAiRunning(true);
     setRealAiError(null);
     setRealAiWarning(null);
@@ -510,7 +515,10 @@ function ArticleDetailPageContent() {
       const level = articleAnalysisLevel(article.user_level_at_analysis);
       const res = await fetch("/api/analyze-article", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           articleId: article.id,
           title: article.title ?? "",
@@ -564,7 +572,7 @@ function ArticleDetailPageContent() {
     } finally {
       setRealAiRunning(false);
     }
-  }, [article, realAiRunning, session?.user?.id]);
+  }, [article, realAiRunning, session]);
 
   const handlePrimaryRealAiClick = useCallback(() => {
     if (realAiPreview) {
@@ -1410,7 +1418,7 @@ function ArticleDetailPageContent() {
                       <ul className="mt-2 max-h-48 space-y-2 overflow-y-auto text-xs">
                         {editableRealAiGrammar.map(({ item: g, index, status }) => (
                           <li
-                            key={`${g.grammar_key}-${index}`}
+                            key={`${g.grammar_key}-${g.normalized_key}-${index}`}
                             className="rounded border border-zinc-200/80 bg-white/80 p-2 dark:border-zinc-700 dark:bg-zinc-900/50"
                           >
                             <div className="flex flex-wrap items-start justify-between gap-2">

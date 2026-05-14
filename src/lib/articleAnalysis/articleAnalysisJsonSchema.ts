@@ -55,6 +55,7 @@ export const ARTICLE_ANALYSIS_JSON_SCHEMA = {
           additionalProperties: false,
           properties: {
             grammar_key: { type: "string" },
+            normalized_key: { type: "string" },
             selected_text: { type: "string" },
             name_de: { type: "string" },
             name_zh: { type: "string" },
@@ -69,6 +70,7 @@ export const ARTICLE_ANALYSIS_JSON_SCHEMA = {
           },
           required: [
             "grammar_key",
+            "normalized_key",
             "selected_text",
             "name_de",
             "name_zh",

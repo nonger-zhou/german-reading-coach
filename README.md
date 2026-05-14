@@ -11,10 +11,12 @@
 **产品愿景（扩展）**：底层可演进为**多语言 Reading Coach**；**German Reading Coach** 为德语实例；**英语**为优先扩展语言（习得维度与 CEFR 见 **[`docs/PRD.md`](./docs/PRD.md) §1.5**）。**母语 / 解释语言 / 目标语言**三维度见 **§1.5.6**。**真实 AI 词汇/语法推荐**的产品原则（读前理解、数量控制、专名过滤、CEFR 侧重、**`level_estimate`** 含义）见 **§13**；Phase 3.0 Mock 不用于评估最终质量。**当前主线仍为德语 MVP**；多语言 **`language` 字段**仅见 **[`docs/DATABASE.md`](./docs/DATABASE.md) §10.7** 规划，**未改 schema**。
 
 - **正式产品需求**（PRD）：[`docs/PRD.md`](./docs/PRD.md)（**§1.0** 目标用户与核心价值；**§5.1–§5.3**：学习中 / 已掌握 / **暂忽略** / **删除**；**§8.1.1** 广义 lexical item；**§12.8** 删除文章（未来）：文章级数据 vs 长期词库主记录；**§12.5** 总词库今日「新增 / 再次遇到」规则；**§13** / **§13.6** AI 推荐规则与软上限）
+- **用户说明手册（素材稿；含阅读页、掌握状态、AI 规则与实现对照）**：[`docs/USER_MANUAL.md`](./docs/USER_MANUAL.md)
 - **阅读页高亮、重叠与选区**（用户手册素材）：[`docs/READING_HIGHLIGHTS_AND_OVERLAPS.md`](./docs/READING_HIGHLIGHTS_AND_OVERLAPS.md)
 - **数据库设计（Phase 2）**：[`docs/DATABASE.md`](./docs/DATABASE.md) · SQL：[`supabase/schema.sql`](./supabase/schema.sql)
 - **个人使用检查清单**：[`docs/PERSONAL_USE_CHECKLIST.md`](./docs/PERSONAL_USE_CHECKLIST.md)（本地启动、Supabase SQL、OpenAI Key、日常完整流程与常见问题）
 - **导入主卡讨论备忘**：**[`docs/IMPORT_UI_DISCUSSION.md`](./docs/IMPORT_UI_DISCUSSION.md)**（来源稿 / 剪贴板 / 历史「重新整理」取舍）；对照示意 **`/import/mock`**。
+- **用户调研开放问题**（产品未决、可摘题做问卷/访谈）：[`docs/USER_RESEARCH_OPEN_QUESTIONS.md`](./docs/USER_RESEARCH_OPEN_QUESTIONS.md)
 - 开发记录：[`DEVELOPMENT_LOG.md`](./DEVELOPMENT_LOG.md)
 - 项目状态：[`PROJECT_STATUS.md`](./PROJECT_STATUS.md)
 
@@ -27,7 +29,7 @@
 - **阅读页** **`/articles/[id]`**：**左侧原文高亮**；**右侧 Tabs**：词汇 / 语法 / 摘要 / 阅读问题；移动端点击词汇高亮优先打开应用内详情；**语法高亮（蓝 / 紫）内可拖选子串**加入词库，无选区时轻点仍打开语法说明。
 - **阅读页词汇统计**：本篇词汇区显示「生词数（去重，含暂忽略）/ 全文总词数（不去重）/ 生词占比」；口径为：同词在卡片反复出现只算 1 个生词，`mastered`、已删除与未标注不计入生词。
 - **删除文章 v1**：`/articles/[id]` 支持删除文章；删除 `articles` 与该文章关联的 `vocabulary_occurrences` / `grammar_occurrences`，保留长期 `vocabulary_items` / `vocabulary_senses` / `grammar_items`。
-- **手动添加词汇、手动添加语法**；**真实 OpenAI** **`/api/analyze-article`**（服务端通过 **undici + IPv4** 调用 `api.openai.com`，减轻部分 Windows 环境下默认 `fetch` 连接失败；错误响应会附带底层 `cause` 说明；结构化词汇含 **`grammatical_gender`**（名词 m/f/n 等），写入 **`vocabulary_items.gender`**）；**预览后确认保存** → AI 词汇/语法入库（**`source = ai`**）；**摘要三字段 + `reading_questions`** 写入 **`articles`**（**`007`**）。**AI 预览与阅读页词汇主标题**：在 **`grammatical_gender` 为 m/f/n** 且 lemma 未带 **der/die/das** 时自动显示 **定冠词 + 词典形**（如 **die Gymiprüfung**），lemma 已含冠词则不再重复。词汇入库时 **`vocabulary_items.lemma`** 保留 AI 词典形（如名词 **das …**），**不**用句中 `display_word` 覆盖。
+- **手动添加词汇、手动添加语法**；**真实 OpenAI** **`/api/analyze-article`**（请求须 **`Authorization: Bearer <Supabase 会话 access_token>`**，与 **`enrich-*`** 一致；服务端按当前用户总词库 **`vocabulary_items`** 中 **已掌握 / 暂忽略** 的 **`normalized_key` + `part_of_speech`** 与总语法库 **`grammar_items`** 中 **已掌握 / 暂忽略** 的 **`grammar_key` + `normalized_key`** 在提示中说明，并对返回的 **`vocabulary`** / **`grammar`** 分别做后处理剔除；**`json_schema`** 中每条 grammar 须含 **`normalized_key`**；服务端通过 **undici + IPv4** 调用 `api.openai.com`，减轻部分 Windows 环境下默认 `fetch` 连接失败；错误响应会附带底层 `cause` 说明；结构化词汇含 **`grammatical_gender`**（名词 m/f/n 等），写入 **`vocabulary_items.gender`**）；**预览后确认保存** → AI 词汇/语法入库（**`source = ai`**）；**摘要三字段 + `reading_questions`** 写入 **`articles`**（**`007`**）。**AI 预览与阅读页词汇主标题**：在 **`grammatical_gender` 为 m/f/n** 且 lemma 未带 **der/die/das** 时自动显示 **定冠词 + 词典形**（如 **die Gymiprüfung**），lemma 已含冠词则不再重复。词汇入库时 **`vocabulary_items.lemma`** 保留 AI 词典形（如名词 **das …**），**不**用句中 `display_word` 覆盖。
 - **手动添加项**：缺失解释时可 **「补充 AI 解释」**（**`/api/enrich-vocabulary`** / **`enrich-grammar`**）；**不**在普通卡提供 App 内「重新生成解释」。
 - **外部深入解释**（词汇/语法卡）：ChatGPT / Claude / Gemini / DeepSeek / 仅复制 Prompt（**不调本应用 OpenAI、不入库**）；点击后直接跳转，并在页面提示“点击后会自动复制深度学习 Prompt，可在外部页面直接 `Ctrl+V` 粘贴发送”。
 - **我的深度笔记**（词汇/语法卡）：用户可从外部 AI 复制解释后粘贴保存，或从剪贴板读取到笔记框；在文章详情卡内默认折叠，减少空白占位，并位于学习状态操作之后；保存前会清理常见 Markdown 标记（如 `##`、`**`、`>`）以及手机剪贴板可能带来的不可见控制字符，以普通笔记文本显示；只写 Supabase，不调用本应用 AI API；须执行 **`supabase/fixes/008_learning_item_deep_notes.sql`** 才能保存。

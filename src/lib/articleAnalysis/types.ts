@@ -26,6 +26,8 @@ export type AnalyzedVocabularyItem = {
 
 export type AnalyzedGrammarItem = {
   grammar_key: string;
+  /** 与 `grammar_key` 共同对应总库唯一键；可与 grammar_key 不同以区分同大概念下小难点 */
+  normalized_key: string;
   selected_text: string;
   name_de: string;
   name_zh: string;

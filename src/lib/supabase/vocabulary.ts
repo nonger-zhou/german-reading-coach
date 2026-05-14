@@ -13,16 +13,13 @@ import {
 } from "@/lib/supabase/vocabularyItemUniqueKey";
 import { mergeLemmaForVocabularyPersist } from "@/lib/supabase/vocabularyLemmaMerge";
 import { parseGrammaticalGender } from "@/lib/vocabulary/grammaticalGender";
+import { vocabPartOfSpeechForDb } from "./vocabPartOfSpeechForDb";
 
 const DB_SOURCE_MANUAL = "manual";
 const DB_SOURCE_AI_MOCK = "ai_mock";
 const DB_SOURCE_AI = "ai";
 
-/** DB `part_of_speech`：空串参与唯一约束；兼容阅读页旧文案「用户添加」 */
-export function vocabPartOfSpeechForDb(ui: string): string {
-  if (!ui || ui.trim() === "" || ui === "用户添加") return "";
-  return ui.trim();
-}
+export { vocabPartOfSpeechForDb };
 
 export function mapDbVocabSourceToArticle(
   source: string | null,
@@ -109,12 +106,49 @@ type VocabularyOccurrenceRow = {
   source: string | null;
 };
 
-/** 加载当前用户在指定文章上的词汇（source = manual / ai_mock / ai） */
+const VOCAB_MASTERED_IGNORED_PAGE = 1000;
+
+/**
+ * 整文分析：拉取当前用户总词库中 **已掌握 / 暂忽略** 的
+ * `normalized_key` + `part_of_speech`（分页全量，顺序稳定）。
+ */
+export async function fetchVocabularyMasteredIgnoredKeysForArticleAnalysis(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<{
+  rows: Array<{ normalized_key: string | null; part_of_speech: string | null }>;
+  error: string | null;
+}> {
+  const rows: Array<{
+    normalized_key: string | null;
+    part_of_speech: string | null;
+  }> = [];
+  let from = 0;
+  for (;;) {
+    const { data, error } = await supabase
+      .from("vocabulary_items")
+      .select("normalized_key, part_of_speech")
+      .eq("user_id", userId)
+      .in("mastery_status", ["mastered", "ignored"])
+      .order("id", { ascending: true })
+      .range(from, from + VOCAB_MASTERED_IGNORED_PAGE - 1);
+    if (error) {
+      return { rows: [], error: formatSupabaseOrUnknownError(error) };
+    }
+    const batch = data ?? [];
+    rows.push(...batch);
+    if (batch.length < VOCAB_MASTERED_IGNORED_PAGE) break;
+    from += VOCAB_MASTERED_IGNORED_PAGE;
+  }
+  return { rows, error: null };
+}
+
 function vocabularyGenderForDb(item: ArticleVocabItem): string | null {
   const g = parseGrammaticalGender(item.grammatical_gender);
   return g === "na" ? null : g;
 }
 
+/** 加载当前用户在指定文章上的词汇（source = manual / ai_mock / ai） */
 export async function fetchArticleManualVocabulary(
   supabase: SupabaseClient,
   articleId: string,

@@ -1,5 +1,8 @@
 import type { CefrLevel } from "@/lib/types";
-import { findBestTextOccurrence } from "@/lib/articleReadingModel";
+import {
+  findBestTextOccurrence,
+  normalizeTextKey,
+} from "@/lib/articleReadingModel";
 import type {
   AnalyzedGrammarItem,
   AnalyzedVocabularyItem,
@@ -66,17 +69,15 @@ function withOccFromPlain(
 
 function grammarHit(
   plain: string,
-  key: string,
-  selected: string,
-  rest: Omit<AnalyzedGrammarItem, "grammar_key" | "selected_text" | "occurrences">,
+  cand: Omit<AnalyzedGrammarItem, "occurrences">,
 ): AnalyzedGrammarItem | null {
-  const occ = findBestTextOccurrence(plain, selected, 0);
+  const needle = cand.selected_text.trim();
+  const occ = findBestTextOccurrence(plain, needle, 0);
   if (!occ) return null;
   return {
-    grammar_key: key,
+    ...cand,
     selected_text: plain.slice(occ.start, occ.end),
     occurrences: [{ start_offset: occ.start, end_offset: occ.end }],
-    ...rest,
   };
 }
 
@@ -120,6 +121,7 @@ export function mockAnalyzeArticle(params: {
   const grammarCandidates: Omit<AnalyzedGrammarItem, "occurrences">[] = [
     {
       grammar_key: "mock_konjunktiv_redetext",
+      normalized_key: normalizeTextKey("mock_konjunktiv_redetext"),
       selected_text: "sich mit Haut und Haar",
       name_de: "Reflexiv + Präpositionalphrase (Mock)",
       name_zh: "反身动词与介词短语（示例）",
@@ -133,6 +135,7 @@ export function mockAnalyzeArticle(params: {
     },
     {
       grammar_key: "mock_partizip_gruppe",
+      normalized_key: normalizeTextKey("mock_partizip_gruppe"),
       selected_text: "blitzgescheit",
       name_de: "Adjektivkompositum (Mock)",
       name_zh: "复合形容词（示例）",
@@ -145,6 +148,7 @@ export function mockAnalyzeArticle(params: {
     },
     {
       grammar_key: "mock_nebensatz",
+      normalized_key: normalizeTextKey("mock_nebensatz"),
       selected_text: "dass",
       name_de: "Nebensatz mit „dass“ (Mock)",
       name_zh: "dass 从句（示例）",
@@ -158,8 +162,7 @@ export function mockAnalyzeArticle(params: {
 
   const grammar: AnalyzedGrammarItem[] = [];
   for (const g of grammarCandidates) {
-    const needle = g.selected_text.trim();
-    const hit = grammarHit(plain, g.grammar_key, needle, g);
+    const hit = grammarHit(plain, g);
     if (hit) grammar.push(hit);
     if (grammar.length >= 3) break;
   }

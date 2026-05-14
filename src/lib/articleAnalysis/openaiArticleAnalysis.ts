@@ -1,6 +1,7 @@
 import type { AnalyzedVocabularyItem, ArticleAnalysisResult } from "./types";
 import type { CefrLevel } from "@/lib/types";
 import { parseGrammaticalGender } from "@/lib/vocabulary/grammaticalGender";
+import { normalizeTextKey } from "@/lib/articleReadingModel";
 
 /** 单次请求正文上限（字符数）。后续可做分块分析。 */
 export const OPENAI_ANALYSIS_TEXT_CHAR_LIMIT = 10_000;
@@ -68,6 +69,7 @@ userLevel 表示本次分析使用的学习者水平（若调用方未指定则�
 3. 每个 vocabulary.surface_form、grammar.selected_text 必须是所给原文中的真实连续子串（区分大小写与变音符号，与原文完全一致）。
 4. 不要编造原文中不存在的词或例句；example_sentence 可摘自原文或基于原文片段的简短引用。
 5. normalized_key：词汇的小写归一化键（可去重参考，如 lemma 小写或规范形式）。
+6. grammar 每条必须包含 **grammar_key** 与 **normalized_key**：二者与用户总语法库唯一键 **(grammar_key, normalized_key)** 对齐；均须小写归一化、折叠多余空白（与词汇 normalized_key 规则一致）。**grammar_key** 表示大概念标签（如从句类型）；**normalized_key** 表示该条「语法记录」的稳定子键，可与 grammar_key 相同，或在同一概念下用更细的归一化片段区分不同难点；**不要**与 vocabulary 的 normalized_key 字段混用语义。
 
 【grammatical_gender 字段（硬性，与 JSON schema 枚举一致）】
 每条 vocabulary 必须输出 **grammatical_gender**，仅取：**na** | **m** | **f** | **n** | **unclear**。
@@ -92,14 +94,23 @@ export function buildOpenAIAnalysisUserContent(params: {
   title: string;
   originalText: string;
   userLevel: CefrLevel;
+  /** 已掌握/暂忽略词汇键说明（OpenAI user 消息附加段） */
+  vocabLibraryBlockAppendix?: string;
+  /** 已掌握/暂忽略语法键说明（OpenAI user 消息附加段） */
+  grammarLibraryBlockAppendix?: string;
 }): string {
-  return `userLevel: ${params.userLevel}
+  const base = `userLevel: ${params.userLevel}
 
 title:
 ${params.title}
 
 originalText:
 ${params.originalText}`;
+  const extras = [params.vocabLibraryBlockAppendix, params.grammarLibraryBlockAppendix]
+    .map((s) => (typeof s === "string" ? s.trim() : ""))
+    .filter(Boolean);
+  if (!extras.length) return base;
+  return `${base}\n\n${extras.join("\n\n")}`;
 }
 
 export function normalizeOpenAIArticleAnalysis(
@@ -109,7 +120,6 @@ export function normalizeOpenAIArticleAnalysis(
     throw new Error("分析结果格式无效");
   }
   const o = raw as Record<string, unknown>;
-  const grammar = Array.isArray(o.grammar) ? o.grammar : [];
   const reading_questions = Array.isArray(o.reading_questions)
     ? o.reading_questions.filter((x) => typeof x === "string")
     : [];
@@ -127,11 +137,28 @@ export function normalizeOpenAIArticleAnalysis(
   );
   const voc =
     vocSanitized.length > 20 ? vocSanitized.slice(0, 20) : vocSanitized;
-  const gra = grammar as ArticleAnalysisResult["grammar"];
+
+  const graRaw = Array.isArray(o.grammar) ? o.grammar : [];
+  const graSanitized: ArticleAnalysisResult["grammar"] = graRaw.map((row) => {
+    const r = row as Record<string, unknown>;
+    const gk = typeof r.grammar_key === "string" ? r.grammar_key : "";
+    const nkIn = typeof r.normalized_key === "string" ? r.normalized_key : "";
+    const nk = nkIn.trim()
+      ? normalizeTextKey(nkIn)
+      : normalizeTextKey(gk);
+    const base = r as unknown as ArticleAnalysisResult["grammar"][0];
+    return {
+      ...base,
+      grammar_key: gk,
+      normalized_key: nk,
+    };
+  });
+  const gra =
+    graSanitized.length > 8 ? graSanitized.slice(0, 8) : graSanitized;
 
   return {
     vocabulary: voc,
-    grammar: gra.length > 8 ? gra.slice(0, 8) : gra,
+    grammar: gra,
     summary_zh: typeof o.summary_zh === "string" ? o.summary_zh : "",
     summary_de_simple:
       typeof o.summary_de_simple === "string" ? o.summary_de_simple : "",

@@ -140,7 +140,7 @@ export function convertAnalysisResultToArticleItems(
     );
     if (!occ) continue;
 
-    const nk = normalizeTextKey(ag.grammar_key);
+    const nk = normalizeTextKey(ag.normalized_key || ag.grammar_key);
     grammar.push({
       id: newEntityId("g-item"),
       dbItemId: null,

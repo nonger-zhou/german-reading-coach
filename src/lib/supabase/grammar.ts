@@ -86,6 +86,43 @@ type GrammarOccurrenceRow = {
   source: string | null;
 };
 
+const GRAMMAR_MASTERED_IGNORED_PAGE = 1000;
+
+/**
+ * 整文分析：拉取当前用户总语法库中 **已掌握 / 暂忽略** 的
+ * `grammar_key` + `normalized_key`（分页全量，顺序稳定）。
+ */
+export async function fetchGrammarMasteredIgnoredKeysForArticleAnalysis(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<{
+  rows: Array<{ grammar_key: string | null; normalized_key: string | null }>;
+  error: string | null;
+}> {
+  const rows: Array<{
+    grammar_key: string | null;
+    normalized_key: string | null;
+  }> = [];
+  let from = 0;
+  for (;;) {
+    const { data, error } = await supabase
+      .from("grammar_items")
+      .select("grammar_key, normalized_key")
+      .eq("user_id", userId)
+      .in("mastery_status", ["mastered", "ignored"])
+      .order("id", { ascending: true })
+      .range(from, from + GRAMMAR_MASTERED_IGNORED_PAGE - 1);
+    if (error) {
+      return { rows: [], error: formatSupabaseOrUnknownError(error) };
+    }
+    const batch = data ?? [];
+    rows.push(...batch);
+    if (batch.length < GRAMMAR_MASTERED_IGNORED_PAGE) break;
+    from += GRAMMAR_MASTERED_IGNORED_PAGE;
+  }
+  return { rows, error: null };
+}
+
 export async function fetchArticleManualGrammar(
   supabase: SupabaseClient,
   articleId: string,

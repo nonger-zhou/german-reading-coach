@@ -76,6 +76,79 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-05-14 — 整文分析：总语法库已掌握 / 暂忽略过滤（grammar_key + normalized_key）
+
+**本次完成**
+
+- **`POST /api/analyze-article`**：并行拉取 **`grammar_items`** 已掌握/暂忽略行的 **`grammar_key` + `normalized_key`**；**user** 消息附加说明（>200 条时仅列前 200 示意）；对 **`grammar`** **后处理剔除**；**`warning`** 另计语法剔除条数。失败码 **`grammar_filter_fetch_failed`**。
+- **结构化输出**：**`articleAnalysisJsonSchema`** / **`AnalyzedGrammarItem`** 增加必填 **`normalized_key`**；**`SYSTEM_PROMPT`** 硬性要求 6（模板字符串内避免未转义反引号）；**`normalizeOpenAIArticleAnalysis`** 归一缺省 **`normalized_key`**；**`convertAnalysisToArticleItems`** 使用 **`ag.normalized_key || ag.grammar_key`** 写入库侧 **`normalized_key`**；**`mockAnalyzeArticle`** 同步。
+- **实现模块**：**`src/lib/articleAnalysis/filterGrammarByUserLibrary.ts`** + 测试；**`fetchGrammarMasteredIgnoredKeysForArticleAnalysis`**（**`grammar.ts`**）；**`buildOpenAIAnalysisUserContent`** 支持词汇 + 语法两段附录。
+- **阅读页**：AI 预览语法列表 **React key** 含 **`normalized_key`**。
+- **文档**：**`docs/PRD.md`**、**`docs/USER_MANUAL.md` §9**、**`README.md`**、**`docs/USER_RESEARCH_OPEN_QUESTIONS.md` Q1**。
+
+**验证**
+
+- `npm test`、`npm run build`：已通过。
+
+### 2026-05-14 — 文档：`USER_RESEARCH_OPEN_QUESTIONS.md`（用户调研开放问题）
+
+**本次完成**
+
+- **`docs/USER_RESEARCH_OPEN_QUESTIONS.md`**：汇集语法过滤粒度、总库展示、键一致性与话术、暂忽略权重、长文分析说明等**可摘题**条目；约定与 **PRD** 关系及维护方式。
+- **`README.md`**、**`docs/USER_MANUAL.md` §14**：增加索引链接。
+
+**验证**
+
+- `npm run build`：已通过。
+
+### 2026-05-14 — 整文分析：总词库已掌握 / 暂忽略词汇过滤
+
+**本次完成**
+
+- **`POST /api/analyze-article`**：与 **`enrich-*`** 一致，**须** **`Authorization: Bearer`**；服务端读取当前用户 **`vocabulary_items`** 中 **`mastery_status ∈ { mastered, ignored }`** 的 **`normalized_key` + `part_of_speech`**（分页全量），在 OpenAI **user** 消息中附加说明（>200 条时仅列前 200 条示意，**全量参与后处理**），并对模型返回的 **`vocabulary`** 做**后处理剔除**；剔除条数写入 **`warning`**。学习中及不同词性的另一条词汇记录不受影响；**`grammar`** 未做同类过滤。
+- **`/articles/[id]`**：真实 AI 分析 **`fetch`** 携带 **`Authorization`**；无 **`access_token`** 时提示重新登录。
+- **实现模块**：**`src/lib/articleAnalysis/filterVocabularyByUserLibrary.ts`**、**`src/lib/supabase/vocabPartOfSpeechForDb.ts`**（从 **`vocabulary.ts`** 抽出 **`vocabPartOfSpeechForDb`** 供共用）、**`fetchVocabularyMasteredIgnoredKeysForArticleAnalysis`**；**`openaiArticleAnalysis.buildOpenAIAnalysisUserContent`** 支持可选附录。
+- **测试**：**`src/lib/articleAnalysis/filterVocabularyByUserLibrary.test.ts`**。
+- **文档**：**`docs/PRD.md`**（**§13.5**、Phase 3.1 段）、**`docs/USER_MANUAL.md` §9**、**`README.md`**。
+
+**验证**
+
+- `npm test`、`npm run build`：已通过。
+
+### 2026-05-14 — 文档：对外用语统一为「两条词汇记录」
+
+**本次完成**
+
+- **`docs/USER_MANUAL.md`**：新增 **§10.1**（同一写法、不同 **`part_of_speech`** 时对应**两条词汇记录**；对外统一该说法，避免「学习档」）；**§7** 词汇与语法重叠处改为「词汇标注与语法标注可同时存在」；**§15** Backlog 描述与「两条（或多条）词汇记录」对齐。
+- **`PROJECT_STATUS.md`**：Backlog 表内分组 UI 说明改为「各条词汇记录」，并写明对用户统一称**「两条词汇记录」**。
+
+**验证**
+
+- `npm run build`：已通过。
+
+### 2026-05-14 — 文档：总词库「同键分组搜索」记入 Backlog + 用户手册 §15
+
+**本次完成**
+
+- **`PROJECT_STATUS.md`**：新增「**待开发 / 产品 Backlog**」表，记录总词库搜索下同 **`normalized_key`**、多 **`part_of_speech`** 时**两条词汇记录**的**分组展示**加分项（组头 + 子行列表；无分组前并列即可）。
+- **`docs/USER_MANUAL.md` §15**：与上述 Backlog 交叉引用。
+
+**验证**
+
+- `npm run build`：已通过。
+
+### 2026-05-14 — 文档：`USER_MANUAL.md` 用户说明手册素材（创建并大幅扩充）
+
+**本次完成**
+
+- **`docs/USER_MANUAL.md`**：新建并扩充为对外手册**素材稿**——含导入「正文 / 来源稿」、导入方式、账户入口、阅读页总览、**CEFR 本篇与默认水平**、高亮重叠与**先词后语法**、选区手动添加、**整文 AI 分析流程**与数量原则、**学习中 / 已掌握 / 暂忽略 / 删除**语义、**§9 产品目标 vs 当前实现**（整文分析 API 尚未传入总词库已掌握/暂忽略列表作硬过滤；与 PRD **§13.5** 未来动态反馈对齐说明）、总词库/语法库、摘要与深度笔记、删文、合规与文档索引；**§15** 截图与错误码占位；**协作约定**（后续整理为正式手册）。
+- **`README.md`**：文档索引增加/更新 **`docs/USER_MANUAL.md`** 描述。
+- **`docs/IMPORT_UI_DISCUSSION.md`**：文首链至 **`USER_MANUAL.md` §1**。
+
+**验证**
+
+- `npm run build`：已通过。
+
 ### 2026-05-14 — 文档：Supabase Data API 显式 `GRANT`（2026 平台变更）
 
 **本次完成**

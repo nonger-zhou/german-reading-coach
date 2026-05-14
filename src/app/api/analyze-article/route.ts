@@ -3,10 +3,15 @@ import {
   createServerOpenAIClient,
   formatOpenAIRouteErrorMessage,
 } from "@/lib/openai/createServerOpenAIClient";
-
-/** 整文分析可能接近分钟级，放宽服务端限时（部署平台支持时生效） */
-export const maxDuration = 180;
 import { ARTICLE_ANALYSIS_JSON_SCHEMA } from "@/lib/articleAnalysis/articleAnalysisJsonSchema";
+import {
+  filterArticleAnalysisGrammarByBlockedSet,
+  formatGrammarLibraryBlockPromptFromRows,
+} from "@/lib/articleAnalysis/filterGrammarByUserLibrary";
+import {
+  filterArticleAnalysisVocabularyByBlockedSet,
+  formatVocabLibraryBlockPromptFromRows,
+} from "@/lib/articleAnalysis/filterVocabularyByUserLibrary";
 import {
   buildOpenAIAnalysisUserContent,
   normalizeOpenAIArticleAnalysis,
@@ -14,7 +19,13 @@ import {
   truncateForOpenAIAnalysis,
 } from "@/lib/articleAnalysis/openaiArticleAnalysis";
 import type { ArticleAnalysisResult } from "@/lib/articleAnalysis/types";
+import { getSupabaseUserFromBearer } from "@/lib/supabase/routeFromBearer";
+import { fetchGrammarMasteredIgnoredKeysForArticleAnalysis } from "@/lib/supabase/grammar";
+import { fetchVocabularyMasteredIgnoredKeysForArticleAnalysis } from "@/lib/supabase/vocabulary";
 import type { CefrLevel } from "@/lib/types";
+
+/** 整文分析可能接近分钟级，放宽服务端限时（部署平台支持时生效） */
+export const maxDuration = 180;
 
 const LEVELS: CefrLevel[] = ["A1", "A2", "B1", "B2", "C1", "C2"];
 
@@ -104,6 +115,63 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
     );
   }
 
+  const auth = await getSupabaseUserFromBearer(req);
+  if (!auth.ok) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          message: auth.message,
+          code: "unauthorized",
+        },
+      },
+      { status: auth.status },
+    );
+  }
+
+  const [vocabRes, grammarRes] = await Promise.all([
+    fetchVocabularyMasteredIgnoredKeysForArticleAnalysis(
+      auth.supabase,
+      auth.user.id,
+    ),
+    fetchGrammarMasteredIgnoredKeysForArticleAnalysis(
+      auth.supabase,
+      auth.user.id,
+    ),
+  ]);
+
+  if (vocabRes.error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          message: vocabRes.error,
+          code: "vocabulary_filter_fetch_failed",
+        },
+      },
+      { status: 502 },
+    );
+  }
+  if (grammarRes.error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          message: grammarRes.error,
+          code: "grammar_filter_fetch_failed",
+        },
+      },
+      { status: 502 },
+    );
+  }
+
+  const { blockLines: vocabLibraryBlockAppendix, blockedSet } =
+    formatVocabLibraryBlockPromptFromRows(vocabRes.rows);
+  const {
+    blockLines: grammarLibraryBlockAppendix,
+    blockedSet: grammarBlockedSet,
+  } = formatGrammarLibraryBlockPromptFromRows(grammarRes.rows);
+
   const { text: textForModel, truncated } =
     truncateForOpenAIAnalysis(originalText);
   const warnings: string[] = [];
@@ -129,6 +197,8 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
             title,
             originalText: textForModel,
             userLevel,
+            vocabLibraryBlockAppendix,
+            grammarLibraryBlockAppendix,
           }),
         },
       ],
@@ -169,7 +239,30 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
       );
     }
 
-    const analysis = normalizeOpenAIArticleAnalysis(parsed);
+    let analysis = normalizeOpenAIArticleAnalysis(parsed);
+    const { vocabulary: vocFiltered, removedCount: vocabRemoved } =
+      filterArticleAnalysisVocabularyByBlockedSet(
+        analysis.vocabulary,
+        blockedSet,
+      );
+    if (vocabRemoved > 0) {
+      analysis = { ...analysis, vocabulary: vocFiltered };
+      warnings.push(
+        `已按您总词库中「已掌握 / 暂忽略」记录剔除 ${vocabRemoved} 条词汇推荐（与 normalized_key + 词性完全一致）。`,
+      );
+    }
+
+    const { grammar: graFiltered, removedCount: grammarRemoved } =
+      filterArticleAnalysisGrammarByBlockedSet(
+        analysis.grammar,
+        grammarBlockedSet,
+      );
+    if (grammarRemoved > 0) {
+      analysis = { ...analysis, grammar: graFiltered };
+      warnings.push(
+        `已按您总语法库中「已掌握 / 暂忽略」记录剔除 ${grammarRemoved} 条语法推荐（与 grammar_key + normalized_key 完全一致）。`,
+      );
+    }
 
     const payload: OkBody = {
       ok: true,
