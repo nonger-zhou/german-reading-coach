@@ -6,6 +6,8 @@
 
 **技术底座**：远程 **Supabase** 已执行 [`supabase/schema.sql`](./supabase/schema.sql)（**7 张表**）；**`@supabase/supabase-js`**、[`.env.example`](./.env.example)、**`/settings/supabase-test`**；**Auth + `profiles`**（RLS **`001`**、GRANT **`002`**）；**`articles` GRANT/RLS `003`/`004`**；词汇/语法 **`005`/`006`**；深度笔记字段 **`008`**（`vocabulary_items` / `grammar_items` 的 `user_deep_note`，未执行时旧词汇/语法功能仍应可用）。**`/import`** 将清洗正文写入 **`articles.original_text`**（元信息入正文前部，无独立 `author`/`published_at` 列）。**`OPENAI_API_KEY`** 仅服务端（本地 **`.env.local`**；线上通过 Vercel Environment Variables）。**Vercel Production** 已部署：[`https://german-reading-coach.vercel.app`](https://german-reading-coach.vercel.app)。**`/articles/mock`** 为**演示**阅读器；真实学习数据在 **`/articles/[id]`**。时间字段与 **read_status** 规划见 **PRD §2.1、§12** 与 **DATABASE §10**。路线图见 **PRD §1.4**，进度见 [`PROJECT_STATUS.md`](./PROJECT_STATUS.md)。
 
+**Supabase（2026 平台）**：在 `public` 新建表时须在迁移里**显式 `GRANT`**（并配 RLS），否则经 Data API 的读写可能报 **`42501`**；时间表与约定见 **[`docs/DATABASE.md`](./docs/DATABASE.md)**「**Supabase 平台变更：Data API 与 `public` 表的显式 `GRANT`**」。
+
 **产品愿景（扩展）**：底层可演进为**多语言 Reading Coach**；**German Reading Coach** 为德语实例；**英语**为优先扩展语言（习得维度与 CEFR 见 **[`docs/PRD.md`](./docs/PRD.md) §1.5**）。**母语 / 解释语言 / 目标语言**三维度见 **§1.5.6**。**真实 AI 词汇/语法推荐**的产品原则（读前理解、数量控制、专名过滤、CEFR 侧重、**`level_estimate`** 含义）见 **§13**；Phase 3.0 Mock 不用于评估最终质量。**当前主线仍为德语 MVP**；多语言 **`language` 字段**仅见 **[`docs/DATABASE.md`](./docs/DATABASE.md) §10.7** 规划，**未改 schema**。
 
 - **正式产品需求**（PRD）：[`docs/PRD.md`](./docs/PRD.md)（**§1.0** 目标用户与核心价值；**§5.1–§5.3**：学习中 / 已掌握 / **暂忽略** / **删除**；**§8.1.1** 广义 lexical item；**§12.8** 删除文章（未来）：文章级数据 vs 长期词库主记录；**§12.5** 总词库今日「新增 / 再次遇到」规则；**§13** / **§13.6** AI 推荐规则与软上限）

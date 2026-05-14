@@ -45,6 +45,17 @@
 - **RLS 与表级 GRANT（重要）**：二者同时需要。**RLS** 决定「哪些行可见」；**`GRANT … ON public.profiles TO authenticated`** 决定 **`authenticated` 角色能否对表执行 SELECT/INSERT/UPDATE/DELETE**。若仅有 policy 而无 GRANT，已登录用户仍可能收到 **`permission denied for table profiles`（42501）**。本仓库在 **`schema.sql`** 与 [`supabase/fixes/002_profiles_grants_fix.sql`](../supabase/fixes/002_profiles_grants_fix.sql) 中为 **`authenticated`** 授予 **`profiles`** 的 **SELECT, INSERT, UPDATE, DELETE**。**不向 `anon` 授予 `profiles`**：个人资料仅允许登录用户访问；**`/settings/supabase-test`** 在未登录时对 `profiles` 的探测仍预期失败（与 RLS 共同作用）。
 - **后续**：在应用中完成 **登录与会话** 后，可用同一测试页或业务页验证「已登录用户可读自身 profile」。**截至 2026-05-02**：**Phase 2.2** 已在 **`/account`** 上验证 **Auth + profile 读取**（见上「Phase 2.2 验证状态」）。
 
+### Supabase 平台变更：Data API 与 `public` 表的显式 `GRANT`（2026）
+
+Supabase 会收紧 **PostgREST / Data API** 对 **`public` schema** 内表的默认暴露策略：**仅当显式授权后**，`supabase-js`、REST、GraphQL 才能访问对应表；缺授权时常见 **`42501`（permission denied）**，控制台或错误 hint 可能提示需 **`GRANT … TO anon` / `authenticated` / `service_role`**。
+
+- **时间表（以 Supabase 官方邮件与项目控制台为准）**：**新建 Supabase 项目**自约 **2026-05-30** 起，新建表默认不再自动暴露给 Data API；**已有项目**自约 **2026-10-30** 起统一同一规则。**变更前已存在且已带 `GRANT` 的表**一般会保留现有权限；风险主要在 **此后新创建的表**若迁移脚本里只有 `CREATE TABLE` 而无 **`GRANT`**。
+- **本仓库约定**：任意新增 **`public`** 业务表时，在**同一迁移或 SQL 文件**中补齐：
+  1. **`ALTER TABLE … ENABLE ROW LEVEL SECURITY`** 与 **`CREATE POLICY`**（按 `user_id = auth.uid()` 等策略）；
+  2. **`GRANT SELECT, INSERT, UPDATE, DELETE ON public.<表名> TO authenticated`**（按业务需要增减动词；**勿**向前端暴露 **`service_role`**）；
+  3. 若确需匿名访问再 **`GRANT SELECT … TO anon`**（本项目的 **`profiles` / `articles` / 词汇语法主表`** 不向 **`anon`** 开放写或读个人数据，见上文各节）。
+- **参考**：根目录 [`supabase/schema.sql`](../supabase/schema.sql) 与各 [`supabase/fixes/*_grants*.sql`](../supabase/fixes/) 已体现「建表 + RLS + GRANT」模式；新建 fix 时请沿用 **可重复执行**（`IF NOT EXISTS` / `DROP POLICY IF EXISTS`）写法。
+
 ---
 
 ## Phase 2.2 Supabase Auth（邮箱密码）

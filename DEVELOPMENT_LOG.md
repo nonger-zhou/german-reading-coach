@@ -76,6 +76,17 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-05-14 — 文档：Supabase Data API 显式 `GRANT`（2026 平台变更）
+
+**本次完成**
+
+- **`docs/DATABASE.md`**：新增「**Supabase 平台变更：Data API 与 `public` 表的显式 `GRANT`（2026）**」小节（时间表、本仓库迁移约定、`schema.sql` / `fixes` 参考）。
+- **`README.md`**：技术底座段落下增加交叉引用至上述小节。
+
+**验证**
+
+- `npm run build`：已通过。
+
 ### 2026-05-13 — 跨已有词汇高亮拖选：`user-select: text` 与语法一致
 
 **本次完成**
