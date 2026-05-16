@@ -13,11 +13,15 @@ function sampleGrammar(
 ): AnalyzedGrammarItem {
   const level: CefrLevel = "B1";
   return {
+    grammar_type: "other",
     grammar_key: "x",
     normalized_key: "x",
     selected_text: "x",
     name_de: "x",
     name_zh: "x",
+    is_subordinate_clause: false,
+    finite_verb: "",
+    finite_verb_position: "unknown",
     level_estimate: level,
     explanation_zh: "",
     explanation_de_simple: "",

@@ -120,8 +120,12 @@ export function mockAnalyzeArticle(params: {
 
   const grammarCandidates: Omit<AnalyzedGrammarItem, "occurrences">[] = [
     {
-      grammar_key: "mock_konjunktiv_redetext",
+      grammar_type: "other",
+      grammar_key: "other",
       normalized_key: normalizeTextKey("mock_konjunktiv_redetext"),
+      is_subordinate_clause: false,
+      finite_verb: "",
+      finite_verb_position: "unknown",
       selected_text: "sich mit Haut und Haar",
       name_de: "Reflexiv + Präpositionalphrase (Mock)",
       name_zh: "反身动词与介词短语（示例）",
@@ -134,8 +138,12 @@ export function mockAnalyzeArticle(params: {
       reason_for_selection: "Mock：若文中出现典型片段则展示；否则跳过。",
     },
     {
-      grammar_key: "mock_partizip_gruppe",
+      grammar_type: "other",
+      grammar_key: "other",
       normalized_key: normalizeTextKey("mock_partizip_gruppe"),
+      is_subordinate_clause: false,
+      finite_verb: "",
+      finite_verb_position: "unknown",
       selected_text: "blitzgescheit",
       name_de: "Adjektivkompositum (Mock)",
       name_zh: "复合形容词（示例）",
@@ -147,8 +155,12 @@ export function mockAnalyzeArticle(params: {
       reason_for_selection: "Mock：依赖正文是否包含该表面形式。",
     },
     {
-      grammar_key: "mock_nebensatz",
+      grammar_type: "nebensatz",
+      grammar_key: "nebensatz",
       normalized_key: normalizeTextKey("mock_nebensatz"),
+      is_subordinate_clause: true,
+      finite_verb: "",
+      finite_verb_position: "unknown",
       selected_text: "dass",
       name_de: "Nebensatz mit „dass“ (Mock)",
       name_zh: "dass 从句（示例）",

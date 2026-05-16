@@ -484,6 +484,8 @@ export async function applyGrammarAiEnrichment(
   params: {
     userId: string;
     grammarItemId: string;
+    /** Grammar v2：与 grammar_type 对齐时更新库内 grammar_key */
+    grammar_key?: string;
     name_de: string;
     name_zh: string;
     explanation_zh: string;
@@ -494,6 +496,7 @@ export async function applyGrammarAiEnrichment(
   const {
     userId,
     grammarItemId,
+    grammar_key,
     name_de,
     name_zh,
     explanation_zh,
@@ -502,16 +505,20 @@ export async function applyGrammarAiEnrichment(
   } = params;
 
   try {
+    const patch: Record<string, unknown> = {
+      name_de,
+      name_zh,
+      explanation_zh,
+      explanation_de_simple,
+      level_estimate: level_estimate ?? null,
+      needs_ai_enrichment: false,
+    };
+    const gk = grammar_key?.trim();
+    if (gk) patch.grammar_key = gk;
+
     const { error } = await supabase
       .from("grammar_items")
-      .update({
-        name_de,
-        name_zh,
-        explanation_zh,
-        explanation_de_simple,
-        level_estimate: level_estimate ?? null,
-        needs_ai_enrichment: false,
-      })
+      .update(patch)
       .eq("id", grammarItemId)
       .eq("user_id", userId);
 

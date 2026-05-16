@@ -63,6 +63,7 @@ German Reading Coach
 
 ## 最近更新
 
+- **2026-05-15（Grammar Analysis v2 Phase 1）**：整文/enrich Prompt + `grammar_type` 枚举；入库 `grammar_key=grammar_type`；**`npm test`** / **`npm run build`** 已通过。
 - **2026-05-15（导入：发布时间不入正文）**：解析仍识别发布时间，仅填导入预览，不写入 **`original_text`**；**`npm run build`** 已通过。
 - **2026-05-15（手机可分动词拖选）**：词汇高亮触摸不再阻断拖选；松手保留多词选区；**`npm run build`** 已通过。
 - **2026-05-15（整文 AI 词汇推荐策略）**：取消词汇 **20 条**上限（Prompt + `json_schema` + 规范化）；去掉「漏掉次要词也比堆满简单词好」；重写 **part_of_speech / grammatical_gender** 指引（动词/搭配/可分动词不得一律标名词）；**`docs/PRD.md` §13.6**、**`USER_MANUAL` §7.2** 已同步；**`npm run build`** 已通过。

@@ -1,5 +1,11 @@
 import type { AnalyzedVocabularyItem, ArticleAnalysisResult } from "./types";
 import type { CefrLevel } from "@/lib/types";
+import { GRAMMAR_ANALYSIS_V2_SYSTEM_SECTION } from "@/lib/articleAnalysis/grammarAnalysisV2Prompt";
+import {
+  parseFiniteVerbPosition,
+  parseGrammarType,
+  parseIsSubordinateClause,
+} from "@/lib/articleAnalysis/grammarTypes";
 import { parseGrammaticalGender } from "@/lib/vocabulary/grammaticalGender";
 import { normalizeTextKey } from "@/lib/articleReadingModel";
 
@@ -44,27 +50,19 @@ const SYSTEM_PROMPT = `你是德语阅读学习助手。
 - 常见复数形式（如 die Mandate），可在 zh_meaning 或 simple_de_explanation 中简要写出。
 **不确定冠词或复数时不要编造**；宁可略写或标注「需查词典确认」。
 
-【语法推荐策略（最多 8 条）】
-优先推荐**明显影响理解**、尤其是对 **userLevel** 水平读者容易造成误解的结构，例如：
-- 长句、从句嵌套、关系从句
-- Konjunktiv I / II、间接引语
-- 被动态、不定式结构、功能动词结构等新闻报道中常见难点
-**不要**罗列过于基础、对理解本文帮助不大的语法标签。
-
 【用户水平 userLevel】
 userLevel 表示本次分析使用的学习者水平（若调用方未指定则常见默认为 B1）。你必须依据该水平判断哪些词汇与语法「值得推荐」：
 - A2：侧重基础词与基础结构，但仍遵守非凑数原则。
-- B1：新闻常见词、搭配、可分动词、复合名词、被动、从句等。
+- B1：新闻常见词、搭配、可分动词、复合名词、被动、主句 V2、从句、Konjunktiv 等——**不要把「语法」等同于「从句」**。
 - B2：减少过于基础的词，侧重抽象表达、长句、语气、Konjunktiv/间接引语、复杂结构。
 - C1/C2：仅在确有帮助时增加难度；grammar 仍不得超过 8 条。
+
+${GRAMMAR_ANALYSIS_V2_SYSTEM_SECTION}
 
 【每条 vocabulary 须在释义中交代清楚的要点】
 - lemma 尽量为词典形式；动词用不定式；名词尽量带冠词的规范形式（不确定则不瞎编）。
 - 说明属于哪类表达（可分动词、固定搭配、介词短语、复合名词等，择要）。
 - surface_form 若为句中变形或拆分形式，说明与 lemma 的对应关系。
-
-【grammar 与 vocabulary 的分工】
-若某片段更适合作为**语法结构**讲解（从句、语序、语态等），放入 grammar；若主要是**词汇 / 表达含义**学习，放入 vocabulary。同一位置不要重复堆砌。
 
 硬性要求：
 1. 不要推荐明显人名、地名、媒体名、公司名，除非它们本身有语言学习价值。
@@ -72,7 +70,7 @@ userLevel 表示本次分析使用的学习者水平（若调用方未指定则�
 3. 每个 vocabulary.surface_form、grammar.selected_text 必须是所给原文中的真实连续子串（区分大小写与变音符号，与原文完全一致）。
 4. 不要编造原文中不存在的词或例句；example_sentence 可摘自原文或基于原文片段的简短引用。
 5. normalized_key：词汇的小写归一化键（可去重参考，如 lemma 小写或规范形式）。
-6. grammar 每条必须包含 **grammar_key** 与 **normalized_key**：二者与用户总语法库唯一键 **(grammar_key, normalized_key)** 对齐；均须小写归一化、折叠多余空白（与词汇 normalized_key 规则一致）。**grammar_key** 表示大概念标签（如从句类型）；**normalized_key** 表示该条「语法记录」的稳定子键，可与 grammar_key 相同，或在同一概念下用更细的归一化片段区分不同难点；**不要**与 vocabulary 的 normalized_key 字段混用语义。
+6. grammar 每条输出 **grammar_type**（枚举）与 **normalized_key**；入库时 **grammar_key = grammar_type**。normalized_key 区分同一类型下的不同具体结构；须小写归一化、折叠多余空白。
 
 【part_of_speech 与 grammatical_gender（硬性，与 JSON schema 一致）】
 每条 vocabulary 须**同时**正确填写 **part_of_speech** 与 **grammatical_gender**。
@@ -155,16 +153,26 @@ export function normalizeOpenAIArticleAnalysis(
   const graRaw = Array.isArray(o.grammar) ? o.grammar : [];
   const graSanitized: ArticleAnalysisResult["grammar"] = graRaw.map((row) => {
     const r = row as Record<string, unknown>;
-    const gk = typeof r.grammar_key === "string" ? r.grammar_key : "";
+    const grammar_type = parseGrammarType(
+      r.grammar_type ?? r.grammar_key,
+    );
+    const grammar_key = grammar_type;
     const nkIn = typeof r.normalized_key === "string" ? r.normalized_key : "";
     const nk = nkIn.trim()
       ? normalizeTextKey(nkIn)
-      : normalizeTextKey(gk);
+      : normalizeTextKey(grammar_key);
     const base = r as unknown as ArticleAnalysisResult["grammar"][0];
     return {
       ...base,
-      grammar_key: gk,
+      grammar_type,
+      grammar_key,
       normalized_key: nk,
+      is_subordinate_clause: parseIsSubordinateClause(
+        r.is_subordinate_clause,
+      ),
+      finite_verb:
+        typeof r.finite_verb === "string" ? r.finite_verb.trim() : "",
+      finite_verb_position: parseFiniteVerbPosition(r.finite_verb_position),
     };
   });
   const gra =

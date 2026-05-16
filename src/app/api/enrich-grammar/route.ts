@@ -6,6 +6,12 @@ import {
 
 export const maxDuration = 120;
 import { GRAMMAR_ENRICHMENT_JSON_SCHEMA } from "@/lib/articleAnalysis/enrichmentJsonSchemas";
+import { GRAMMAR_ENRICH_V2_SYSTEM_SECTION } from "@/lib/articleAnalysis/grammarAnalysisV2Prompt";
+import {
+  parseFiniteVerbPosition,
+  parseGrammarType,
+  parseIsSubordinateClause,
+} from "@/lib/articleAnalysis/grammarTypes";
 import { snippetAroundOffsets } from "@/lib/articleAnalysis/enrichmentContext";
 import { validateGrammarLabel } from "@/lib/grammar/labelValidation";
 import { applyGrammarAiEnrichment } from "@/lib/supabase/grammar";
@@ -19,25 +25,27 @@ function isCefrLevel(s: unknown): s is CefrLevel {
 }
 
 const SYSTEM_PROMPT = `你是德语阅读教练。用户在文章中手动标记了一处语法现象，尚未有完整解释。请根据提供的标题、学习者水平、标记片段、出现句和原文短片段，输出语法说明。
-硬性要求：
-- explanation_zh 必须结合该出现句说明：这一语法结构在句中如何组织信息、如何影响读者对句意或语气、逻辑关系的理解。禁止只写「这是从句」「这是不定式」等过短、脱离上下文的套话；至少 2–3 句中文，且必须引用句中具体成分（可用引号标出德语片段）。
-- explanation_de_simple：用简单德语复述要点，初学者可懂。
-- name_de / name_zh：准确的语法点名称（如「关系从句」「情态动词 + 不定式」等），与句中用法一致。
-- 如果候选语法标签不准确，必须直接纠正，不要强行解释错误标签。
-- 例如：出现 "Es habe ... gefehlt" 时，主标签应为 Konjunktiv I（间接引语），不要标成 Konjunktiv II。
-- reason_for_selection：说明为何该点在本文中值得注意。
-- example_sentence：优先使用用户给出的出现句。
+
+${GRAMMAR_ENRICH_V2_SYSTEM_SECTION}
+
 只输出 JSON schema 要求的字段，不要其它文字。`;
 
 type OkBody = {
   ok: true;
+  grammar_type: string;
   name_de: string;
   name_zh: string;
+  is_subordinate_clause: boolean;
+  finite_verb: string;
+  finite_verb_position: string;
   explanation_zh: string;
   explanation_de_simple: string;
   level_estimate: CefrLevel;
   reason_for_selection: string;
   example_sentence: string;
+  was_label_corrected: boolean;
+  corrected_label: string;
+  correction_reason: string;
   corrected_from?: string | null;
 };
 
@@ -220,6 +228,19 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
       );
     }
 
+    const grammar_type = parseGrammarType(parsed.grammar_type);
+    const was_label_corrected = parsed.was_label_corrected === true;
+    const corrected_label = String(parsed.corrected_label ?? "").trim();
+    const correction_reason = String(parsed.correction_reason ?? "").trim();
+    const is_subordinate_clause = parseIsSubordinateClause(
+      parsed.is_subordinate_clause,
+    );
+    const finite_verb =
+      typeof parsed.finite_verb === "string" ? parsed.finite_verb.trim() : "";
+    const finite_verb_position = parseFiniteVerbPosition(
+      parsed.finite_verb_position,
+    );
+
     const name_de_raw = String(parsed.name_de ?? "").trim();
     const name_zh_raw = String(parsed.name_zh ?? "").trim();
     const explanation_zh_raw = String(parsed.explanation_zh ?? "").trim();
@@ -275,6 +296,7 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
     const { error: saveErr } = await applyGrammarAiEnrichment(supabase, {
       userId: user.id,
       grammarItemId,
+      grammar_key: grammar_type,
       name_de,
       name_zh,
       explanation_zh,
@@ -286,16 +308,29 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
       return NextResponse.json({ ok: false, error: saveErr }, { status: 500 });
     }
 
+    const corrected_from =
+      validated.corrected_from ??
+      (was_label_corrected
+        ? `${grow.name_zh ?? ""} / ${grow.grammar_key ?? ""}`
+        : null);
+
     return NextResponse.json({
       ok: true,
+      grammar_type,
       name_de,
       name_zh,
+      is_subordinate_clause,
+      finite_verb,
+      finite_verb_position,
       explanation_zh,
       explanation_de_simple,
       level_estimate,
       reason_for_selection: reason_for_selection_final,
       example_sentence,
-      corrected_from: validated.corrected_from,
+      was_label_corrected,
+      corrected_label: corrected_label || name_zh,
+      correction_reason,
+      corrected_from,
     });
   } catch (e: unknown) {
     const msg = formatOpenAIRouteErrorMessage(e);

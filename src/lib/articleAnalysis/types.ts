@@ -1,4 +1,8 @@
 import type { CefrLevel } from "@/lib/types";
+import type {
+  FiniteVerbPosition,
+  GrammarType,
+} from "@/lib/articleAnalysis/grammarTypes";
 import type { VocabGrammaticalGender } from "@/lib/vocabulary/grammaticalGender";
 
 /** AI 分析结果结构：Phase 3.0 Mock 与 Phase 3.1 OpenAI 结构化输出共用 */
@@ -25,12 +29,17 @@ export type AnalyzedVocabularyItem = {
 };
 
 export type AnalyzedGrammarItem = {
+  /** Phase 1：与 grammar_type 相同，供入库 (user_id, grammar_key, normalized_key) */
   grammar_key: string;
+  grammar_type: GrammarType;
   /** 与 `grammar_key` 共同对应总库唯一键；可与 grammar_key 不同以区分同大概念下小难点 */
   normalized_key: string;
   selected_text: string;
   name_de: string;
   name_zh: string;
+  is_subordinate_clause: boolean;
+  finite_verb: string;
+  finite_verb_position: FiniteVerbPosition;
   level_estimate: CefrLevel;
   explanation_zh: string;
   explanation_de_simple: string;

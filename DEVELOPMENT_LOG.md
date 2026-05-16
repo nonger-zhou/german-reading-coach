@@ -3522,6 +3522,23 @@
 
 - **`npm.cmd run build`**：已通过。
 
+### 2026-05-15 — Grammar Analysis v2 Phase 1（Prompt + grammar_type）
+
+**本次完成**
+
+- **`grammarTypes.ts`**：`grammar_type` / `finite_verb_position` 枚举与解析。
+- **`grammarAnalysisV2Prompt.ts`**：整文分析与 enrich 的 v2 规则与 7 条反例。
+- **`openaiArticleAnalysis.ts`**：语法章节替换为 v2；规范化时 **`grammar_key = grammar_type`**。
+- **`articleAnalysisJsonSchema.ts`**：grammar 项改为 `grammar_type` + `is_subordinate_clause` + `finite_verb` + `finite_verb_position`（移除模型侧 `grammar_key`）。
+- **`enrich-grammar`**：v2 Prompt + schema 纠错字段；入库更新 **`grammar_key`**。
+- **`types.ts`**、**`mockAnalyzeArticle`**、测试已对齐。
+
+**未改**：词汇 Prompt、阅读页选区、导入、10k 截断、总库过滤逻辑（仍按 grammar_key + normalized_key）。
+
+**Phase 2**：`validateGrammarType.ts` 轻量后处理（待做）。
+
+**构建**：**`npm test`** / **`npm run build`** 已通过。
+
 ### 2026-05-15 — 导入：发布时间不写入正文
 
 **本次完成**

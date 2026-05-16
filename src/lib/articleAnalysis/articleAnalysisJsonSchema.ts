@@ -1,3 +1,5 @@
+import { FINITE_VERB_POSITION_VALUES, GRAMMAR_TYPE_VALUES } from "./grammarTypes";
+
 /**
  * OpenAI Chat Completions `response_format.json_schema`（strict）。
  * 与 {@link ArticleAnalysisResult} 字段对齐；不含可选 `occurrences`。
@@ -53,11 +55,20 @@ export const ARTICLE_ANALYSIS_JSON_SCHEMA = {
           type: "object",
           additionalProperties: false,
           properties: {
-            grammar_key: { type: "string" },
+            grammar_type: {
+              type: "string",
+              enum: [...GRAMMAR_TYPE_VALUES],
+            },
             normalized_key: { type: "string" },
             selected_text: { type: "string" },
             name_de: { type: "string" },
             name_zh: { type: "string" },
+            is_subordinate_clause: { type: "boolean" },
+            finite_verb: { type: "string" },
+            finite_verb_position: {
+              type: "string",
+              enum: [...FINITE_VERB_POSITION_VALUES],
+            },
             level_estimate: {
               type: "string",
               enum: ["A1", "A2", "B1", "B2", "C1", "C2"],
@@ -68,11 +79,14 @@ export const ARTICLE_ANALYSIS_JSON_SCHEMA = {
             reason_for_selection: { type: "string" },
           },
           required: [
-            "grammar_key",
+            "grammar_type",
             "normalized_key",
             "selected_text",
             "name_de",
             "name_zh",
+            "is_subordinate_clause",
+            "finite_verb",
+            "finite_verb_position",
             "level_estimate",
             "explanation_zh",
             "explanation_de_simple",
