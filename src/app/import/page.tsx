@@ -768,7 +768,7 @@ function ImportPageContent() {
               发布时间（文本）
             </label>
             <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-              仅用于预览参考；本阶段不新增发布时间数据库字段。
+              仅用于导入页预览，不会写入保存的正文，也不参与整文 AI 分析。
             </p>
             <input
               type="text"

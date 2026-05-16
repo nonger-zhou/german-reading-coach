@@ -3522,6 +3522,18 @@
 
 - **`npm.cmd run build`**：已通过。
 
+### 2026-05-15 — 导入：发布时间不写入正文
+
+**本次完成**
+
+- **`parseArticleFromRaw.ts`**：`composeCleanedText` 不再拼接发布时间行；仍识别 **`publishedAtLine`** 供 **`/import`** 预览框。
+- **`/import`** 说明文案同步。
+- **`docs/PRD.md`**、**`docs/DATABASE.md`**、**`docs/USER_MANUAL.md` §1.1** 已同步。
+
+**说明**：已保存文章正文中的发布时间行不会自动删除，需重新导入或手删。
+
+**构建**：**`npm run build`** 已通过。
+
 ### 2026-05-15 — 手机可分动词拖选修复 + Backlog 分块分析
 
 **本次完成**

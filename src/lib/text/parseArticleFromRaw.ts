@@ -2,10 +2,10 @@ import { cleanArticleText } from "./cleanArticleText";
 
 /**
  * 回归样例（瑞士德语媒体引号长标题）：首行 «…›…» 为文章标题，次行问句与第三行为 lead，
- * 作者重复一行应合并；发布时间保留在正文中。解析结果应为：
+ * 作者重复一行应合并；发布时间识别为 publishedAtLine，不写入 cleanedText。解析结果应为：
  * - suggestedTitle = 首行（含 « ‹ › »）
  * - suggestedSubtitle = 问句行 + Recruterin 行
- * - cleanedText 开头含副标题/作者/发布时间，且不重复首行标题全文。
+ * - cleanedText 开头含副标题/作者（若有），且不重复首行标题全文。
  *
  * «Sagt jemand im Vorstellungsgespräch: ‹Mein Chef war schlecht›, ist das ein klares Warnsignal»
  * Wie entlarven Unternehmen ungeeignete Kandidaten in Zeiten von künstlicher Intelligenz?
@@ -287,7 +287,6 @@ function bodyStartsWithNormalizedPrefix(body: string, prefix: string): boolean {
 function composeCleanedText(
   subtitle: string | null,
   authorBlock: string | null,
-  publishedLine: string | null,
   cleanedBody: string,
   suggestedTitle: string | null,
 ): string {
@@ -306,19 +305,14 @@ function composeCleanedText(
       parts.push(ab);
     }
   }
-  if (publishedLine) {
-    const pl = publishedLine.trim();
-    if (pl && !bodyTrim.includes(pl)) {
-      parts.push(pl);
-    }
-  }
   parts.push(bodyTrim);
   return parts.filter(Boolean).join("\n\n").trim();
 }
 
 /**
  * 从粘贴的网页文本解析标题/副标题/作者/发布时间，并生成将写入 articles.original_text 的正文。
- * 作者与发布时间均不单独建库字段；作者署名去重后置于正文前部（保留原文样式，不强制「作者：」前缀）。
+ * 作者不单独建库字段，署名去重后置于正文前部（保留原文样式，不强制「作者：」前缀）。
+ * 发布时间识别为 publishedAtLine，供导入页预览，不写入 cleanedText / articles.original_text。
  */
 export function parseArticleFromRawInput(raw: string): ParsedArticleFromRaw {
   const normalized = norm(raw);
@@ -392,7 +386,6 @@ export function parseArticleFromRawInput(raw: string): ParsedArticleFromRaw {
   const cleanedText = composeCleanedText(
     suggestedSubtitle,
     authorBlock,
-    publishedAtLine,
     cleanedBody,
     suggestedTitle,
   );
