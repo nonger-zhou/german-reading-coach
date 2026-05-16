@@ -76,6 +76,73 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-05-15 — 手机轻点选词 + 导入页短文案
+
+**本次完成**
+
+- **阅读页（手机）**：轻点普通文字 → 自动选中该德语词（蓝底 + 选区下方三按钮 +「已选：xxx」）；仍支持拖选长短语。点彩色高亮词仍打开详情，不触发轻点选词。
+- **`/import`**：手机端缩短顶栏、导入方式、链接抓取、正文与来源稿说明（`md:hidden` / `hidden md:inline`）。
+
+**验证**：`npm run build` 已通过。
+
+### 2026-05-15 — 选区浮层：松手后再显示 + 按最后一行锚定（不盖住整句）
+
+**本次完成**
+
+- 手机拖选过程中**不**再随 `selectionchange` 立刻出浮层/滚正文（`selectionGestureActiveRef`），**松手约 120ms 后**再定位，减少拖选时跳动、选不准。
+- 浮层位置改用 `getClientRects()` **最后一行**锚点 + 与各行 rect 防重叠；默认在选区下方 **32px**，空间不足时改到第一行上方。
+- 正文增加 `touch-manipulation`。
+
+**验证**：`npm run build` 已通过。
+
+### 2026-05-15 — 恢复手机「词下」选区浮层（去掉屏幕底栏）
+
+**本次完成**
+
+- **`InteractiveArticleReader`**：拖选普通文字后，手机与桌面统一为**选区下方**浮动三按钮（`getBoundingClientRect` + `fixed`）；移除仅手机的屏幕底部固定条。下方空间不足时浮层改显示在选区**上方**；`z-[60]` 与阴影加强。保留 `touch-callout: none` 与同屏定位逻辑。
+
+**验证**：`npm run build` 已通过。
+
+### 2026-05-15 — 手机点词反馈 + 课文/详情同屏定位
+
+**本次完成**
+
+- **点按/选中反馈**：高亮词触摸时**即时描边闪光**（`pressedOccurrenceId` + `flashOccurrenceId`）；选中项在文中**持续描边**直至关闭详情；拖选普通文字为**琥珀色选区**；手机底栏显示「**已选中，可添加**」。
+- **同屏定位（回归修复）**：手机端选中词汇/语法时**不再**自动滚到下方 Tabs 列表（避免课文被顶出屏幕）；打开底部详情时**滚回课文卡片顶部**、**隐藏**下方列表区，并压缩课文区高度，使课文与底部详情同屏；拖选后自动把选区滚到**底栏上方**。
+
+**修改的主要文件**
+
+- `src/components/InteractiveArticleReader.tsx`
+
+**验证**
+
+- `npm run build`：已通过。
+
+### 2026-05-15 — 手机选词/加词库：恢复禁用系统「在 Google 中搜索」浮层
+
+**本次完成**
+
+- **根因**：2026-05-13 为支持跨已有词汇高亮拖选整句，将高亮样式改为 **`user-select: text`** 且 **`WebkitTouchCallout: default`**，覆盖了 2026-05-12 的移动端 **`touch-callout: none`** 修复，导致 iOS/Android 系统菜单再次盖住「添加为词汇 / 标记语法」。
+- **`InteractiveArticleReader`**：高亮样式恢复 **`WebkitTouchCallout: none`**、**`touch-action: manipulation`**，保留 **`user-select: text`**（仍可穿过绿/琥珀高亮拖选）；正文 **`article`** 在手机端增加 **`[-webkit-touch-callout:none]`**。
+- **手机选区 UI**：拖选结束后在**屏幕底部固定工具栏**展示操作按钮（桌面仍为选区附近浮动条），减少与系统选区气泡抢位；**`selectionMobileBarRef`** 避免点工具栏时误关选区。
+- **`AGENTS.md`**：新增**回归防护**自检条——不要随便动已验收功能。
+- **`docs/READING_HIGHLIGHTS_AND_OVERLAPS.md`**：同步触摸 / 手机底栏说明。
+
+**修改的主要文件**
+
+- `src/components/InteractiveArticleReader.tsx`
+- `AGENTS.md`
+- `docs/READING_HIGHLIGHTS_AND_OVERLAPS.md`
+
+**验证**
+
+- `npm run build`：已通过。
+- Vercel Production：已通过（`npm.cmd run vercel:prod:system-ca`），已 alias 至 `https://german-reading-coach.vercel.app`。
+
+**已知问题 / 下一步**
+
+- 请在真实 iPhone Safari 上硬刷新后复测：拖选普通正文与高亮内子串、点按已有高亮打开详情、底栏三个按钮是否均可点。
+
 ### 2026-05-14 — 整文分析：总语法库已掌握 / 暂忽略过滤（grammar_key + normalized_key）
 
 **本次完成**
@@ -3454,6 +3521,37 @@
 **构建**
 
 - **`npm.cmd run build`**：已通过。
+
+### 2026-05-15 — 手机可分动词拖选修复 + Backlog 分块分析
+
+**本次完成**
+
+- **`InteractiveArticleReader.tsx`**：词汇高亮触摸时不再 `pointerdown` 上 `preventDefault`/立即打开详情（与语法一致）；有文本选区时不误开详情；松手时若已有拖选内容则保留、不用轻点单字覆盖；手机说明改为「可分动词请拖选」。
+- **`PROJECT_STATUS.md` Backlog**：新增「整文 AI 超长正文分块分析（1 万字符后）」。
+- **`docs/READING_HIGHLIGHTS_AND_OVERLAPS.md`** §3.1 同步。
+
+**构建**：**`npm run build`** 已通过。
+
+### 2026-05-15 — 整文 AI：取消词汇 20 条上限 + 重写 part_of_speech 指引
+
+**本次完成**
+
+- **`src/lib/articleAnalysis/openaiArticleAnalysis.ts`**：词汇推荐**不设固定条数上限**；删除「漏掉次要词也比堆满简单词好」；**part_of_speech / grammatical_gender** 分节重写（名词用 noun/compound_noun + m/f/n；动词/搭配/可分动词等用对应词性 + **na**；禁止为冠词把搭配标成名词）；`normalizeOpenAIArticleAnalysis` 不再 `slice(0, 20)`；**10k 字符截断**注释补充原因。
+- **`src/lib/articleAnalysis/articleAnalysisJsonSchema.ts`**：移除 `vocabulary` 的 **`maxItems: 20`**。
+- **`docs/PRD.md` §13.6**、**`docs/USER_MANUAL.md` §7.2**、**`PROJECT_STATUS.md`** 已同步。
+
+**已知问题**
+
+- 词汇条数增多后单次 OpenAI 调用更慢、费用更高；超长文仍只分析前 **10 000** 字符。
+- 模型仍可能偏名词，需实机观察后微调 Prompt。
+
+**下一步**
+
+- 实机 B2 文章验证动词/搭配占比；若仍偏名词可加强示例或后处理统计 warning。
+
+**构建**
+
+- **`npm run build`**：已通过。
 
 ### 2026-05-02 — /import：结构识别（标题/副标题/发布时间/作者）与正文合成
 

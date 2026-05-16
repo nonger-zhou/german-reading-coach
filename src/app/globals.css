@@ -24,3 +24,14 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* 阅读正文：桌面端原生选区底色（手机端另用 JS 浮层矩形补强） */
+.article-reading-body::selection {
+  background-color: rgba(96, 165, 250, 0.55);
+  color: inherit;
+}
+
+.article-reading-body *::selection {
+  background-color: rgba(96, 165, 250, 0.55);
+  color: inherit;
+}

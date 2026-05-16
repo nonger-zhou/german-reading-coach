@@ -78,14 +78,15 @@ const DELETE_LEARNING_ITEM_CONFIRM_ZH =
 /**
  * 正文里「可学习」高亮（词汇绿/琥珀、语法蓝/紫）统一允许 **拖选穿过**，
  * 以便跨多个已有高亮选整句加入词库；与 `resolveUserHighlightInPlain` 依赖的选区文本一致。
- * 词汇按钮在触摸 `pointerdown` 上仍会 `preventDefault`（见 handler），以保留点按打开详情为主。
+ * 词汇高亮在触摸时不在 `pointerdown` 上 `preventDefault`（与语法一致），以便拖选穿过绿/琥珀词选可分动词；点按打开详情在 `click` 且无文本选区时触发。
+ * `-webkit-touch-callout: none` 抑制 iOS/Android「在 Google 中搜索」等系统浮层，避免挡住应用内选区工具栏。
  */
 const ARTICLE_LEARNING_HIGHLIGHT_TEXT_STYLE = {
   WebkitTapHighlightColor: "transparent",
-  touchAction: "auto",
+  touchAction: "manipulation",
   userSelect: "text",
   WebkitUserSelect: "text",
-  WebkitTouchCallout: "default",
+  WebkitTouchCallout: "none",
 } as CSSProperties;
 
 const GRAMMAR_ARTICLE_HIGHLIGHT_STYLE = ARTICLE_LEARNING_HIGHLIGHT_TEXT_STYLE;
@@ -145,6 +146,160 @@ function scrollElementIntoScrollContainer(
     nextTop = container.scrollTop + D;
   }
   container.scrollTo({ top: Math.max(0, nextTop), behavior });
+}
+
+/** 将视口矩形滚入 overflow 容器（用于文本选区，无对应 DOM 节点时） */
+function scrollRectIntoScrollContainer(
+  container: HTMLElement,
+  rect: DOMRect,
+  options?: {
+    paddingTop?: number;
+    ensureGapBottom?: number;
+    behavior?: ScrollBehavior;
+  },
+) {
+  if (rect.width === 0 && rect.height === 0) return;
+  const cRect = container.getBoundingClientRect();
+  const pad = options?.paddingTop ?? 48;
+  const reserve = options?.ensureGapBottom ?? 0;
+  let delta = 0;
+  if (rect.top < cRect.top + pad) {
+    delta = rect.top - cRect.top - pad;
+  }
+  const bottomOverflow = rect.bottom - cRect.bottom + reserve;
+  if (bottomOverflow > 0) {
+    delta = Math.max(delta, bottomOverflow);
+  }
+  if (delta !== 0) {
+    container.scrollBy({ top: delta, behavior: options?.behavior ?? "smooth" });
+  }
+}
+
+/** 选区各行矩形（过滤空 rect）；用于浮层锚点，避免用整块 bounding box 盖住整句 */
+function getSelectionLineRects(range: Range): DOMRect[] {
+  return Array.from(range.getClientRects()).filter(
+    (r) => r.width > 0 && r.height > 0,
+  );
+}
+
+/** 浮层锚在线条：单行用词本身；多行用最后一行（工具栏在选区下方） */
+function getSelectionAnchorRect(range: Range): DOMRect {
+  const lines = getSelectionLineRects(range);
+  if (lines.length === 0) return range.getBoundingClientRect();
+  return lines[lines.length - 1]!;
+}
+
+/** 含手机端「已选：」一行时的浮层总高度估算 */
+const SELECTION_POPOVER_H = 68;
+const SELECTION_POPOVER_GAP = 32;
+
+/**
+ * 浮层贴在选区下方（空间不足时改到第一行上方），并与各行 rect 保持间距，避免盖住选中文字。
+ */
+function computeSelectionPopoverPosition(
+  anchorRect: DOMRect,
+  lineRects: DOMRect[],
+): { left: number; top: number } {
+  const margin = 12;
+  const popoverH = SELECTION_POPOVER_H;
+  const gap = SELECTION_POPOVER_GAP;
+  const left = Math.min(
+    Math.max(anchorRect.left + anchorRect.width / 2, margin + 100),
+    window.innerWidth - margin - 100,
+  );
+
+  const maxLineBottom = lineRects.length
+    ? Math.max(...lineRects.map((r) => r.bottom))
+    : anchorRect.bottom;
+  const minLineTop = lineRects.length
+    ? Math.min(...lineRects.map((r) => r.top))
+    : anchorRect.top;
+
+  let top = maxLineBottom + gap;
+
+  const overlapsSelection = (t: number) =>
+    lineRects.some(
+      (r) => t < r.bottom + 8 && t + popoverH > r.top - 8,
+    );
+
+  if (
+    top + popoverH > window.innerHeight - margin ||
+    overlapsSelection(top)
+  ) {
+    top = minLineTop - popoverH - gap;
+  }
+
+  if (overlapsSelection(top)) {
+    top = maxLineBottom + gap + 12;
+  }
+
+  top = Math.max(margin, Math.min(top, window.innerHeight - popoverH - margin));
+  return { left, top };
+}
+
+const GERMAN_WORD_CHAR_RE = /[A-Za-zÄÖÜäöüß]/;
+const GERMAN_WORD_TOKEN_RE = /[A-Za-zÄÖÜäöüß]+(?:[-'][A-Za-zÄÖÜäöüß]+)*/g;
+
+const TAP_SELECT_MOVE_PX = 12;
+const TAP_SELECT_MAX_MS = 450;
+
+function getCaretRangeFromPoint(x: number, y: number): Range | null {
+  const doc = document as Document & {
+    caretRangeFromPoint?: (x: number, y: number) => Range | null;
+    caretPositionFromPoint?: (
+      x: number,
+      y: number,
+    ) => { offsetNode: Node; offset: number } | null;
+  };
+  if (typeof doc.caretRangeFromPoint === "function") {
+    return doc.caretRangeFromPoint(x, y);
+  }
+  const pos = doc.caretPositionFromPoint?.(x, y);
+  if (!pos) return null;
+  const r = document.createRange();
+  r.setStart(pos.offsetNode, pos.offset);
+  r.collapse(true);
+  return r;
+}
+
+function expandRangeToGermanWord(caret: Range): Range | null {
+  let node: Node | null = caret.startContainer;
+  let offset = caret.startOffset;
+  if (node.nodeType === Node.ELEMENT_NODE) {
+    const el = node as Element;
+    const child = el.childNodes[offset] ?? el.childNodes[offset - 1];
+    if (child?.nodeType === Node.TEXT_NODE) {
+      node = child;
+      offset = 0;
+    } else {
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      node = walker.nextNode();
+      offset = 0;
+    }
+  }
+  if (!node || node.nodeType !== Node.TEXT_NODE) return null;
+  const text = node.textContent ?? "";
+  GERMAN_WORD_TOKEN_RE.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = GERMAN_WORD_TOKEN_RE.exec(text)) !== null) {
+    const start = match.index;
+    const end = start + match[0].length;
+    if (offset >= start && offset <= end) {
+      const r = document.createRange();
+      r.setStart(node, start);
+      r.setEnd(node, end);
+      return r;
+    }
+  }
+  return null;
+}
+
+function isArticleLearningHighlightTarget(el: Element | null): boolean {
+  if (!el) return false;
+  return Boolean(
+    el.closest("button[data-occurrence-id]") ||
+      el.closest('[role="button"][data-occurrence-id]'),
+  );
 }
 
 function extractWordTokens(text: string): string[] {
@@ -496,6 +651,16 @@ export function InteractiveArticleReader({
   const mobileSheetScrollRef = useRef<HTMLDivElement | null>(null);
   const selectionPopoverRef = useRef<HTMLDivElement | null>(null);
   const selectionTextSnapshotRef = useRef<string | null>(null);
+  /** 手机拖选过程中为 true，避免浮层过早出现、滚动干扰选区 */
+  const selectionGestureActiveRef = useRef(false);
+  const pointerTapStartRef = useRef<{
+    x: number;
+    y: number;
+    t: number;
+  } | null>(null);
+  const selectionPopoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   const addVocabLabel = selectionLabels?.addVocab ?? "加入词库";
   const addGrammarLabel = selectionLabels?.addGrammar ?? "标记语法";
@@ -522,6 +687,13 @@ export function InteractiveArticleReader({
     text: string;
     left: number;
     top: number;
+    /** 视口坐标，用于手机端自定义选区底色（弥补 ::selection 不显示） */
+    highlightRects: Array<{
+      left: number;
+      top: number;
+      width: number;
+      height: number;
+    }>;
   } | null>(null);
 
   const [vocabFormOpen, setVocabFormOpen] = useState(false);
@@ -622,6 +794,10 @@ export function InteractiveArticleReader({
 
   /** 右侧点击某条 occurrence 后，左侧对应 span 短暂 flash */
   const [flashOccurrenceId, setFlashOccurrenceId] = useState<string | null>(
+    null,
+  );
+  /** 触摸按下时即时高亮（早于抽屉打开 / smooth 滚动结束） */
+  const [pressedOccurrenceId, setPressedOccurrenceId] = useState<string | null>(
     null,
   );
   const flashOccurrenceTimeoutRef = useRef<ReturnType<
@@ -802,6 +978,55 @@ export function InteractiveArticleReader({
     window.getSelection()?.removeAllRanges();
   }, []);
 
+  const showSelectionUiForRange = useCallback((range: Range) => {
+    const text = range.toString().trim();
+    if (!text) {
+      selectionTextSnapshotRef.current = null;
+      setTextSelectionUi(null);
+      return;
+    }
+    const root = articleRef.current;
+    if (!root || !root.contains(range.commonAncestorContainer)) {
+      selectionTextSnapshotRef.current = null;
+      setTextSelectionUi(null);
+      return;
+    }
+    const lineRects = getSelectionLineRects(range);
+    const anchorRect = getSelectionAnchorRect(range);
+    if (anchorRect.width === 0 && anchorRect.height === 0) {
+      selectionTextSnapshotRef.current = null;
+      setTextSelectionUi(null);
+      return;
+    }
+    const { left, top } = computeSelectionPopoverPosition(anchorRect, lineRects);
+    selectionTextSnapshotRef.current = text;
+    setTextSelectionUi({
+      text,
+      left,
+      top,
+      highlightRects: lineRects.map((r) => ({
+        left: r.left,
+        top: r.top,
+        width: r.width,
+        height: r.height,
+      })),
+    });
+
+    const narrow =
+      typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 767px)").matches;
+    const scrollParent = articleScrollRef.current;
+    if (narrow && scrollParent) {
+      requestAnimationFrame(() => {
+        scrollRectIntoScrollContainer(scrollParent, anchorRect, {
+          paddingTop: 56,
+          ensureGapBottom: SELECTION_POPOVER_H + SELECTION_POPOVER_GAP + 16,
+          behavior: "smooth",
+        });
+      });
+    }
+  }, []);
+
   const updateSelectionPopover = useCallback(() => {
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
@@ -809,46 +1034,140 @@ export function InteractiveArticleReader({
       setTextSelectionUi(null);
       return;
     }
-    const text = sel.toString().trim();
-    if (!text) {
-      selectionTextSnapshotRef.current = null;
-      setTextSelectionUi(null);
-      return;
-    }
-    const range = sel.getRangeAt(0);
-    const root = articleRef.current;
-    if (!root || !root.contains(range.commonAncestorContainer)) {
-      selectionTextSnapshotRef.current = null;
-      setTextSelectionUi(null);
-      return;
-    }
-    const rect = range.getBoundingClientRect();
-    if (rect.width === 0 && rect.height === 0) {
-      selectionTextSnapshotRef.current = null;
-      setTextSelectionUi(null);
-      return;
-    }
-    const left = Math.min(
-      Math.max(rect.left + rect.width / 2, 16),
-      window.innerWidth - 16,
-    );
-    const top = Math.min(rect.bottom + 8, window.innerHeight - 100);
-    selectionTextSnapshotRef.current = text;
-    setTextSelectionUi({ text, left, top });
-  }, []);
+    showSelectionUiForRange(sel.getRangeAt(0));
+  }, [showSelectionUiForRange]);
 
-  const handleArticlePointerUp = useCallback(() => {
-    requestAnimationFrame(updateSelectionPopover);
-  }, [updateSelectionPopover]);
+  const tryTapSelectWordAtPoint = useCallback(
+    (clientX: number, clientY: number, target: EventTarget | null): boolean => {
+      const narrow =
+        typeof window !== "undefined" &&
+        window.matchMedia("(max-width: 767px)").matches;
+      if (!narrow) return false;
+
+      const root = articleRef.current;
+      if (!root) return false;
+
+      const el =
+        target instanceof Element
+          ? target
+          : target instanceof Node
+            ? (target.parentElement ?? null)
+            : null;
+      if (isArticleLearningHighlightTarget(el)) return false;
+      if (el && selectionPopoverRef.current?.contains(el)) return false;
+
+      const caret = getCaretRangeFromPoint(clientX, clientY);
+      if (!caret || !root.contains(caret.commonAncestorContainer)) return false;
+
+      const wordRange = expandRangeToGermanWord(caret);
+      if (!wordRange) return false;
+
+      const word = wordRange.toString().trim();
+      if (!word || !GERMAN_WORD_CHAR_RE.test(word)) return false;
+
+      const sel = window.getSelection();
+      if (!sel) return false;
+      sel.removeAllRanges();
+      sel.addRange(wordRange);
+      showSelectionUiForRange(wordRange);
+      return true;
+    },
+    [showSelectionUiForRange],
+  );
+
+  const scheduleSelectionPopoverUpdate = useCallback(
+    (delayMs = 0) => {
+      if (selectionPopoverTimerRef.current !== null) {
+        clearTimeout(selectionPopoverTimerRef.current);
+      }
+      selectionPopoverTimerRef.current = setTimeout(() => {
+        selectionPopoverTimerRef.current = null;
+        if (selectionGestureActiveRef.current) return;
+        requestAnimationFrame(updateSelectionPopover);
+      }, delayMs);
+    },
+    [updateSelectionPopover],
+  );
+
+  const handleArticlePointerDown = useCallback(
+    (event: React.PointerEvent<HTMLElement>) => {
+      selectionGestureActiveRef.current = true;
+      pointerTapStartRef.current = {
+        x: event.clientX,
+        y: event.clientY,
+        t: Date.now(),
+      };
+      if (selectionPopoverTimerRef.current !== null) {
+        clearTimeout(selectionPopoverTimerRef.current);
+        selectionPopoverTimerRef.current = null;
+      }
+      setTextSelectionUi(null);
+      selectionTextSnapshotRef.current = null;
+    },
+    [],
+  );
+
+  const handleArticlePointerUp = useCallback(
+    (event: React.PointerEvent<HTMLElement>) => {
+      selectionGestureActiveRef.current = false;
+      const narrow =
+        typeof window !== "undefined" &&
+        window.matchMedia("(max-width: 767px)").matches;
+      const start = pointerTapStartRef.current;
+      pointerTapStartRef.current = null;
+
+      if (narrow && start) {
+        const sel = window.getSelection();
+        const root = articleRef.current;
+        if (sel && sel.rangeCount > 0 && !sel.isCollapsed && root) {
+          const r = sel.getRangeAt(0);
+          if (root.contains(r.commonAncestorContainer)) {
+            const existing = sel.toString().trim();
+            if (existing.length > 0) {
+              scheduleSelectionPopoverUpdate(0);
+              return;
+            }
+          }
+        }
+
+        const dx = event.clientX - start.x;
+        const dy = event.clientY - start.y;
+        const moved2 = dx * dx + dy * dy;
+        if (
+          moved2 <= TAP_SELECT_MOVE_PX * TAP_SELECT_MOVE_PX &&
+          Date.now() - start.t <= TAP_SELECT_MAX_MS &&
+          tryTapSelectWordAtPoint(event.clientX, event.clientY, event.target)
+        ) {
+          return;
+        }
+      }
+
+      scheduleSelectionPopoverUpdate(narrow ? 120 : 0);
+    },
+    [scheduleSelectionPopoverUpdate, tryTapSelectWordAtPoint],
+  );
 
   useEffect(() => {
     const onSelectionChange = () => {
-      requestAnimationFrame(updateSelectionPopover);
+      const narrow =
+        typeof window !== "undefined" &&
+        window.matchMedia("(max-width: 767px)").matches;
+      if (narrow && selectionGestureActiveRef.current) return;
+      if (narrow) return;
+      scheduleSelectionPopoverUpdate(40);
     };
     document.addEventListener("selectionchange", onSelectionChange);
     return () =>
       document.removeEventListener("selectionchange", onSelectionChange);
-  }, [updateSelectionPopover]);
+  }, [scheduleSelectionPopoverUpdate]);
+
+  useEffect(() => {
+    return () => {
+      if (selectionPopoverTimerRef.current !== null) {
+        clearTimeout(selectionPopoverTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const onScroll = () => {
@@ -1124,6 +1443,22 @@ export function InteractiveArticleReader({
     }, 100);
     return () => window.clearTimeout(tid);
   }, [vocabSelection, vocabById, scrollArticleToOccurrence]);
+
+  /** 手机打开底部详情时：把课文卡片滚回视区顶部，避免页面被「下方词汇列表」顶走 */
+  useEffect(() => {
+    const narrow =
+      typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 767px)").matches;
+    if (!narrow) return;
+    if (!vocabSelection && !grammarSelection) return;
+    const tid = window.setTimeout(() => {
+      articleScrollRef.current?.scrollIntoView({
+        block: "start",
+        behavior: "smooth",
+      });
+    }, 40);
+    return () => window.clearTimeout(tid);
+  }, [vocabSelection, grammarSelection]);
 
   useEffect(() => {
     setVocabDeepNoteError(null);
@@ -1494,9 +1829,12 @@ export function InteractiveArticleReader({
 
     const run = () => {
       const panel = sidePanelScrollRef.current;
+      const narrow =
+        typeof window !== "undefined" &&
+        window.matchMedia("(max-width: 767px)").matches;
 
       /** 仅在有 pending（文中/列表选中）时滚右侧面板 occurrence；右侧详情里点「本篇出现位置」不设 pending，避免与 scrollArticleToOccurrence 的 smooth 争抢导致左侧不滚 */
-      if (pending) {
+      if (pending && !narrow) {
         const map =
           pending.kind === "vocab" ? vocabItemRefs : grammarItemRefs;
         const el = map.current.get(pending.id);
@@ -3097,9 +3435,26 @@ export function InteractiveArticleReader({
       peek && peek.kind === listKind && peek.id === meta.itemId,
     );
     const flash = flashOccurrenceId === meta.occurrenceId;
-    if (flash) {
-      // 点击右侧 occurrence 后左侧定位：高对比描边 + 外发光（不用 animate-pulse，避免低谷时几乎看不见）
-      return "relative z-[1] rounded-sm ring-2 ring-amber-500 ring-offset-2 ring-offset-white shadow-[0_0_12px_rgba(245,158,11,0.65)] dark:ring-amber-300 dark:ring-offset-zinc-950 dark:shadow-[0_0_16px_rgba(253,224,71,0.55)]";
+    const pressed = pressedOccurrenceId === meta.occurrenceId;
+    const vocabActive =
+      listKind === "vocab" &&
+      vocabSelection?.itemId === meta.itemId &&
+      (!vocabSelection.occurrenceId ||
+        vocabSelection.occurrenceId === meta.occurrenceId);
+    const grammarActive =
+      listKind === "grammar" &&
+      grammarSelection?.itemId === meta.itemId &&
+      (!grammarSelection.occurrenceId ||
+        grammarSelection.occurrenceId === meta.occurrenceId);
+    if (flash || pressed || vocabActive || grammarActive) {
+      // 点击/选中后左侧定位：高对比描边 + 外发光（不用 animate-pulse，避免低谷时几乎看不见）
+      const ring =
+        meta.kind === "ai_grammar" || meta.kind === "user_grammar"
+          ? "ring-sky-500 dark:ring-sky-300"
+          : meta.kind === "user_vocab"
+            ? "ring-amber-500 dark:ring-amber-300"
+            : "ring-emerald-600 dark:ring-emerald-300";
+      return `relative z-[1] rounded-sm ring-2 ${ring} ring-offset-2 ring-offset-white shadow-[0_0_12px_rgba(245,158,11,0.45)] dark:ring-offset-zinc-950 dark:shadow-[0_0_14px_rgba(253,224,71,0.4)]`;
     }
     if (itemMatch) {
       return "ring-2 ring-zinc-900/35 ring-offset-0 dark:ring-zinc-100/30";
@@ -3126,16 +3481,22 @@ export function InteractiveArticleReader({
 
   function handleHighlightPointerDown(
     event: ReactPointerEvent<HTMLButtonElement>,
-    activate: () => void,
+    _activate: () => void,
+    occurrenceId?: string,
   ) {
     if (event.pointerType !== "touch" && event.pointerType !== "pen") return;
 
-    event.preventDefault();
-    event.stopPropagation();
-    selectionTextSnapshotRef.current = null;
-    setTextSelectionUi(null);
-    clearNativeSelection();
-    activate();
+    // 不在 pointerdown 上 preventDefault：否则手机无法从词汇高亮上发起拖选（可分动词等跨词选区）
+    if (occurrenceId) {
+      setPressedOccurrenceId(occurrenceId);
+      setFlashOccurrenceId(occurrenceId);
+    }
+  }
+
+  function handleHighlightPointerUp(occurrenceId?: string) {
+    if (occurrenceId && pressedOccurrenceId === occurrenceId) {
+      setPressedOccurrenceId(null);
+    }
   }
 
   function handleHighlightClick(
@@ -3143,6 +3504,8 @@ export function InteractiveArticleReader({
     activate: () => void,
   ) {
     event.stopPropagation();
+    const sel = window.getSelection()?.toString().trim() ?? "";
+    if (sel.length > 0) return;
     activate();
   }
 
@@ -3181,8 +3544,10 @@ export function InteractiveArticleReader({
           <button
             type="button"
             onPointerDown={(event) =>
-              handleHighlightPointerDown(event, onVocab)
+              handleHighlightPointerDown(event, onVocab, meta.occurrenceId)
             }
+            onPointerUp={() => handleHighlightPointerUp(meta.occurrenceId)}
+            onPointerCancel={() => handleHighlightPointerUp(meta.occurrenceId)}
             onClick={(event) => handleHighlightClick(event, onVocab)}
             style={ARTICLE_LEARNING_HIGHLIGHT_TEXT_STYLE}
             data-marker-id={meta.itemId}
@@ -3191,7 +3556,7 @@ export function InteractiveArticleReader({
             data-range-id={`${run.start}-${run.end}`}
             className={vocabRunClassName(
               meta,
-              `mx-0.5 rounded bg-emerald-100 px-0.5 font-medium text-emerald-900 underline decoration-emerald-400/60 decoration-2 underline-offset-2 transition hover:bg-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-100 dark:hover:bg-emerald-800/60 ${runHighlightExtraClass(meta)}`,
+              `mx-0.5 rounded bg-emerald-100 px-0.5 font-medium text-emerald-900 underline decoration-emerald-400/60 decoration-2 underline-offset-2 transition hover:bg-emerald-200 active:scale-[0.98] active:bg-emerald-300 dark:bg-emerald-900/50 dark:text-emerald-100 dark:hover:bg-emerald-800/60 dark:active:bg-emerald-800 ${runHighlightExtraClass(meta)}`,
             )}
           >
             {text}
@@ -3220,8 +3585,10 @@ export function InteractiveArticleReader({
           <button
             type="button"
             onPointerDown={(event) =>
-              handleHighlightPointerDown(event, onVocab)
+              handleHighlightPointerDown(event, onVocab, meta.occurrenceId)
             }
+            onPointerUp={() => handleHighlightPointerUp(meta.occurrenceId)}
+            onPointerCancel={() => handleHighlightPointerUp(meta.occurrenceId)}
             onClick={(event) => handleHighlightClick(event, onVocab)}
             style={ARTICLE_LEARNING_HIGHLIGHT_TEXT_STYLE}
             data-marker-id={meta.itemId}
@@ -3230,7 +3597,7 @@ export function InteractiveArticleReader({
             data-range-id={`${run.start}-${run.end}`}
             className={vocabRunClassName(
               meta,
-              `mx-0.5 rounded bg-amber-200 px-0.5 font-medium text-amber-950 underline decoration-amber-500/70 decoration-2 underline-offset-2 transition hover:bg-amber-300 dark:bg-amber-900/55 dark:text-amber-100 dark:hover:bg-amber-800/60 ${runHighlightExtraClass(meta)}`,
+              `mx-0.5 rounded bg-amber-200 px-0.5 font-medium text-amber-950 underline decoration-amber-500/70 decoration-2 underline-offset-2 transition hover:bg-amber-300 active:scale-[0.98] active:bg-amber-400 dark:bg-amber-900/55 dark:text-amber-100 dark:hover:bg-amber-800/60 dark:active:bg-amber-800 ${runHighlightExtraClass(meta)}`,
             )}
           >
             {text}
@@ -3268,13 +3635,21 @@ export function InteractiveArticleReader({
               event.stopPropagation();
               onGrammar();
             }}
+            onPointerDown={(event) => {
+              if (event.pointerType !== "touch" && event.pointerType !== "pen")
+                return;
+              setPressedOccurrenceId(meta.occurrenceId);
+              setFlashOccurrenceId(meta.occurrenceId);
+            }}
+            onPointerUp={() => handleHighlightPointerUp(meta.occurrenceId)}
+            onPointerCancel={() => handleHighlightPointerUp(meta.occurrenceId)}
             onClick={(event) => handleGrammarHighlightClick(event, onGrammar)}
             style={GRAMMAR_ARTICLE_HIGHLIGHT_STYLE}
             data-marker-id={meta.itemId}
             data-occurrence-id={meta.occurrenceId}
             data-occurrence-index={occurrenceRowIndex(meta)}
             data-range-id={`${run.start}-${run.end}`}
-            className={`mx-0.5 cursor-pointer whitespace-pre-line rounded bg-sky-100 px-0.5 font-medium text-sky-900 underline decoration-sky-400/60 decoration-2 underline-offset-2 transition hover:bg-sky-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-1 dark:bg-sky-900/45 dark:text-sky-100 dark:hover:bg-sky-800/50 dark:focus-visible:ring-sky-400 dark:focus-visible:ring-offset-zinc-950 ${runHighlightExtraClass(meta)}`}
+            className={`mx-0.5 cursor-pointer whitespace-pre-line rounded bg-sky-100 px-0.5 font-medium text-sky-900 underline decoration-sky-400/60 decoration-2 underline-offset-2 transition hover:bg-sky-200 active:bg-sky-200/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-1 dark:bg-sky-900/45 dark:text-sky-100 dark:hover:bg-sky-800/50 dark:active:bg-sky-800/70 dark:focus-visible:ring-sky-400 dark:focus-visible:ring-offset-zinc-950 ${runHighlightExtraClass(meta)}`}
           >
             {text}
           </span>
@@ -3308,13 +3683,21 @@ export function InteractiveArticleReader({
             event.stopPropagation();
             onGrammar();
           }}
+          onPointerDown={(event) => {
+            if (event.pointerType !== "touch" && event.pointerType !== "pen")
+              return;
+            setPressedOccurrenceId(meta.occurrenceId);
+            setFlashOccurrenceId(meta.occurrenceId);
+          }}
+          onPointerUp={() => handleHighlightPointerUp(meta.occurrenceId)}
+          onPointerCancel={() => handleHighlightPointerUp(meta.occurrenceId)}
           onClick={(event) => handleGrammarHighlightClick(event, onGrammar)}
           style={GRAMMAR_ARTICLE_HIGHLIGHT_STYLE}
           data-marker-id={meta.itemId}
           data-occurrence-id={meta.occurrenceId}
           data-occurrence-index={occurrenceRowIndex(meta)}
           data-range-id={`${run.start}-${run.end}`}
-          className={`mx-0.5 cursor-pointer whitespace-pre-line rounded bg-violet-200 px-0.5 font-medium text-violet-950 underline decoration-violet-500/70 decoration-2 underline-offset-2 transition hover:bg-violet-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-1 dark:bg-violet-900/50 dark:text-violet-100 dark:hover:bg-violet-800/55 dark:focus-visible:ring-violet-400 dark:focus-visible:ring-offset-zinc-950 ${runHighlightExtraClass(meta)}`}
+          className={`mx-0.5 cursor-pointer whitespace-pre-line rounded bg-violet-200 px-0.5 font-medium text-violet-950 underline decoration-violet-500/70 decoration-2 underline-offset-2 transition hover:bg-violet-300 active:bg-violet-300/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-1 dark:bg-violet-900/50 dark:text-violet-100 dark:hover:bg-violet-800/55 dark:active:bg-violet-800/70 dark:focus-visible:ring-violet-400 dark:focus-visible:ring-offset-zinc-950 ${runHighlightExtraClass(meta)}`}
         >
           {text}
         </span>
@@ -3350,7 +3733,11 @@ export function InteractiveArticleReader({
       <div className="grid flex-1 gap-4 md:grid-cols-2 md:items-start">
         <Card
           ref={articleScrollRef}
-          className="flex max-h-[calc(100vh-100px)] min-h-[280px] flex-col overflow-y-auto md:min-h-[360px]"
+          className={`flex min-h-[280px] flex-col overflow-y-auto md:min-h-[360px] md:max-h-[calc(100vh-100px)] ${
+            showMobileSheet
+              ? "max-md:max-h-[min(50dvh,calc(100dvh-220px))]"
+              : "max-md:max-h-[min(72dvh,calc(100dvh-88px))]"
+          } ${!showMobileSheet ? "max-h-[calc(100vh-100px)]" : ""}`}
         >
           <CardTitle className="text-base">{metaTitle}</CardTitle>
           <div className="mt-1 space-y-1.5 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
@@ -3361,7 +3748,7 @@ export function InteractiveArticleReader({
               语法高亮（蓝 / 紫）内也可拖选其中单词加入词库；无选区时轻点该片段仍会打开语法说明。
             </p>
             <p className="md:hidden text-zinc-500">
-              底部「详情」打开时仍可滑动、点选课文中内容；高亮会尽量上移到抽屉上方。收起请点抽屉内「关闭」。
+              <strong>轻点</strong>普通文字可选中单词；<strong>可分动词、短语请拖选</strong>（可从绿/琥珀/蓝/紫高亮上起拖，选区下方出按钮）。无选区时轻点彩色高亮打开详情。
             </p>
             <p className="font-medium text-zinc-700 dark:text-zinc-300">高亮含义</p>
             {legendMode === "full" ? (
@@ -3413,15 +3800,18 @@ export function InteractiveArticleReader({
           </div>
           <article
             ref={articleRef}
-            className="mt-4 cursor-text select-text text-[17px]"
-            onMouseUp={handleArticlePointerUp}
-            onTouchEnd={handleArticlePointerUp}
+            className="article-reading-body mt-4 cursor-text select-text text-[17px] selection:bg-blue-300/80 selection:text-inherit max-md:touch-manipulation max-md:[-webkit-touch-callout:none] dark:selection:bg-blue-500/50"
+            onPointerDown={handleArticlePointerDown}
+            onPointerUp={handleArticlePointerUp}
+            onPointerCancel={handleArticlePointerUp}
           >
             {articleBody}
           </article>
         </Card>
 
-        <div className="flex min-h-0 flex-col md:sticky md:top-20 md:z-10 md:h-[calc(100vh-100px)] md:max-h-[calc(100vh-100px)] md:w-full md:self-start">
+        <div
+          className={`flex min-h-0 flex-col md:sticky md:top-20 md:z-10 md:h-[calc(100vh-100px)] md:max-h-[calc(100vh-100px)] md:w-full md:self-start ${showMobileSheet ? "max-md:hidden" : ""}`}
+        >
           <Card className="flex h-full min-h-[280px] flex-col overflow-hidden md:min-h-0">
             <div className="flex min-h-0 flex-1 flex-col">
               <Tabs
@@ -3435,19 +3825,37 @@ export function InteractiveArticleReader({
         </div>
       </div>
 
+      {textSelectionUi?.highlightRects.map((r, i) => (
+        <div
+          key={`sel-hl-${i}-${r.top}`}
+          className="pointer-events-none fixed z-[58] rounded-[2px] bg-blue-400/45 ring-1 ring-blue-500/55 dark:bg-blue-400/35 dark:ring-blue-400/50"
+          style={{
+            left: r.left,
+            top: r.top,
+            width: r.width,
+            height: r.height,
+          }}
+          aria-hidden
+        />
+      ))}
+
       {textSelectionUi ? (
         <div
           ref={selectionPopoverRef}
           role="toolbar"
           aria-label="选中文本操作"
-          className="fixed z-[55] flex -translate-x-1/2 flex-wrap items-center justify-center gap-1 rounded-lg border border-zinc-200 bg-white p-1.5 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
+          className="pointer-events-auto fixed z-[60] flex -translate-x-1/2 flex-col flex-nowrap items-center justify-center gap-1 rounded-lg border border-zinc-200 bg-white px-2 py-1.5 shadow-[0_4px_20px_rgba(0,0,0,0.18)] dark:border-zinc-700 dark:bg-zinc-900 dark:shadow-[0_4px_24px_rgba(0,0,0,0.45)]"
           style={{
             left: textSelectionUi.left,
             top: textSelectionUi.top,
             maxWidth: "min(100vw - 1rem, 280px)",
           }}
         >
-          <Button
+          <p className="max-w-full truncate px-1 text-center text-[10px] font-medium text-blue-800 dark:text-blue-200 md:hidden">
+            已选：{textSelectionUi.text}
+          </p>
+          <div className="flex flex-nowrap items-center justify-center gap-1">
+            <Button
             type="button"
             variant="secondary"
             className="px-2 py-1 text-xs"
@@ -3486,7 +3894,8 @@ export function InteractiveArticleReader({
             onClick={onPopoverSpeak}
           >
             发音
-          </Button>
+            </Button>
+          </div>
         </div>
       ) : null}
 

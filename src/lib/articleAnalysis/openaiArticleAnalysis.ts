@@ -3,7 +3,11 @@ import type { CefrLevel } from "@/lib/types";
 import { parseGrammaticalGender } from "@/lib/vocabulary/grammaticalGender";
 import { normalizeTextKey } from "@/lib/articleReadingModel";
 
-/** 单次请求正文上限（字符数）。后续可做分块分析。 */
+/**
+ * 单次整文分析送入模型的正文上限（字符数）。
+ * 原因：控制单次 OpenAI 调用的 token/费用/延迟，并降低超长文 JSON 输出失败率；超长文目前只分析前半段（响应 warning）。
+ * 后续可改为分块分析或分段合并推荐。
+ */
 export const OPENAI_ANALYSIS_TEXT_CHAR_LIMIT = 10_000;
 
 const SYSTEM_PROMPT = `你是德语阅读学习助手。
@@ -11,11 +15,10 @@ const SYSTEM_PROMPT = `你是德语阅读学习助手。
 
 核心目标：用户在阅读文章前，先查看你标出的关键词汇和语法点；看完这些解释后，应能大致读懂文章主旨和关键细节，阅读过程中不需要频繁查词。
 
-【推荐数量（上限，不是配额）】
-- vocabulary（广义词汇 / 表达，lexical item）**最多 20 条**；grammar **最多 8 条**；reading_questions **恰好 3 条**中文问题。
-- 这是**上限**：简单、篇幅短或整体较易的文章，应**明显少于**上限；**不要为了凑满条数**而加入过于基础、对读懂主旨与关键细节帮助很小的项目。
-- 文章偏难、篇幅较长或信息密度高时，可以**接近**上述上限，但**不得超过**。
-- 优先保证「读懂」：**漏掉次要词也比堆满简单词好**。
+【推荐数量】
+- vocabulary（广义词汇 / 表达，lexical item）：**不设固定条数上限**；应覆盖文中影响读懂主旨与关键细节、且符合 **userLevel** 的值得学项（单词、复合名词、搭配、可分动词、固定表达等）。
+- grammar **最多 8 条**；reading_questions **恰好 3 条**中文问题。
+- 简单、篇幅短或整体较易的文章，词汇条数自然会较少；**不要为了凑满条数**而加入过于基础、对读懂主旨与关键细节帮助很小的项目。
 
 【词汇推荐范围：主动覆盖广义 lexical item】
 不要只推荐单个生词。应主动识别影响理解的词汇型表达，包括但不限于：
@@ -50,10 +53,10 @@ const SYSTEM_PROMPT = `你是德语阅读学习助手。
 
 【用户水平 userLevel】
 userLevel 表示本次分析使用的学习者水平（若调用方未指定则常见默认为 B1）。你必须依据该水平判断哪些词汇与语法「值得推荐」：
-- A2：侧重基础词与基础结构，但仍遵守上限与非凑数原则。
+- A2：侧重基础词与基础结构，但仍遵守非凑数原则。
 - B1：新闻常见词、搭配、可分动词、复合名词、被动、从句等。
 - B2：减少过于基础的词，侧重抽象表达、长句、语气、Konjunktiv/间接引语、复杂结构。
-- C1/C2：仅在确有帮助时增加难度；仍不得超过条数上限。
+- C1/C2：仅在确有帮助时增加难度；grammar 仍不得超过 8 条。
 
 【每条 vocabulary 须在释义中交代清楚的要点】
 - lemma 尽量为词典形式；动词用不定式；名词尽量带冠词的规范形式（不确定则不瞎编）。
@@ -71,11 +74,23 @@ userLevel 表示本次分析使用的学习者水平（若调用方未指定则�
 5. normalized_key：词汇的小写归一化键（可去重参考，如 lemma 小写或规范形式）。
 6. grammar 每条必须包含 **grammar_key** 与 **normalized_key**：二者与用户总语法库唯一键 **(grammar_key, normalized_key)** 对齐；均须小写归一化、折叠多余空白（与词汇 normalized_key 规则一致）。**grammar_key** 表示大概念标签（如从句类型）；**normalized_key** 表示该条「语法记录」的稳定子键，可与 grammar_key 相同，或在同一概念下用更细的归一化片段区分不同难点；**不要**与 vocabulary 的 normalized_key 字段混用语义。
 
-【grammatical_gender 字段（硬性，与 JSON schema 枚举一致）】
-每条 vocabulary 必须输出 **grammatical_gender**，仅取：**na** | **m** | **f** | **n** | **unclear**。
-- **名词**（part_of_speech 为 **noun** 或 **compound_noun**，或德文标签 **Substantiv** / **Nomen**）：**必须是 m / f / n 之一**；复合词按主干或整体常见用法判断，无法判断时用 **unclear**（不要用 na 糊弄名词）。
-- **单个名词、复合名词**的 **part_of_speech 必须用 noun 或 compound_noun**，不要用 phrase / collocation / fixed_expression 等代替，否则界面无法稳定展示名词性。
-- **动词、形容词、副词、介词、连词、短语、固定搭配**等非名词：**na**。`;
+【part_of_speech 与 grammatical_gender（硬性，与 JSON schema 一致）】
+每条 vocabulary 须**同时**正确填写 **part_of_speech** 与 **grammatical_gender**。
+
+**part_of_speech** — 按表达的真实类型选择，**不要**为填 m/f/n 而把动词、搭配、可分动词一律标成名词：
+- 单个名词 → **noun**
+- 连写的复合名词（如 Untersuchungshaft）→ **compound_noun**
+- 可分动词（句中可拆分）→ **separable_verb**
+- 动词短语、多词动词表达 → **verb_phrase**
+- 固定搭配、惯用表达（多词、以动词或虚词为主）→ **collocation** 或 **fixed_expression**
+- 介词短语、一般短语 → **prepositional_phrase** 或 **phrase**
+- 单个动词、形容词等 → **verb** / **adjective** 等
+
+**grammatical_gender** — 仅取：**na** | **m** | **f** | **n** | **unclear**。
+- **仅当** part_of_speech 为 **noun** 或 **compound_noun**（或条目本质上是名词性学习对象）时：填 **m / f / n**（无法判断用 **unclear**，不要用 na）；lemma 尽量以 **der / die / das** 开头（见上文名词节）。
+- part_of_speech 为 **separable_verb、verb、verb_phrase、phrase、collocation、fixed_expression、prepositional_phrase** 及形容词、副词、介词等时：填 **na**。
+
+**禁止**：把明显是动词搭配、固定表达、可分动词的条目标成 noun / compound_noun，仅为了输出冠词或 gender。`;
 
 export function truncateForOpenAIAnalysis(fullText: string): {
   text: string;
@@ -135,8 +150,7 @@ export function normalizeOpenAIArticleAnalysis(
       };
     },
   );
-  const voc =
-    vocSanitized.length > 20 ? vocSanitized.slice(0, 20) : vocSanitized;
+  const voc = vocSanitized;
 
   const graRaw = Array.isArray(o.grammar) ? o.grammar : [];
   const graSanitized: ArticleAnalysisResult["grammar"] = graRaw.map((row) => {

@@ -54,6 +54,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 ## 功能范围约束
 
 - **除非任务明确要求**，不得改动现有页面/组件的**用户可见行为**（路由、交互、文案意图、Mock 数据语义等）。重构需与任务目标一致且可审查。
+- **回归防护（强制自检）**：每次改代码前默认定语——**千万不要随便动以前已经做好、验收过的功能**（尤其阅读页：点按高亮打开详情、拖选加入词库/语法、移动端勿弹系统「在 Google 中搜索」等）。新功能应增量实现；若必须动到旧逻辑，须在同一任务内用 `npm test` / `npm run build` 验证，并在 `DEVELOPMENT_LOG.md` 写明影响面。
 
 ## 相关文件
 

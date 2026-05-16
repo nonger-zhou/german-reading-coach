@@ -6,7 +6,7 @@ German Reading Coach
 
 ## 当前版本
 
-**v0.1 Mock** + **Phase 2**；**Phase 2.5** 已完成；**Phase 3.0（Mock）**、**Phase 3.1–3.2（OpenAI + 确认保存 `source = ai`）**、**Phase 3.4（文章级 `summary_*` / `reading_questions`）**、**Phase 3.5（真实 AI 为主，Mock 仅 `development` 开发工具）**、**Phase 3.6（删除 ≠ 忽略）**、**Phase 3.7（学习中/已掌握/暂忽略 UI + 已掌握与暂忽略默认折叠）**、**Phase 3.8（全局词库/语法库 Supabase；总库支持状态管理）**、**Phase 3.13–3.14（词汇/语法「外部深入解释」；锁定 AI 调用、移除普通卡「重新生成解释」）**、**Phase 3.15（我的深度笔记：外部解释手动保存，不消耗本应用 AI token）**、**Phase 3.16（整文分析 SYSTEM_PROMPT：词汇≤20 / 语法≤8、lexical item 与可分动词等策略）**、**Phase 4.0（URL 自动导入：服务端抓取 + 预览后保存 + 剪贴板读取）**、**Phase 4.1（删除文章 v1）**、**Phase 7（Chrome 插件导入 MVP）**、**状态操作下拉菜单 UI** 已落地，见 **`DEVELOPMENT_LOG.md`**。
+**v0.1 Mock** + **Phase 2**；**Phase 2.5** 已完成；**Phase 3.0（Mock）**、**Phase 3.1–3.2（OpenAI + 确认保存 `source = ai`）**、**Phase 3.4（文章级 `summary_*` / `reading_questions`）**、**Phase 3.5（真实 AI 为主，Mock 仅 `development` 开发工具）**、**Phase 3.6（删除 ≠ 忽略）**、**Phase 3.7（学习中/已掌握/暂忽略 UI + 已掌握与暂忽略默认折叠）**、**Phase 3.8（全局词库/语法库 Supabase；总库支持状态管理）**、**Phase 3.13–3.14（词汇/语法「外部深入解释」；锁定 AI 调用、移除普通卡「重新生成解释」）**、**Phase 3.15（我的深度笔记：外部解释手动保存，不消耗本应用 AI token）**、**Phase 3.16（整文分析 SYSTEM_PROMPT：词汇不设固定上限 / 语法≤8、lexical item 与 part_of_speech 策略）**、**Phase 4.0（URL 自动导入：服务端抓取 + 预览后保存 + 剪贴板读取）**、**Phase 4.1（删除文章 v1）**、**Phase 7（Chrome 插件导入 MVP）**、**状态操作下拉菜单 UI** 已落地，见 **`DEVELOPMENT_LOG.md`**。
 
 ## 当前状态
 
@@ -58,10 +58,16 @@ German Reading Coach
 
 | 方向 | 说明 |
 |------|------|
+| **整文 AI：超长正文分块分析** | 当前单次分析仅送正文**前 1 万字符**；后半段无 AI 推荐。后续做分块调用并合并 vocabulary/grammar，或提高上限并评估费用/超时。 |
 | **总词库搜索：同 `normalized_key` 分组展示** | 当同一归一化键因 **`part_of_speech`** 不同存在**多条 `vocabulary_items`** 时，搜索命中后在列表中**收拢为一组**：组头展示词形（如 `lemma` / `display_word`），组内列出各条**词汇记录**（标明词性/类型 + 状态徽标），子行点击进入对应卡片详情。对用户统一称**「两条词汇记录」**（不说「学习档」）。**无分组实现前**：保持当前「并列多条」即可。 |
 
 ## 最近更新
 
+- **2026-05-15（手机可分动词拖选）**：词汇高亮触摸不再阻断拖选；松手保留多词选区；**`npm run build`** 已通过。
+- **2026-05-15（整文 AI 词汇推荐策略）**：取消词汇 **20 条**上限（Prompt + `json_schema` + 规范化）；去掉「漏掉次要词也比堆满简单词好」；重写 **part_of_speech / grammatical_gender** 指引（动词/搭配/可分动词不得一律标名词）；**`docs/PRD.md` §13.6**、**`USER_MANUAL` §7.2** 已同步；**`npm run build`** 已通过。
+- **2026-05-15（恢复词下选区浮层）**：手机拖选后三按钮回到**选区下方**浮动条，移除屏幕底栏；保留 touch-callout 与同屏定位；**`npm run build`** 已通过。
+- **2026-05-15（手机点词反馈 + 同屏定位）**：点按高亮即时描边、拖选琥珀色高亮、底栏「已选中可添加」；手机选中项时不再滚到下方列表、详情打开时课文留上方；**`npm run build`** 已通过。
+- **2026-05-15（手机选词：系统菜单回归修复）**：恢复高亮 **`touch-callout: none`**，保留跨高亮 **`user-select: text`**；手机拖选后在**底部工具栏**操作「添加为词汇 / 标记语法 / 发音」；**`AGENTS.md`** 增加回归防护；**`npm run build`** 已通过，Production 已部署。
 - **2026-05-14（整文分析：总语法库已掌握/暂忽略过滤）**：**`grammar_key` + `normalized_key`** 与 **`json_schema` 必填 `normalized_key`**；**`filterGrammarByUserLibrary`**、**`fetchGrammarMasteredIgnoredKeysForArticleAnalysis`**；**`USER_MANUAL` §9**、**`PRD`**、**`README`**、**`USER_RESEARCH` Q1**；**`npm test`** / **`npm run build`** 已通过。
 - **2026-05-14（用户调研开放问题文档）**：新增 **`docs/USER_RESEARCH_OPEN_QUESTIONS.md`**（语法过滤粒度、复习展示、话术等可摘题）；**`README.md`**、**`USER_MANUAL` §14** 索引；**`DEVELOPMENT_LOG.md`** 已记；**`npm run build`** 已通过。
 - **2026-05-14（整文分析：总词库已掌握/暂忽略词汇过滤）**：**`POST /api/analyze-article`** 须 **Bearer**；按 **`normalized_key` + `part_of_speech`** 提示模型并**后处理剔除** **`vocabulary`**；**`grammar`** 未过滤；**`/articles/[id]`** 请求带头；**`docs/PRD.md`**、**`USER_MANUAL` §9**、**`README.md`** 已同步；**`npm test`** / **`npm run build`** 已通过。

@@ -11,7 +11,6 @@ export const ARTICLE_ANALYSIS_JSON_SCHEMA = {
     properties: {
       vocabulary: {
         type: "array",
-        maxItems: 20,
         items: {
           type: "object",
           additionalProperties: false,

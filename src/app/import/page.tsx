@@ -482,11 +482,19 @@ function ImportPageContent() {
           导入文章
         </h1>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          推荐先用链接自动抓取标题与正文；若抓取失败可切换手动粘贴。需要完整阅读演示可走{" "}
-          <Link href="/articles/mock" className="text-emerald-700 hover:underline dark:text-emerald-400">
-            演示课文
-          </Link>
-          。
+          <span className="md:hidden">
+            链接抓取，或复制后点「剪贴板」填入正文。
+          </span>
+          <span className="hidden md:inline">
+            推荐先用链接自动抓取标题与正文；若抓取失败可切换手动粘贴。需要完整阅读演示可走{" "}
+            <Link
+              href="/articles/mock"
+              className="text-emerald-700 hover:underline dark:text-emerald-400"
+            >
+              演示课文
+            </Link>
+            。
+          </span>
         </p>
       </div>
 
@@ -525,7 +533,10 @@ function ImportPageContent() {
       <Card>
         <CardTitle className="text-base">导入方式</CardTitle>
         <CardDescription>
-          可选择手动粘贴正文，或先抓取链接后再确认保存。
+          <span className="md:hidden">粘贴或链接抓取后保存。</span>
+          <span className="hidden md:inline">
+            可选择手动粘贴正文，或先抓取链接后再确认保存。
+          </span>
         </CardDescription>
         <div className="mt-3 inline-flex rounded-lg border border-zinc-200 p-1 dark:border-zinc-700">
           <button
@@ -557,7 +568,10 @@ function ImportPageContent() {
         <Card>
           <CardTitle className="text-base">链接导入</CardTitle>
           <CardDescription>
-            在服务端抓取网页并提取标题、正文、来源与发布时间，不会调用 AI。
+            <span className="md:hidden">输入链接后点「抓取文章」。</span>
+            <span className="hidden md:inline">
+              在服务端抓取网页并提取标题、正文、来源与发布时间，不会调用 AI。
+            </span>
           </CardDescription>
           <label className="mt-3 block text-sm font-medium text-zinc-800 dark:text-zinc-200">
             文章链接
@@ -612,7 +626,12 @@ function ImportPageContent() {
       <Card>
         <CardTitle className="text-base">正文</CardTitle>
         <CardDescription>
-          保存到云端时使用此处的文本。从网页复制全文时，请优先点「从剪贴板读取」，以便自动去掉广告与多余版式；若正文已是干净稿，也可直接在此编辑或粘贴。阅读水平请在下方「本篇阅读水平」中选择。
+          <span className="md:hidden">
+            复制网页后点「剪贴板」填入；或抓取链接。下方选阅读水平。
+          </span>
+          <span className="hidden md:inline">
+            保存到云端时使用此处的文本。从网页复制全文时，请优先点「从剪贴板读取」，以便自动去掉广告与多余版式；若正文已是干净稿，也可直接在此编辑或粘贴。阅读水平请在下方「本篇阅读水平」中选择。
+          </span>
         </CardDescription>
         <textarea
           value={cleanedText}
@@ -676,7 +695,10 @@ function ImportPageContent() {
               )}
             </summary>
             <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">
-              此处为抓取或剪贴板导入的原始文本。修改后约半秒会自动同步到上方正文；也可先改上方正文再保存。
+              <span className="md:hidden">原始稿，改后会同步到上方正文。</span>
+              <span className="hidden md:inline">
+                此处为抓取或剪贴板导入的原始文本。修改后约半秒会自动同步到上方正文；也可先改上方正文再保存。
+              </span>
             </p>
             <textarea
               value={rawPastedText}
