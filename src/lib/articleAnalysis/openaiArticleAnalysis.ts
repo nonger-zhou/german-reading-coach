@@ -1,6 +1,9 @@
 import type { AnalyzedVocabularyItem, ArticleAnalysisResult } from "./types";
 import type { CefrLevel } from "@/lib/types";
-import { GRAMMAR_ANALYSIS_V2_SYSTEM_SECTION } from "@/lib/articleAnalysis/grammarAnalysisV2Prompt";
+import {
+  GRAMMAR_ANALYSIS_V2_SYSTEM_SECTION,
+  GRAMMAR_SELECTED_TEXT_CONTIGUOUS_SUBSTRING_RULE,
+} from "@/lib/articleAnalysis/grammarAnalysisV2Prompt";
 import {
   parseFiniteVerbPosition,
   parseGrammarType,
@@ -23,7 +26,8 @@ const SYSTEM_PROMPT = `你是德语阅读学习助手。
 
 【推荐数量】
 - vocabulary（广义词汇 / 表达，lexical item）：**不设固定条数上限**；应覆盖文中影响读懂主旨与关键细节、且符合 **userLevel** 的值得学项（单词、复合名词、搭配、可分动词、固定表达等）。
-- grammar **最多 8 条**；reading_questions **恰好 3 条**中文问题。
+- grammar（语法点）：**不设固定条数上限**；应覆盖文中确有学习价值、且符合 **userLevel** 的结构；**不要为了凑条数**编造语法点。
+- reading_questions **恰好 3 条**中文问题。
 - 简单、篇幅短或整体较易的文章，词汇条数自然会较少；**不要为了凑满条数**而加入过于基础、对读懂主旨与关键细节帮助很小的项目。
 
 【词汇推荐范围：主动覆盖广义 lexical item】
@@ -55,9 +59,14 @@ userLevel 表示本次分析使用的学习者水平（若调用方未指定则�
 - A2：侧重基础词与基础结构，但仍遵守非凑数原则。
 - B1：新闻常见词、搭配、可分动词、复合名词、被动、主句 V2、从句、Konjunktiv 等——**不要把「语法」等同于「从句」**。
 - B2：减少过于基础的词，侧重抽象表达、长句、语气、Konjunktiv/间接引语、复杂结构。
-- C1/C2：仅在确有帮助时增加难度；grammar 仍不得超过 8 条。
+- C1/C2：仅在确有帮助时增加难度；grammar 仍须遵守「准确性优先、不凑条数」。
 
 ${GRAMMAR_ANALYSIS_V2_SYSTEM_SECTION}
+
+${GRAMMAR_SELECTED_TEXT_CONTIGUOUS_SUBSTRING_RULE}
+
+【grammar 与 vocabulary 的分工】
+若某片段更适合作为**语法结构**讲解（从句、语序、语态等），放入 grammar；若主要是**词汇 / 表达含义**学习，放入 vocabulary。同一位置不要重复堆砌。标题式论断句、口号式短句**不要**标成 fixed_expression，除非确是惯用搭配。
 
 【每条 vocabulary 须在释义中交代清楚的要点】
 - lemma 尽量为词典形式；动词用不定式；名词尽量带冠词的规范形式（不确定则不瞎编）。
@@ -67,7 +76,7 @@ ${GRAMMAR_ANALYSIS_V2_SYSTEM_SECTION}
 硬性要求：
 1. 不要推荐明显人名、地名、媒体名、公司名，除非它们本身有语言学习价值。
 2. 不要推荐文章标题或正文中不存在的词或片段。
-3. 每个 vocabulary.surface_form、grammar.selected_text 必须是所给原文中的真实连续子串（区分大小写与变音符号，与原文完全一致）。
+3. grammar.**selected_text** 必须是所给 **originalText 中的真实连续子串**（区分大小写与变音符号，与原文逐字一致）。**禁止**删减、改写、重组后当作 selected_text。vocabulary.**surface_form** 优先选用文中连续片段以便高亮；**禁止**在 surface_form 中使用「…」或文中不存在的拼接。
 4. 不要编造原文中不存在的词或例句；example_sentence 可摘自原文或基于原文片段的简短引用。
 5. normalized_key：词汇的小写归一化键（可去重参考，如 lemma 小写或规范形式）。
 6. grammar 每条输出 **grammar_type**（枚举）与 **normalized_key**；入库时 **grammar_key = grammar_type**。normalized_key 区分同一类型下的不同具体结构；须小写归一化、折叠多余空白。
@@ -119,7 +128,10 @@ ${params.title}
 
 originalText:
 ${params.originalText}`;
-  const extras = [params.vocabLibraryBlockAppendix, params.grammarLibraryBlockAppendix]
+  const extras = [
+    params.vocabLibraryBlockAppendix,
+    params.grammarLibraryBlockAppendix,
+  ]
     .map((s) => (typeof s === "string" ? s.trim() : ""))
     .filter(Boolean);
   if (!extras.length) return base;
@@ -148,10 +160,9 @@ export function normalizeOpenAIArticleAnalysis(
       };
     },
   );
-  const voc = vocSanitized;
 
   const graRaw = Array.isArray(o.grammar) ? o.grammar : [];
-  const graSanitized: ArticleAnalysisResult["grammar"] = graRaw.map((row) => {
+  const grammar = graRaw.map((row) => {
     const r = row as Record<string, unknown>;
     const grammar_type = parseGrammarType(
       r.grammar_type ?? r.grammar_key,
@@ -175,12 +186,10 @@ export function normalizeOpenAIArticleAnalysis(
       finite_verb_position: parseFiniteVerbPosition(r.finite_verb_position),
     };
   });
-  const gra =
-    graSanitized.length > 8 ? graSanitized.slice(0, 8) : graSanitized;
 
   return {
-    vocabulary: voc,
-    grammar: gra,
+    vocabulary: vocSanitized,
+    grammar,
     summary_zh: typeof o.summary_zh === "string" ? o.summary_zh : "",
     summary_de_simple:
       typeof o.summary_de_simple === "string" ? o.summary_de_simple : "",

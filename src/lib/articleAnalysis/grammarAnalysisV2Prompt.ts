@@ -1,11 +1,11 @@
 /** Grammar Analysis v2：整文分析 SYSTEM_PROMPT 语法章节（Phase 1） */
 
 export const GRAMMAR_ANALYSIS_V2_SYSTEM_SECTION = `
-【Grammar Analysis v2 — 语法推荐（最多 8 条，可少于 8 条）】
+【Grammar Analysis v2 — 语法推荐】
 
 **原则（必须遵守）**
 - Accuracy is more important than quantity. 准确性优先于数量。
-- 不要为了凑满 8 条而编造语法点；没有明确、真实、有学习价值的结构时，只返回 2–5 条甚至 0 条。
+- **不设固定条数上限**；没有明确、真实、有学习价值的结构时不要编造；篇幅短或较易的文章可只返回少量条甚至 0 条。
 - Do not invent grammar points. Do not force a Nebensatz label.
 - Do not classify a phrase as a clause. Do not classify a fronted adverbial as a subordinate clause.
 - 每条 grammar item **只选一个**最主要、最有学习价值的 **grammar_type**（见 schema 枚举）。同一 selected_text 或同一句不要拆成多条重复项（如不要对同一句同时输出 temporalangabe + modalverb + satzklammer）。
@@ -20,7 +20,9 @@ export const GRAMMAR_ANALYSIS_V2_SYSTEM_SECTION = `
 **每条 grammar 必填字段**
 - **grammar_type**（枚举，入库时 **grammar_key = grammar_type**）
 - **normalized_key**：区分同一类型下的不同具体结构（小写归一化；可与 grammar_type 相同或更细，如含 selected_text 关键词）
-- **selected_text**：必须是原文**连续子串**
+- **selected_text**：必须是所给 **originalText 中的真实连续子串**（区分大小写与变音符号，与原文逐字一致）。
+  **禁止**删减、改写、重组句子后当作 selected_text（例如不得从关系从句句中删掉「, der dort steht,」只留下「Der Mann ist mein Lehrer.」——后者不是原文子串）。
+  若讲整句结构，selected_text 须为**完整原句**；若讲关系从句，用关系从句片段（如 der dort steht）。
 - **name_de** / **name_zh**：人类可读标题（不要只写「从句」）
 - **is_subordinate_clause**：true 仅当确为从句/关系从句/um…zu 等非主句结构；主句、介词短语、祈使句等为 false
 - **finite_verb**：句中变位动词（无则 ""）
@@ -76,6 +78,19 @@ Der Mann, der dort steht, ist mein Lehrer. → relativsatz。
 
 反例 7
 Der Mann steht dort. → hauptsatz_v2；der 是冠词不是关系代词。
+
+反例 8（禁止伪造 selected_text）
+原文：Der Mann, der dort steht, ist mein Lehrer.
+允许：selected_text = "der dort steht"（relativsatz）或整句 "Der Mann, der dort steht, ist mein Lehrer."
+禁止：selected_text = "Der Mann ist mein Lehrer."（删改中间从句后不再是原文连续子串）
+`;
+
+export const GRAMMAR_SELECTED_TEXT_CONTIGUOUS_SUBSTRING_RULE = `
+【grammar.selected_text 连续子串（硬性，仅 grammar）】
+- grammar.**selected_text** 必须是 user 消息中 **originalText 里真实存在的一段连续字符**（区分大小写与变音符号）。
+- **禁止**为便于讲解而删减、合并、改写或「骨架化」句子；不得输出原文中不存在的拼接结果。
+- 错误示例：原文「Der Mann, der dort steht, ist mein Lehrer.」→ 禁止 selected_text「Der Mann ist mein Lehrer.」
+- 正确示例：selected_text「der dort steht」或整句原文。
 `;
 
 export const GRAMMAR_ENRICH_V2_SYSTEM_SECTION = `

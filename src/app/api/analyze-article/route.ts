@@ -4,6 +4,8 @@ import {
   formatOpenAIRouteErrorMessage,
 } from "@/lib/openai/createServerOpenAIClient";
 import { ARTICLE_ANALYSIS_JSON_SCHEMA } from "@/lib/articleAnalysis/articleAnalysisJsonSchema";
+import { filterArticleAnalysisGrammarByArticleText } from "@/lib/articleAnalysis/filterAnalysisByArticleText";
+import { listRealAiEntriesWithoutTextMatch } from "@/lib/articleAnalysis/convertAnalysisToArticleItems";
 import {
   filterArticleAnalysisGrammarByBlockedSet,
   formatGrammarLibraryBlockPromptFromRows,
@@ -240,6 +242,26 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
     }
 
     let analysis = normalizeOpenAIArticleAnalysis(parsed);
+
+    const { analysis: analysisGrammarFiltered, removedGrammar: grammarNotInText } =
+      filterArticleAnalysisGrammarByArticleText(analysis, textForModel);
+    analysis = analysisGrammarFiltered;
+    if (grammarNotInText.length > 0) {
+      warnings.push(
+        `已剔除 ${grammarNotInText.length} 条语法推荐（selected_text 非正文连续子串）：${grammarNotInText.slice(0, 3).join("、")}${grammarNotInText.length > 3 ? "…" : ""}`,
+      );
+    }
+
+    const unmatchedVocab = listRealAiEntriesWithoutTextMatch(
+      analysis,
+      textForModel,
+    ).vocabulary;
+    if (unmatchedVocab.length > 0) {
+      warnings.push(
+        `有 ${unmatchedVocab.length} 条词汇推荐的 surface_form 未在正文中精确匹配，预览保存时可能无法高亮（未剔除）：${unmatchedVocab.slice(0, 3).join("、")}${unmatchedVocab.length > 3 ? "…" : ""}`,
+      );
+    }
+
     const { vocabulary: vocFiltered, removedCount: vocabRemoved } =
       filterArticleAnalysisVocabularyByBlockedSet(
         analysis.vocabulary,

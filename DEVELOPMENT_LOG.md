@@ -76,6 +76,228 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-05-17 — 回退方案 C，恢复 d4aee6e 单次调用 + 完整词汇 Prompt
+
+**本次完成**
+
+- **撤销**方案 C 双次 API：删除 **`requestOpenAIArticleAnalysis.ts`**、**`openaiVocabularyAnalysis.ts`**、**`openaiArticleCoreAnalysis.ts`**、**`articleAnalysisVocabularySchema.ts`**；**`analyze-article`** 恢复 **一次** `chat.completions`。
+- **`openaiArticleAnalysis.ts`**：恢复 **Grammar v2 落地后（`d4aee6e`）** 的词汇 Prompt 口径——广义 lexical item、可分动词、**名词 der/die/das**、**part_of_speech / grammatical_gender** 分类型指引；保留 Grammar v2 + 连续子串规则；grammar **不设 8 条硬上限**；增加一句：标题式短句勿滥标 fixed_expression。
+- **`articleAnalysisJsonSchema.ts`**：合并单次 schema，grammar **无** `maxItems: 8`。
+- 测试与 **PRD / USER_MANUAL** 已同步。
+
+**验证**：**`npm test`**（62）/ **`npm run build`** 已通过。
+
+**说明**：模型对政经长文仍可能偏名词；若仍不满意，后续再单独评估换模型，**不再**叠 05-17 补丁或拆调用。
+
+### 2026-05-17 — 方案 C：vocabulary 独立 OpenAI 调用（已回退）
+
+**本次完成**
+
+- **`requestOpenAIArticleAnalysis.ts`**：`POST /api/analyze-article` 并行两次 **`gpt-4o-mini`** 调用后合并：
+  - **Core**：`ARTICLE_CORE_SYSTEM_PROMPT` + `ARTICLE_CORE_ANALYSIS_JSON_SCHEMA`（grammar、摘要、阅读问题 3 条）。
+  - **Vocabulary**：`VOCABULARY_ONLY_SYSTEM_PROMPT` + `VOCABULARY_ONLY_JSON_SCHEMA`（仅 vocabulary；含「词性多样性」短指引）。
+- 新增 **`openaiArticleCoreAnalysis.ts`**、**`openaiVocabularyAnalysis.ts`**、**`articleAnalysisVocabularySchema.ts`**；**`openaiArticleAnalysis.ts`** 仅保留截断与用户消息构建。
+- Live 测试改为分别使用 core / vocabulary-only schema。
+- **`docs/PRD.md` §13.6** 实现侧说明已同步。
+
+**验证**：**`npm test`**（62）/ **`npm run build`** 已通过。
+
+**说明**：单次分析 **API 调用变为 2 次**（费用/耗时略增）；词性分布需 App **重新分析** 后观察。
+
+**部署**：待维护者 push 或 `npm.cmd run vercel:prod`。
+
+### 2026-05-17 — 移除 grammar 8 条硬上限
+
+**本次完成**
+
+- **`articleAnalysisJsonSchema.ts`**：删除 **`grammar`** 数组 **`maxItems: 8`**。
+- **`openaiArticleAnalysis.ts`**：SYSTEM_PROMPT 改为 grammar **不设固定条数上限**；**`normalizeOpenAIArticleAnalysis`** 不再 **`slice(0, 8)`**。
+- **`grammarAnalysisV2Prompt.ts`**：删除「最多 8 条 / 凑满 8 条」表述，保留准确性优先、不凑条数。
+- **`docs/PRD.md` §13.6**、**`docs/USER_MANUAL.md`** 已同步。
+- **`vocabularySelectionPrompt.test.ts`**：断言无 grammar 8 条上限文案。
+
+**验证**：**`npm test`** / **`npm run build`** 已通过。
+
+**说明**：旨在减轻「grammar 固定 8 条」对 vocabulary 条数的锚定；**不保证** vocabulary 词性分布立刻改善，需重新分析后观察。
+
+**部署**：待维护者 push 或 `npm.cmd run vercel:prod`。
+
+### 2026-05-17 — vocabulary 方案 A：极简名词/性别 Prompt 段
+
+**本次完成**
+
+- **`openaiArticleAnalysis.ts`**（方案 A）：
+  - **删除**独立节「【名词与 grammatical_gender】」长说明（避免模型过度关注冠词/性别而偏名词）。
+  - **压缩**文末「part_of_speech 与 grammatical_gender」：先按真实类型选 POS；**非名词一律 `na`**；仅 noun/compound_noun 填 m/f/n，lemma **可**带 der/die/das，**不强制**、不展开复数教学。
+  - 释义要点中去掉「名词类见上节冠词说明」交叉引用。
+- **`vocabularySelectionPrompt.test.ts`**：断言含「非名词 / 一律 na」、不含旧版「必须以 der…」「常见复数形式」等长句。
+- **未改**：schema 字段、normalize、route 剔除策略、保存/高亮、Grammar v2、`vocabularySelectionPrompt.ts` 短段。
+
+**验证**
+
+- **`npm test`**（61）/ **`npm run build`** 已通过。
+
+**已知问题**
+
+- 全名词分布是否改善**需 App 或 live 复测**（`VOCAB_PROMPT_ACCEPTANCE_LIVE=1`）；本改动仅减 Prompt 对性别的权重，不保证模型行为稳定。
+
+**下一步**
+
+- 维护者对 Gaullismus / MSC **重新分析**对比 POS；若仍偏名词，再讨论方案 B/C（换模型 / 拆 vocabulary 调用），**不**再堆 05-17 式 Prompt 补丁。
+
+**部署**
+
+- 待维护者 push 或 `npm.cmd run vercel:prod`（本环境未执行 CLI 部署）。
+
+### 2026-05-17 — vocabulary Prompt 局部回退（05-15 口径，保留 Grammar v2）
+
+**本次完成**
+
+- **局部回退** vocabulary 选词 Prompt（非整仓、非 Grammar v2）：
+  - **`vocabularySelectionPrompt.ts`**：仅保留 **`VOCABULARY_LEXICAL_SCOPE_SECTION`**、**`VOCABULARY_SURFACE_FORM_LEMMA_SECTION`**（短原则）。
+  - **`openaiArticleAnalysis.ts`**：恢复 **不设词汇条数上限**、广义 lexical item、可分动词短说明；**缩短**名词/性别段；删除 05-17 叠补丁（四类流程、8–12、keyword extraction 长段、OUTPUT_CHECK、user reminder、长文政经附录）。
+  - **`articleAnalysisJsonSchema.ts`**：vocabulary 数组 `description` 改为中性一句（仅文案）。
+  - **`buildOpenAIAnalysisUserContent`**：不再附加 vocabulary 流程 reminder。
+- **保留不动**：`grammarAnalysisV2Prompt.ts`、grammar 连续子串剔除、vocabulary 不 API 剔除、normalize/route/保存。
+- **`vocabularyPromptAcceptance.live.test.ts`**：改为 **POS 诊断日志**（不因分布 fail，便于 A/B 人工对比）。
+
+**验证**
+
+- **`npm test`**（60）/ **`npm run build`** 已通过。
+- Live / Grammar v2 live：维护者本机跑 `VOCAB_PROMPT_ACCEPTANCE_LIVE=1` 与 `GRAMMAR_V2_LIVE=1` 对比 POS。
+
+**下一步**
+
+- App 内对 Gaullismus / MSC **重新分析**，对比回退前后 raw vocabulary；若仍偏名词再评估是否缩短 schema 侧名词字段说明或模型策略（非 Prompt 堆叠）。
+
+### 2026-05-17 — vocabulary 轻结构化候选流程（四类 → 8–12 条）
+
+**本次完成**
+
+- **`vocabularySelectionPrompt.ts`**：以 **`VOCABULARY_STRUCTURED_SELECTION_SECTION`** 替代零散目标/自检——Step 1 四类候选（主题名词 / 动词短语 / 搭配固定表达 / 形容词副词连接词）→ Step 2 选约 8–12 条 → Step 3 软性原则；保留 **surface_form/lemma** 与 **OUTPUT_CHECK**。
+- **`openaiArticleAnalysis.ts`**：挂载结构化流程；推荐数量与四类对齐；删除重复的「词汇推荐范围」长段。
+- **`buildOpenAIAnalysisUserContent`**：每条分析附加 **`VOCABULARY_USER_REMINDER_APPENDIX`**；长文再加 **`VOCABULARY_LONG_TEXT_USER_APPENDIX`**。
+- **未改**：schema / normalize / filter / 重试 / 保存高亮。
+
+**Live 复跑（两次，gpt-4o-mini）**
+
+- **Gaullismus**：仍 **8/8 noun/compound_noun**，`expressionTypes=0` — **未通过**。
+- **MSC fixture**：本轮亦 **8/8 全名词**（上一轮小改 Prompt 曾出现 4 条 expression，说明**不稳定**）— **未通过**。
+
+**结论**：轻结构化 Prompt 方向正确，但当前模型+单次调用**不足以稳定**改变行为；后续若继续 Prompt-only 边际有限，需产品层或模型策略讨论（仍不在此次 scope）。
+
+**验证**：`npm test`（61）/ `npm run build` 已通过。
+
+### 2026-05-17 — vocabulary 软性自检：推荐多条动词短语（非硬配额）
+
+**本次完成**
+
+- **`vocabularySelectionPrompt.ts`**：在 soft self-check 增加中英双语句——文中有多个值得学的动词短语/搭配时应推荐**多条**，勿只加 1 形容词或 1 孤立非名词、其余仍全是抽象主题名词。
+- **`vocabularyRegressionDiagnostic.ts`**：`countExpressionTypeVocabulary`。
+- **`scripts/fixtures/msc-oil-article.txt`**；**`vocabularyPromptAcceptance.live.test.ts`**：A=Gaullismus、B=MSC，验收 raw 中 **≥2** 条 expression 类型 + 非名词 surface 可定位。
+- **未改**：schema / normalize / filter / 重试 / 保存高亮。
+
+**Live 复跑（`VOCAB_PROMPT_ACCEPTANCE_LIVE=1`，vitest.live.config）**
+
+- **Gaullismus**：仍 **8/8 noun/compound_noun**，`expressionTypes=0` — **未通过**（模型波动；Prompt 仍不足）。
+- **MSC fixture**：`expressionTypes=4`（含 verb_phrase/fixed_expression），**非全名词** — 多样性有改善；但 3 条非名词 `surface_form` 非正文连续子串（如 `sich distanzieren von`）— **missingSurfaces 断言未通过**。
+
+**验证**
+
+- **`npm test`**（60）/ **`npm run build`** 已通过。
+
+### 2026-05-17 — vocabulary：surface_form/lemma 分工 + 选择目标（Prompt 极小修正）
+
+**本次完成**
+
+- **`vocabularySelectionPrompt.ts`**：新增 **`VOCABULARY_SURFACE_FORM_AND_LEMMA_SECTION`**（lemma=学习对象、surface_form=原文连续可高亮片段；禁止词典骨架/…；Gaullismus 类示例）；强化目标节与软性自检（输出前 surface_form 须为 originalText 连续子串）。
+- **`openaiArticleAnalysis.ts`**：挂载新段；精简重复的「可分动词」长示例；硬性要求 #3 对齐字段职责。
+- **`vocabularyRegressionDiagnostic.ts`**：`hasExpressionTypeVocabulary`、`nonNounSurfaceFormsMissingFromArticle`；Gaullismus live 验收增加 expression 类型与非名词 surface 可定位断言。
+- **未改**：schema / normalize / filter / 自动重试 / 保存逻辑。
+
+**验证**
+
+- **`npm test`** / **`npm run build`** 已通过。
+- Gaullismus live：`VOCAB_PROMPT_ACCEPTANCE_LIVE=1` + `vocabularyPromptAcceptance.live.test.ts`（模型有波动）。
+
+### 2026-05-17 — vocabulary Prompt 统一目标（B1/B2 阅读学习）+ 移除自动重试
+
+**本次完成**
+
+- **`vocabularySelectionPrompt.ts`**：重写为极小两段——**`VOCABULARY_GOAL_SECTION`**（阅读学习词汇，兼顾核心名词与非名词表达）与 **`VOCABULARY_BALANCE_SOFT_CHECK_SECTION`**（用户指定的英文软性自检四条 +「非硬配额」）；长文 user 附录对齐；**删除**「至少 2 条非名词」等硬配额文案与 **`VOCABULARY_ALL_NOUN_RETRY_USER_APPENDIX`**。
+- **`openaiArticleAnalysis.ts`**：挂载新段落；移除 `vocabularyRetryAppendix`。
+- **`analyze-article/route.ts`**：移除全名词 **自动第二次 OpenAI 调用**。
+- **`vocabularySelectionPrompt.test.ts`**：断言 SYSTEM_PROMPT 含软性自检、无硬配额句。
+- **`vocabularyPromptAcceptance.live.test.ts`** + **`scripts/fixtures/news-short-article.txt`**：验收 A（Gaullismus 非全名词）/ B（新闻短文有名词+非名词），**仅 raw vocabulary POS**（`VOCAB_PROMPT_ACCEPTANCE_LIVE=1`）。
+- 删除 **`gaullismusVocabRegression.live.test.ts`**（由新 live 验收替代）。
+
+**未改**
+
+- schema / normalize / filter（vocabulary 仍不服务端剔除）。
+
+**验证**
+
+- **`npm test`**（58）/ **`npm run build`** 已通过。
+- Live 验收需本机 `OPENAI_API_KEY` + `VOCAB_PROMPT_ACCEPTANCE_LIVE=1`（模型有波动）。
+
+**已知问题**
+
+- **`vocabularyAllNounRetry.ts`** 仍保留单元测试，**route 已不再调用**。
+
+### 2026-05-17 — 长文 vocabulary 全名词：加强 Prompt + 自动重试一次
+
+**本次完成**
+
+- **`vocabularySelectionPrompt.ts`**：中英文「非主题词摘抄」+ **输出 JSON 前最后检查**；长文 user 附录；全名词重试 user 附录。
+- **`openaiArticleAnalysis.ts`**：段落前置/末尾挂载；长文 user 消息提醒；`buildOpenAIAnalysisUserContent` 支持 `vocabularyRetryAppendix`。
+- **`articleAnalysisJsonSchema.ts`**：`vocabulary` 数组 `description` 注明勿仅抽象名词。
+- **`vocabularyAllNounRetry.ts`** + **`analyze-article/route.ts`**：长文（≥2500 字）且非名词 &lt;2 条时**再调一次 OpenAI**（仅一次），`warning` 说明。
+- **`vocabularyAllNounRetry.test.ts`**、live 测试对齐 route 重试逻辑。
+
+**验证**
+
+- Gaullismus live（带重试）：可由「7 noun + 1 verb」触发重试，复跑后出现 **phrase/verb 混合**（`nonNoun=8`，模型波动）。
+- **`npm test`**（57）/ **`npm run build`** 已通过。
+
+**下一步**
+
+- 用户重启 dev 后重分析 Gaullismus；看 `warning` 是否含「已自动重新分析」。
+
+### 2026-05-17 — Prompt：Vocabulary selection is not keyword extraction
+
+**本次完成**
+
+- **`openaiArticleAnalysis.ts`**：在 vocabulary 段加入 **「Vocabulary selection is not keyword extraction」**（B1/B2 学习价值、非全名词自检、政经长文示例；无词性硬配额）；保留 grammar v2 与「仅 grammar 连续子串剔除」。
+- **`gaullismusVocabRegression.live.test.ts`** + **`scripts/fixtures/gaullismus-article.txt`**：Gaullismus 长文 live 诊断（`VOCAB_GAULLISMUS_LIVE=1` + `vitest.live.config.ts`）。
+
+**验证**
+
+- **`npm test`** / **`npm run build`** 已通过。
+- Live 复跑（同 fixture，B1）：**模型输出有波动**——一次仍为 8/8 名词；需实机多跑或继续微调。normalize/route **不删** vocabulary。
+
+**下一步**
+
+- 在 App 中对用户 Gaullismus 文再分析对比；若仍偏名词可加强示例或 temperature。
+
+### 2026-05-17 — 词汇回归最小修复：取消 vocabulary 连续子串剔除
+
+**本次完成**
+
+- **`filterAnalysisByArticleText.ts`**：拆出 **`filterArticleAnalysisGrammarByArticleText`**（仅剔除非法 `grammar.selected_text`）；**vocabulary 不再服务端剔除**。
+- **`analyze-article/route.ts`**：grammar 仍严格过滤；vocabulary 未匹配正文时仅 **`warning`**（`listRealAiEntriesWithoutTextMatch`），与预览保存路径一致。
+- **`openaiArticleAnalysis.ts`**：恢复 **grammar 与 vocabulary 分工** 一句；修正可分动词 **`surface_form` 禁止 `…`** 示例；硬性要求 #3 区分 grammar / vocabulary；**`GRAMMAR_SELECTED_TEXT_CONTIGUOUS_SUBSTRING_RULE`** 仅约束 grammar。
+- **回归**：`vocabularyRegressionDiagnostic.test.ts`（mock 三阶段）；`scripts/vocab-regression-route-live.mts`（live 可选）。
+
+**验证**
+
+- Mock：`raw 8 条 → route 仍 8 条`（含 `wies … zurück`）；仅 warning 列出未精确匹配项。
+- Live（同段测试正文）：`total=6, noun=3, verb=1, adj=1, phrase=1`；三阶段 vocabulary 条数不变。
+- **`npm test`** / **`npm run build`** 已通过。
+
+**已知**：长文仍可能模型侧偏名词；未加词性配额。vocabulary 高亮仍依赖 `convertAnalysisToArticleItems` 定位。
+
+**下一步**：实机长文验收；Phase 2 再考虑 vocabulary 宽松匹配（非剔除）。
+
 ### 2026-05-15 — 手机轻点选词 + 导入页短文案
 
 **本次完成**
@@ -3538,6 +3760,20 @@
 **Phase 2**：`validateGrammarType.ts` 轻量后处理（待做）。
 
 **构建**：**`npm test`** / **`npm run build`** 已通过。
+
+### 2026-05-15 — selected_text / surface_form 连续子串校验
+
+**本次完成**
+
+- **Prompt**：`grammarAnalysisV2Prompt.ts` 增加反例 8 与 `SELECTED_TEXT_CONTIGUOUS_SUBSTRING_RULE`；`openaiArticleAnalysis.ts` 硬性要求第 3 条强化（禁止删减关系从句后拼「主句骨架」）。
+- **`filterAnalysisByArticleText.ts`**（**2026-05-17 已调整**：仅 grammar 剔除，见上条「词汇回归最小修复」）：初版曾同时剔除 vocabulary `surface_form`。
+- **验收**：`grammarV2Acceptance.live.test.ts` 同步过滤；用例 7 增加禁止 `Der Mann ist mein Lehrer.` 断言；**`GRAMMAR_V2_LIVE=1` 七句验收 7/7 通过**。
+
+**主要文件**：`filterAnalysisByArticleText.ts`、`.test.ts`、`analyze-article/route.ts`、`grammarAnalysisV2Prompt.ts`、`openaiArticleAnalysis.ts`、`grammarV2Acceptance.live.test.ts`。
+
+**已知**：模型仍可能返回非法子串，服务端会丢弃；`um + 时间` 优先 vocabulary 为后续优化。
+
+**构建**：**`npm test`**（51）/ **`npm run build`** 已通过。
 
 ### 2026-05-15 — 导入：发布时间不写入正文
 

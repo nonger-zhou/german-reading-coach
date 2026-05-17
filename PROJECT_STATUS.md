@@ -16,6 +16,7 @@ German Reading Coach
 - **数据库**：**`articles`** 使用 **RLS（`user_id = auth.uid()`）** + **`GRANT … TO authenticated`**（**`schema.sql`** / **`003_articles_grants_fix.sql`**）；策略异常可跑 **`004_articles_rls_fix.sql`**。**不向 anon 授予 articles**。
 - **应用**：**`/vocabulary`** 与 **`/grammar`** 已接入真实 Supabase 数据（当前登录用户维度）；词库与语法库均支持 **全部/今日/昨日/近三日/本周** 时间分组 Tab 与本周复盘小卡（点击联动筛选）。总词库/总语法库均支持通过状态下拉菜单切换 **学习中 / 已掌握 / 暂忽略**；暂不做总库删除。**`/articles/[id]`** 手动添加与真实 AI 保存的词汇/语法持续持久化至 **`vocabulary_*` / `grammar_*`**（登录、GRANT 已执行前提下），学习项卡片同样用状态下拉菜单修改状态，删除仍为独立操作；深度笔记需 **`008`** 字段。
 - **产品方向**：**Web App** 为主体，**Chrome 插件**为桌面导入入口（MVP 见 **`browser-extension/chrome-mv3`**），**Supabase** 统一库（详见 **`docs/PRD.md` §1.1–§1.4**）。**愿景**：底层可扩展为**多语言 Reading Coach**，**英语**为优先扩展语言（详见 **`docs/PRD.md` §1.5**）；**母语/解释语言/目标语言**三维度见 **§1.5.6**。**AI 推荐**以「读前抓主旨与关键细节、控制数量、过滤无学习价值专名」为核心，水平侧重见 **§13**；**Phase 3.1+** 接真实 OpenAI 时以此为准。**当前主线仍为德语 MVP**，排期不变。
+- **Grammar v2 Phase 1 补充（2026-05-17 调整）**：整文分析在 normalize 后**仅剔除**非法 **`grammar.selected_text`**；**vocabulary 不剔除**。vocabulary Prompt **已局部回退至 05-15 口径**，并实施 **方案 A（极简名词/性别段）**（见 **`DEVELOPMENT_LOG.md`**）；Grammar v2 Prompt **未回退**。
 - **下一步（建议）**：短期目标切回 **个人可完整使用版**：按 **`docs/PERSONAL_USE_CHECKLIST.md`** 跑通导入 → AI 分析 → 保存 → 阅读 → 深度笔记 → 总词库/总语法 → 状态修改；再迭代 OpenAI 提示与验收（**PRD §13**）。**Vercel Production** 已部署到 [`https://german-reading-coach.vercel.app`](https://german-reading-coach.vercel.app)，后续需完成 Supabase 生产回调 URL 自检；项目级 `npm.cmd run lint` 仍有既有 cleanup 项（`scripts/*.cjs` 的 `require()` 规则、文章库/仪表盘删除回调依赖提示、`/import` 未使用变量）；Chrome 插件后续可做打包发布，**PWA/手机分享**、支付与公开用户体系仍后置。合规边界：不绕过付费墙、登录墙或订阅限制。
 - **需求 / 库设计**：**Mock** 与 **`/articles/[id]`** 见 **`docs/PRD.md` §2.1**；时间字段与 **read_status** 见 **§12**；**`docs/DATABASE.md`** Mock 节、**§10**、统一云端节；**read_status / finished_at / mastered_at / ignored_at** 等为后续 **schema** 增量，当前不强制迁移。
 - **选区与「添加为词汇」**：长选区点词汇 = **词汇/表达层面（广义 lexical item）**，不等于整句当普通词、也不自动当语法；与 **「添加为语法」** 分工见 **`docs/PRD.md` §8.1.1**。**AI 主动推荐**亦应覆盖表达型词汇（短语、搭配、可分动词、新闻表达等），**统一进词汇 Tab**；**`item_type` / `surface_form` / `lemma` / `occurrence_sentence` / `explanation`** 等预留，**当前不改 schema/UI/prompt**。
@@ -63,6 +64,11 @@ German Reading Coach
 
 ## 最近更新
 
+- **2026-05-17（回退方案 C）**：恢复单次 OpenAI 整文分析 + **d4aee6e** 词汇/冠词 Prompt（保留 Grammar v2）；已删除双次调用代码。
+- **2026-05-17（grammar 取消 8 条硬上限）**：`json_schema` / Prompt / normalize 均不再限制 grammar ≤8；PRD §13.6、用户手册已同步。**`npm test`** / **`npm run build`** 已通过。
+- **2026-05-17（vocabulary 方案 A）**：删除独立「名词与 grammatical_gender」长节；文末 POS/gender 改为「非名词一律 na、名词可填 m/f/n、冠词不强制」；**Grammar v2 不变**。**`npm test`**（61）/ **`npm run build`** 已通过；POS 分布需 App/live 复测。
+- **2026-05-17（vocabulary Prompt 局部回退）**：撤销 05-17 叠补丁，vocabulary 选词回到 **05-15 短原则**（广义 lexical item、surface_form/lemma）；**Grammar v2 全保留**；schema 仅 vocabulary `description` 文案；live 为 POS **诊断日志**。**`npm test`** / **`npm run build`** 已通过。
+- **2026-05-17（vocabulary Prompt 目标澄清）**：统一为 **B1/B2 阅读学习词汇推荐**（兼顾主题名词与动词/搭配/表达）；软性自检、**无硬配额**；**已移除** analyze-article **全名词自动重试**；live 验收见 **`vocabularyPromptAcceptance.live.test.ts`**（`VOCAB_PROMPT_ACCEPTANCE_LIVE=1`）；**`npm test`** / **`npm run build`** 已通过。
 - **2026-05-15（Grammar Analysis v2 Phase 1）**：整文/enrich Prompt + `grammar_type` 枚举；入库 `grammar_key=grammar_type`；**`npm test`** / **`npm run build`** 已通过。
 - **2026-05-15（导入：发布时间不入正文）**：解析仍识别发布时间，仅填导入预览，不写入 **`original_text`**；**`npm run build`** 已通过。
 - **2026-05-15（手机可分动词拖选）**：词汇高亮触摸不再阻断拖选；松手保留多词选区；**`npm run build`** 已通过。

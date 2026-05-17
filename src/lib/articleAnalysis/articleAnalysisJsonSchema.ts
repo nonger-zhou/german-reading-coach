@@ -50,7 +50,6 @@ export const ARTICLE_ANALYSIS_JSON_SCHEMA = {
       },
       grammar: {
         type: "array",
-        maxItems: 8,
         items: {
           type: "object",
           additionalProperties: false,
