@@ -14,6 +14,7 @@ import {
 import { mergeLemmaForVocabularyPersist } from "@/lib/supabase/vocabularyLemmaMerge";
 import { parseGrammaticalGender } from "@/lib/vocabulary/grammaticalGender";
 import { vocabPartOfSpeechForDb } from "./vocabPartOfSpeechForDb";
+import type { UserVocabRow } from "@/lib/vocabSelection/userVocabProfile";
 
 const DB_SOURCE_MANUAL = "manual";
 const DB_SOURCE_AI_MOCK = "ai_mock";
@@ -107,6 +108,36 @@ type VocabularyOccurrenceRow = {
 };
 
 const VOCAB_MASTERED_IGNORED_PAGE = 1000;
+
+/**
+ * 整文分析（选词 v2）：拉取当前用户总词库**全部**词条的选词所需字段（分页全量）。
+ * 用于：已掌握 / 暂忽略剔除、学习中必推、自适应词频分界线。
+ */
+export async function fetchVocabularyProfileRowsForArticleAnalysis(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<{ rows: UserVocabRow[]; error: string | null }> {
+  const rows: UserVocabRow[] = [];
+  let from = 0;
+  for (;;) {
+    const { data, error } = await supabase
+      .from("vocabulary_items")
+      .select(
+        "lemma, display_word, normalized_key, part_of_speech, mastery_status, source, zh_meaning, simple_de_explanation, gender, level_estimate",
+      )
+      .eq("user_id", userId)
+      .order("id", { ascending: true })
+      .range(from, from + VOCAB_MASTERED_IGNORED_PAGE - 1);
+    if (error) {
+      return { rows: [], error: formatSupabaseOrUnknownError(error) };
+    }
+    const batch = (data ?? []) as UserVocabRow[];
+    rows.push(...batch);
+    if (batch.length < VOCAB_MASTERED_IGNORED_PAGE) break;
+    from += VOCAB_MASTERED_IGNORED_PAGE;
+  }
+  return { rows, error: null };
+}
 
 /**
  * 整文分析：拉取当前用户总词库中 **已掌握 / 暂忽略** 的
@@ -323,6 +354,10 @@ async function ensureDefaultSense(
   return inserted!.id as string;
 }
 
+function isMasteredOrIgnored(status: string | null | undefined): boolean {
+  return status === "mastered" || status === "ignored";
+}
+
 /** 将阅读页一条手动词汇（含 occurrences）写入 Supabase，返回带服务端 id 的条目 */
 export async function persistManualVocabularyItem(
   supabase: SupabaseClient,
@@ -331,9 +366,19 @@ export async function persistManualVocabularyItem(
     articleId: string;
     articlePlain: string;
     item: ArticleVocabItem;
+    /**
+     * 用户在阅读页**主动**框选/表单添加时传 true：若词库中该词已是「已掌握 / 暂忽略」，
+     * 改回「学习中」（learning），之后整文分析可再次推荐；直到用户再次标为已掌握。
+     * AI 预览保存不传（不得改动用户已标的状态）。
+     */
+    reactivateIfMastered?: boolean;
   },
 ): Promise<{ item: ArticleVocabItem | null; error: string | null }> {
-  const { userId, articleId, articlePlain, item } = params;
+  const { userId, articleId, articlePlain, reactivateIfMastered } = params;
+  const item: ArticleVocabItem =
+    reactivateIfMastered && isMasteredOrIgnored(params.item.mastery_status)
+      ? { ...params.item, mastery_status: "learning" }
+      : params.item;
   const pos = vocabPartOfSpeechForDb(item.part_of_speech);
   /** 词典形须保留 AI 的 lemma（常含 der/die/das）；勿用 display_word（句中形式）覆盖 */
   const lemmaForStorage =
@@ -387,6 +432,10 @@ export async function persistManualVocabularyItem(
           needs_ai_enrichment: item.needs_ai_enrichment ?? false,
           level_estimate: item.level_estimate ?? null,
           gender: vocabularyGenderForDb(item),
+          ...(reactivateIfMastered &&
+          isMasteredOrIgnored(existingRow.mastery_status as string | null)
+            ? { mastery_status: "learning" }
+            : {}),
           /** 与旧 Mock（ai_mock）同键合并时，真实 AI 保存须升级为 ai，避免右侧仍显示 Mock 源 */
           ...(item.source === "ai"
             ? { source: DB_SOURCE_AI, needs_ai_enrichment: false }
@@ -447,6 +496,10 @@ export async function persistManualVocabularyItem(
             needs_ai_enrichment: item.needs_ai_enrichment ?? false,
             level_estimate: item.level_estimate ?? null,
             gender: vocabularyGenderForDb(item),
+            ...(reactivateIfMastered &&
+            isMasteredOrIgnored(again.mastery_status as string | null)
+              ? { mastery_status: "learning" }
+              : {}),
             ...(item.source === "ai"
               ? { source: DB_SOURCE_AI, needs_ai_enrichment: false }
               : {}),

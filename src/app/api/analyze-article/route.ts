@@ -10,10 +10,7 @@ import {
   filterArticleAnalysisGrammarByBlockedSet,
   formatGrammarLibraryBlockPromptFromRows,
 } from "@/lib/articleAnalysis/filterGrammarByUserLibrary";
-import {
-  filterArticleAnalysisVocabularyByBlockedSet,
-  formatVocabLibraryBlockPromptFromRows,
-} from "@/lib/articleAnalysis/filterVocabularyByUserLibrary";
+import { formatVocabLibraryBlockPromptFromRows } from "@/lib/articleAnalysis/filterVocabularyByUserLibrary";
 import {
   buildOpenAIAnalysisUserContent,
   normalizeOpenAIArticleAnalysis,
@@ -23,13 +20,30 @@ import {
 import type { ArticleAnalysisResult } from "@/lib/articleAnalysis/types";
 import { getSupabaseUserFromBearer } from "@/lib/supabase/routeFromBearer";
 import { fetchGrammarMasteredIgnoredKeysForArticleAnalysis } from "@/lib/supabase/grammar";
-import { fetchVocabularyMasteredIgnoredKeysForArticleAnalysis } from "@/lib/supabase/vocabulary";
+import { fetchVocabularyProfileRowsForArticleAnalysis } from "@/lib/supabase/vocabulary";
+import { buildUserVocabProfile } from "@/lib/vocabSelection/userVocabProfile";
+import {
+  applyVocabularySelection,
+  planVocabularySelection,
+} from "@/lib/vocabSelection/selectVocabulary";
 import type { CefrLevel } from "@/lib/types";
 
 /** 整文分析可能接近分钟级，放宽服务端限时（部署平台支持时生效） */
 export const maxDuration = 180;
 
 const LEVELS: CefrLevel[] = ["A1", "A2", "B1", "B2", "C1", "C2"];
+
+/**
+ * 整文分析模型。默认 gpt-5-mini（选词质量明显好于 gpt-4o-mini，单篇约 $0.02–0.03）；
+ * 可用环境变量 OPENAI_ANALYSIS_MODEL 覆盖（例如改回 gpt-4o-mini）。
+ */
+const ANALYSIS_MODEL =
+  process.env.OPENAI_ANALYSIS_MODEL?.trim() || "gpt-5-mini";
+
+/** gpt-5 / o 系列为推理模型：不接受 temperature，改用 reasoning_effort */
+function isReasoningModel(model: string): boolean {
+  return /^(gpt-5|o\d)/i.test(model);
+}
 
 type OkBody = {
   ok: true;
@@ -132,7 +146,7 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
   }
 
   const [vocabRes, grammarRes] = await Promise.all([
-    fetchVocabularyMasteredIgnoredKeysForArticleAnalysis(
+    fetchVocabularyProfileRowsForArticleAnalysis(
       auth.supabase,
       auth.user.id,
     ),
@@ -167,8 +181,13 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
     );
   }
 
-  const { blockLines: vocabLibraryBlockAppendix, blockedSet } =
-    formatVocabLibraryBlockPromptFromRows(vocabRes.rows);
+  const vocabProfile = buildUserVocabProfile(userLevel, vocabRes.rows);
+  const { blockLines: vocabLibraryBlockLines } =
+    formatVocabLibraryBlockPromptFromRows(
+      vocabRes.rows.filter(
+        (r) => r.mastery_status === "mastered" || r.mastery_status === "ignored",
+      ),
+    );
   const {
     blockLines: grammarLibraryBlockAppendix,
     blockedSet: grammarBlockedSet,
@@ -181,6 +200,14 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
     warnings.push("当前仅分析文章前半部分。");
   }
 
+  const vocabPlan = planVocabularySelection(textForModel, vocabProfile);
+  const vocabLibraryBlockAppendix = [
+    vocabPlan.promptAppendix,
+    vocabLibraryBlockLines,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
   const openai = createServerOpenAIClient({
     apiKey,
     timeout: 180_000,
@@ -189,8 +216,10 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      temperature: 0.3,
+      model: ANALYSIS_MODEL,
+      ...(isReasoningModel(ANALYSIS_MODEL)
+        ? { reasoning_effort: "low" as const }
+        : { temperature: 0.3 }),
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         {
@@ -262,15 +291,19 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
       );
     }
 
-    const { vocabulary: vocFiltered, removedCount: vocabRemoved } =
-      filterArticleAnalysisVocabularyByBlockedSet(
-        analysis.vocabulary,
-        blockedSet,
-      );
-    if (vocabRemoved > 0) {
-      analysis = { ...analysis, vocabulary: vocFiltered };
+    const selection = applyVocabularySelection(
+      analysis.vocabulary,
+      vocabPlan,
+      vocabProfile,
+      textForModel,
+    );
+    analysis = { ...analysis, vocabulary: selection.vocabulary };
+    console.info(
+      `[analyze-article] vocab v2 model=${ANALYSIS_MODEL} level=${userLevel} cutoff=${vocabProfile.cutoff} (${vocabProfile.cutoffNote}) candidates=${vocabPlan.candidates.length} learningInText=${vocabPlan.learningInArticle.length} kept=${selection.vocabulary.length} droppedKnown=${selection.droppedKnown.length} droppedTooCommon=${selection.droppedTooCommon.length} addedLearning=${selection.addedLearning.length}`,
+    );
+    if (selection.droppedKnown.length > 0) {
       warnings.push(
-        `已按您总词库中「已掌握 / 暂忽略」记录剔除 ${vocabRemoved} 条词汇推荐（与 normalized_key + 词性完全一致）。`,
+        `已按您总词库中「已掌握 / 暂忽略」记录剔除 ${selection.droppedKnown.length} 条词汇推荐。`,
       );
     }
 

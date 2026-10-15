@@ -64,6 +64,7 @@ German Reading Coach
 
 ## 最近更新
 
+- **2026-10-15（选词 v2）**：整文分析改为「词频表 + 用户词库画像」选词——学习中的词必推、已掌握不推（去冠词稳健比对）、其余按等级词频分界线（自适应）；手动添加已掌握词会改回学习中；模型改为 `gpt-5-mini`（`OPENAI_ANALYSIS_MODEL` 可覆盖）。深入解释 / 框选 / 高亮 / 保存未改。`npm test`（76）/ `npm run build` 通过；**待部署与实测**。
 - **2026-05-17（回退方案 C）**：恢复单次 OpenAI 整文分析 + **d4aee6e** 词汇/冠词 Prompt（保留 Grammar v2）；已删除双次调用代码。
 - **2026-05-17（grammar 取消 8 条硬上限）**：`json_schema` / Prompt / normalize 均不再限制 grammar ≤8；PRD §13.6、用户手册已同步。**`npm test`** / **`npm run build`** 已通过。
 - **2026-05-17（vocabulary 方案 A）**：删除独立「名词与 grammatical_gender」长节；文末 POS/gender 改为「非名词一律 na、名词可填 m/f/n、冠词不强制」；**Grammar v2 不变**。**`npm test`**（61）/ **`npm run build`** 已通过；POS 分布需 App/live 复测。

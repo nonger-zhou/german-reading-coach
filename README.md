@@ -39,7 +39,7 @@
 
 ## 协作与文档义务（自动化助手 / 贡献者）
 
-开发任务收尾时请遵守 [`AGENTS.md`](./AGENTS.md) 与 [`CLAUDE.md`](./CLAUDE.md)：**更新** `DEVELOPMENT_LOG.md` 与 `PROJECT_STATUS.md`；若涉及依赖、运行方式、页面、API、数据库、部署或环境变量，**同步** `README.md`；结束前运行 **`npm run build`** 并修复失败项。非任务要求请勿改变现有页面行为。**Phase 3.1**：本地需在 **`.env.local`** 配置 **`OPENAI_API_KEY`**（**不要**提交到仓库）以试用真实 AI 预览。
+开发任务收尾时请遵守 [`AGENTS.md`](./AGENTS.md) 与 [`CLAUDE.md`](./CLAUDE.md)：**更新** `DEVELOPMENT_LOG.md` 与 `PROJECT_STATUS.md`；若涉及依赖、运行方式、页面、API、数据库、部署或环境变量，**同步** `README.md`；结束前运行 **`npm run build`** 并修复失败项。非任务要求请勿改变现有页面行为。**Phase 3.1**：本地需在 **`.env.local`** 配置 **`OPENAI_API_KEY`**（**不要**提交到仓库）以试用真实 AI 预览。整文分析模型默认 **`gpt-5-mini`**，可用 **`OPENAI_ANALYSIS_MODEL`** 覆盖（见 `.env.example`）。
 
 ## 运行命令
 
