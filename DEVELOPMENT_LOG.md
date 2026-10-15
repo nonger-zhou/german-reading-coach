@@ -5,6 +5,12 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-10-15 — 文档：改名、商业化与中国用户讨论备忘（暂不执行）
+
+**本次完成**：新增 `docs/BUSINESS_AND_CHINA_NOTES.md`，记录当日讨论与查证事实：改名（中文名「读报学外语」待人工查重；英文名查重表，Reading Coach / Read Native 等不可用，候选 GlossRead / Newsling / Readmint）、改名与换域名要改的地方（插件写死网址、Supabase 回调 URL）、卖什么形态（网页 / App / 插件上架 / Claude skill）、AI 费用（用户自带 OpenAI 密钥对中国用户不可行，倾向我们承担按订阅收费，先算单价）、中国大陆可访问性（vercel.app 可能被屏蔽、浏览器直连 Supabase）与 A/B/C 方案、国内部署合规与 CloudBase 成本、迁移工作量、「同一套代码两种部署」原则、重新启动时的顺序。`docs/PRD.md` §1.3 加链接；`PROJECT_STATUS.md` Backlog 加该条与 4 条优化建议（复习进度存数据库、`.gitattributes`、英语推荐可观察性、总词库德语占位句）。
+**当前状态**：维护者决定暂不做商业化与改名。
+**验证**：`npm test` / `npm run build` 通过（文档改动）。
+
 ### 2026-10-15 — 英语学习功能上线（PR #3 合并）
 
 **本次完成**：维护者在 Preview 上验收（德语文章 / 词库 / 高亮 / 复习与正式版一致；英语导入、分析、高亮正常）后，PR #3 合并到 `main`，Vercel Production 部署成功。迁移 `010` 已于当日执行（已有数据：文章 109、词条 1157、语法项 93，全部为 de）；Vercel Preview 已配置 `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`（Config 类型，仅 Preview）与 `OPENAI_API_KEY`。
