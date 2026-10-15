@@ -33,6 +33,7 @@ import {
   type LearningLanguage,
 } from "@/lib/language/learningLanguage";
 import { ContentLanguageProvider } from "@/lib/language/ContentLanguageContext";
+import { enqueueUnique, readAutoEnrichOnAdd } from "@/lib/settings/autoEnrich";
 import {
   buildGrammarExternalDeepDivePromptEn,
   buildVocabularyExternalDeepDivePromptEn,
@@ -290,6 +291,14 @@ export function InteractiveArticleReader({
   const [grammarEnrichLoadingId, setGrammarEnrichLoadingId] = useState<
     string | null
   >(null);
+  /**
+   * 添加后自动补充 AI 解释的待办队列（UI id）。保存成功后入队，按顺序逐个调用，
+   * 同一时间只有一个补充请求；已有完整解释的条目由 handleEnrich* 内的判断跳过。
+   */
+  const [autoEnrichVocabQueue, setAutoEnrichVocabQueue] = useState<string[]>([]);
+  const [autoEnrichGrammarQueue, setAutoEnrichGrammarQueue] = useState<string[]>([]);
+  /** 当前由自动队列触发的条目 id（只有它在生成时才显示「添加后自动生成」提示） */
+  const [autoEnrichActiveId, setAutoEnrichActiveId] = useState<string | null>(null);
   const [vocabEnrichError, setVocabEnrichError] = useState<string | null>(null);
   const [grammarEnrichError, setGrammarEnrichError] = useState<string | null>(
     null,
@@ -1561,6 +1570,39 @@ export function InteractiveArticleReader({
     [grammarItems, persistEnabled, persistArticleId, enrichLevelEffective],
   );
 
+  /** 自动补充队列：一次只跑一个；条目已不在列表（被删除）则丢弃 */
+  useEffect(() => {
+    if (!persistEnabled) return;
+    if (vocabEnrichLoadingId || grammarEnrichLoadingId) return;
+    if (autoEnrichVocabQueue.length > 0) {
+      const [id, ...rest] = autoEnrichVocabQueue;
+      setAutoEnrichVocabQueue(rest);
+      if (vocabularyItems.some((v) => v.id === id)) {
+        setAutoEnrichActiveId(id);
+        void handleEnrichVocabForItem(id);
+      }
+      return;
+    }
+    if (autoEnrichGrammarQueue.length > 0) {
+      const [id, ...rest] = autoEnrichGrammarQueue;
+      setAutoEnrichGrammarQueue(rest);
+      if (grammarItems.some((g) => g.id === id)) {
+        setAutoEnrichActiveId(id);
+        void handleEnrichGrammarForItem(id);
+      }
+    }
+  }, [
+    persistEnabled,
+    vocabEnrichLoadingId,
+    grammarEnrichLoadingId,
+    autoEnrichVocabQueue,
+    autoEnrichGrammarQueue,
+    vocabularyItems,
+    grammarItems,
+    handleEnrichVocabForItem,
+    handleEnrichGrammarForItem,
+  ]);
+
   useEffect(() => {
     const pending = pendingPanelScrollRef.current;
     if (pending) {
@@ -1927,6 +1969,9 @@ export function InteractiveArticleReader({
       } else if (saved) {
         merged = applyPersistedVocabToLocalItems(merged, saved);
         selectItemId = saved.id;
+        if (readAutoEnrichOnAdd()) {
+          setAutoEnrichVocabQueue((q) => enqueueUnique(q, saved.id));
+        }
         selectOccId = alignVocabOccurrenceIdAfterPersist(
           preOcc,
           saved,
@@ -2009,6 +2054,9 @@ export function InteractiveArticleReader({
           ),
         );
         selectItemId = finalizedSaved.id;
+        if (readAutoEnrichOnAdd()) {
+          setAutoEnrichGrammarQueue((q) => enqueueUnique(q, finalizedSaved.id));
+        }
         selectOccId = prevOccSnapshot
           ? saved.occurrences.find(
               (o) =>
@@ -2166,6 +2214,9 @@ export function InteractiveArticleReader({
             ),
           );
           selectItemId = finalizedSaved.id;
+          if (readAutoEnrichOnAdd()) {
+            setAutoEnrichGrammarQueue((q) => enqueueUnique(q, finalizedSaved.id));
+          }
           selectOccId = prevOccSnapshot
             ? saved.occurrences.find(
                 (o) =>
@@ -2283,6 +2334,11 @@ export function InteractiveArticleReader({
               {vocabEnrichLoadingId === selectedVocabItem.id ? (
                 <p className="text-xs text-zinc-600 dark:text-zinc-400">
                   AI 解释生成中...
+                  {autoEnrichActiveId === selectedVocabItem.id ? (
+                    <span className="ml-1 text-zinc-400 dark:text-zinc-500">
+                      （添加后自动生成，可在设置中关闭）
+                    </span>
+                  ) : null}
                 </p>
               ) : (
                 <Button
@@ -2668,6 +2724,11 @@ export function InteractiveArticleReader({
               {grammarEnrichLoadingId === selectedGrammarItem.id ? (
                 <p className="text-xs text-zinc-600 dark:text-zinc-400">
                   AI 解释生成中...
+                  {autoEnrichActiveId === selectedGrammarItem.id ? (
+                    <span className="ml-1 text-zinc-400 dark:text-zinc-500">
+                      （添加后自动生成，可在设置中关闭）
+                    </span>
+                  ) : null}
                 </p>
               ) : (
                 <Button
@@ -3897,6 +3958,9 @@ export function InteractiveArticleReader({
                     } else if (saved) {
                       merged = applyPersistedVocabToLocalItems(merged, saved);
                       selectItemId = saved.id;
+                      if (readAutoEnrichOnAdd()) {
+                        setAutoEnrichVocabQueue((q) => enqueueUnique(q, saved.id));
+                      }
                       selectOccId = alignVocabOccurrenceIdAfterPersist(
                         preOcc,
                         saved,
@@ -4012,6 +4076,9 @@ export function InteractiveArticleReader({
                         ),
                       );
                       selectItemId = finalizedSaved.id;
+                      if (readAutoEnrichOnAdd()) {
+                        setAutoEnrichGrammarQueue((q) => enqueueUnique(q, finalizedSaved.id));
+                      }
                       selectOccId = prevOccSnapshot
                         ? saved.occurrences.find(
                             (o) =>

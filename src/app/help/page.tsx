@@ -71,7 +71,7 @@ export default function HelpPage() {
             <strong>读前过一遍</strong>：看推荐词的意思；一看就会的，直接标「已掌握」，以后不再推荐。
           </li>
           <li>
-            <strong>保存后阅读</strong>：读的时候遇到不懂、但没被推荐的词，拖选后「添加为词汇」。
+            <strong>保存后阅读</strong>：读的时候遇到不懂、但没被推荐的词，拖选后「添加为词汇」，解释会自动生成（可在设置中关闭）。
           </li>
           <li>
             <strong>复习</strong>：在「复习」页定期翻卡，记住的词标「已掌握」。

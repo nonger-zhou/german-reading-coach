@@ -5,6 +5,17 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-10-15 — 手动添加词汇 / 语法后自动生成 AI 解释（分支 `feat/auto-enrich`）
+
+**原因**：维护者反馈：添加单词后还要再点「补充 AI 解释」很麻烦。
+**本次完成**
+- `InteractiveArticleReader.tsx`：手动添加（拖选浮层、右侧表单，词汇与语法共 5 处保存点）保存成功后，把条目放入自动补充队列；队列一次只跑一个，复用原有 `handleEnrichVocabForItem` / `handleEnrichGrammarForItem`（其内部判断已保证只对缺解释的手动条目调用，已有完整解释的跳过）。失败时与原来一样显示错误与「补充 AI 解释」按钮。只有自动触发的生成，在「AI 解释生成中…」后显示「（添加后自动生成，可在设置中关闭）」。
+- 新增 `src/lib/settings/autoEnrich.ts`：开关读写（默认开，localStorage，读写失败按开处理）与去重入队；`autoEnrich.test.ts` 4 条测试。
+- 设置页新增「添加后自动生成 AI 解释」开关。
+- 规则更新：PRD §1.4.1 Phase 3.14、§13.6；`/help`；`docs/USER_MANUAL.md` §6.2。
+**影响面**：只在手动添加保存成功后多一次补充解释调用；刷新、切换 Tab、重新打开文章仍不会自动调用 AI；拖选 / 点词 / 高亮逻辑未改。
+**验证**：`npm test`（136）/ `npm run build` 通过。
+
 ### 2026-10-15 — 文档：备忘补充欧美市场与竞品
 
 **本次完成**：`docs/BUSINESS_AND_CHINA_NOTES.md` 新增 §6「欧美市场与竞品」（LingQ、Readlang、Language Reactor、Readle 等定价与功能；我们的差异；英语界面给英语母语者学德语暂不建议作为第一步；先用自有渠道低成本验证付费意愿），结论表与重新启动顺序同步更新。
