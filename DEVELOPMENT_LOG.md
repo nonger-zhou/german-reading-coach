@@ -5,6 +5,14 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-10-15 — 复习进度存入数据库（PR #6，已上线）
+
+- **完成**：复习排期从浏览器 localStorage 改存新表 `vocabulary_review_progress`（迁移 `supabase/fixes/012_review_progress.sql`），换设备也能接着复习。未执行 012 时自动退回本地存储，行为与之前完全一样；执行后首次打开复习页，把本浏览器已有排期（德语、英语各自）自动搬入数据库并清掉本机副本。每次「记住了 / 还不熟」只写一行；「已掌握」删除该行。
+- **主要文件**：`supabase/fixes/012_review_progress.sql`、`supabase/schema.sql`、`src/lib/supabase/reviewProgress.ts`（+ 测试）、`src/lib/review/reviewQueue.ts`（`clearReviewState`）、`src/app/review/page.tsx`、`/help`、`docs/USER_MANUAL.md`、`docs/PRD.md` §5.0、`docs/DATABASE.md` §10.9、`README.md`。
+- **状态**：代码完成，待维护者在 Supabase 执行 012 并在 Preview 验证后合并。未改其他页面；单独建表，不碰 `vocabulary_items`（避免 updated_at 变动影响词库时间分组）。
+- **已知问题**：本机排期搬入时若同一个词在数据库里已有记录，以数据库为准。
+- **下一步**：英语词库占位句；截图导入。
+
 ### 2026-10-15 — AI 词形对不上原文时自动修正（德语 / 英语，PR #5，已上线）
 
 **原因**：维护者测试德语长文时出现「das Verbrechen、die Tradition、die Rüstungsindustrie 未在原文精确匹配」——AI 给名词多加了冠词，原文是 Verbrechen / der Tradition 等；上一次的大小写回退覆盖不到。
