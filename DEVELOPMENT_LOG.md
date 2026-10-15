@@ -5,6 +5,14 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-10-15 — 截图 / 拍照导入（分支 `feat/screenshot-import`，PRD §1.4.3 A）
+
+- **完成**：导入页新增第三种方式「截图 / 拍照」：一次最多 10 张（手机可直接拍照），浏览器先压缩（宽 ≤1280 px；长截图按 2000 px 切块并重叠），再由 `POST /api/import-image` 调 OpenAI 视觉模型逐字转写正文（去掉昵称、互动数、按钮、广告、他人评论；多图去重叠；不翻译不改写）。结果填入「正文」，标题 / 来源平台为空时自动填，语言为德 / 英时自动切换；用户核对后照常保存。原图不保存、不写日志。
+- **主要文件**：`src/lib/import/imageImport.ts`（常量、提示词、schema、校验、切块规划，+ 测试）、`src/lib/import/compressImageForImport.ts`、`src/app/api/import-image/route.ts`、`src/app/import/page.tsx`、`/help`、`docs/USER_MANUAL.md` §1.4、`docs/PRD.md` §1.4.3、`README.md`、`.env.example`。
+- **状态**：代码完成，单元测试 / build 通过；读图效果需在 Preview 用真实截图验证后合并。不影响现有粘贴 / 链接 / 插件导入。
+- **已知问题**：§1.4.3 第 7 条（短内容只推词、不生成阅读问题）未做；读图实际效果（串帖、评论区识别）尚未用真实截图验证。
+- **下一步**：维护者用 X / Facebook 截图与报纸照片在 Preview 测试；之后再做短内容规则、插件识别 X / Facebook / YouTube 文稿（§1.4.3 C/D）。
+
 ### 2026-10-15 — AI 词形对不上原文时自动修正（德语 / 英语，PR #5，已上线）
 
 **原因**：维护者测试德语长文时出现「das Verbrechen、die Tradition、die Rüstungsindustrie 未在原文精确匹配」——AI 给名词多加了冠词，原文是 Verbrechen / der Tradition 等；上一次的大小写回退覆盖不到。

@@ -26,8 +26,15 @@ import { useAuthEntryHrefs } from "@/lib/auth/use-auth-entry-hrefs";
 import { isBadImportPluginTitle } from "@/lib/import/visibleArticleExtractLogic";
 import { parseArticleFromRawInput } from "@/lib/text/parseArticleFromRaw";
 import type { CefrLevel } from "@/lib/types";
+import {
+  MAX_IMPORT_IMAGES,
+  MAX_IMPORT_TILES,
+  MAX_TOTAL_DATA_URL_CHARS,
+  type ImageImportResult,
+} from "@/lib/import/imageImport";
+import { compressImageForImport } from "@/lib/import/compressImageForImport";
 
-type ImportMode = "paste" | "url";
+type ImportMode = "paste" | "url" | "image";
 type UrlImportUiError = { message: string; code: string | null };
 type ExternalImportDraftPayload = {
   title?: unknown;
@@ -96,6 +103,13 @@ function ImportPageContent() {
   const [saving, setSaving] = useState(false);
   const [fetchingUrl, setFetchingUrl] = useState(false);
   const [readingClipboard, setReadingClipboard] = useState(false);
+  /** 截图 / 拍照导入：只在本页内存中暂存，识别后清空，不上传保存 */
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [recognizingImages, setRecognizingImages] = useState(false);
+  const [imageMessage, setImageMessage] = useState<{
+    tone: "success" | "error";
+    text: string;
+  } | null>(null);
   const [urlImportError, setUrlImportError] = useState<UrlImportUiError | null>(null);
   const [clipboardMessage, setClipboardMessage] = useState<{
     tone: "success" | "error";
@@ -330,6 +344,106 @@ function ImportPageContent() {
       });
     } finally {
       setReadingClipboard(false);
+    }
+  }
+
+  function onPickImages(list: FileList | null) {
+    if (!list || list.length === 0) return;
+    setImageMessage(null);
+    const picked = Array.from(list).filter((f) => f.type.startsWith("image/"));
+    setImageFiles((prev) => {
+      const next = [...prev, ...picked];
+      if (next.length > MAX_IMPORT_IMAGES) {
+        setImageMessage({
+          tone: "error",
+          text: `一次最多 ${MAX_IMPORT_IMAGES} 张，已只保留前 ${MAX_IMPORT_IMAGES} 张。`,
+        });
+        return next.slice(0, MAX_IMPORT_IMAGES);
+      }
+      return next;
+    });
+  }
+
+  async function onRecognizeImages() {
+    setValidationError(null);
+    setSaveError(null);
+    setImageMessage(null);
+    if (!imageFiles.length) {
+      setImageMessage({ tone: "error", text: "请先选择截图或拍照。" });
+      return;
+    }
+    const token = session?.access_token;
+    if (!token) {
+      setImageMessage({ tone: "error", text: "请先登录后再使用截图识别。" });
+      return;
+    }
+    setRecognizingImages(true);
+    try {
+      const tiles: string[] = [];
+      for (const f of imageFiles) {
+        tiles.push(...(await compressImageForImport(f)));
+      }
+      if (tiles.length > MAX_IMPORT_TILES) {
+        setImageMessage({
+          tone: "error",
+          text: "截图太长或太多，请减少张数后分几次导入。",
+        });
+        return;
+      }
+      const total = tiles.reduce((n, t) => n + t.length, 0);
+      if (total > MAX_TOTAL_DATA_URL_CHARS) {
+        setImageMessage({
+          tone: "error",
+          text: "图片总体积太大，请减少张数后分几次导入。",
+        });
+        return;
+      }
+      const res = await fetch("/api/import-image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ images: tiles }),
+      });
+      const data = (await res.json().catch(() => null)) as
+        | { ok: true; result: ImageImportResult }
+        | { ok: false; error: string }
+        | null;
+      if (!res.ok || !data || !data.ok) {
+        setImageMessage({
+          tone: "error",
+          text:
+            (data && !data.ok && data.error) ||
+            (res.status === 413 ? "图片太大，请减少张数后重试。" : "识别失败，请稍后重试。"),
+        });
+        return;
+      }
+      const r = data.result;
+      setRawPastedText("");
+      setCleanedText(r.text);
+      setTitle((prev) => (prev.trim() ? prev : r.title));
+      if (r.source_platform) {
+        setSourceName((prev) => (prev.trim() ? prev : r.source_platform));
+      }
+      if (!languageTouchedRef.current && (r.language === "de" || r.language === "en")) {
+        applyArticleLanguage(r.language);
+      }
+      setImageFiles([]);
+      setImageMessage({
+        tone: "success",
+        text:
+          r.language === "other"
+            ? "已识别出文字，但看起来不是德语或英语，请核对。原图未保存。"
+            : "已识别出文字并填入下方正文，请核对后保存。原图未保存。",
+      });
+    } catch (e) {
+      setImageMessage({
+        tone: "error",
+        text: `图片处理失败：${e instanceof Error ? e.message : String(e)}`,
+      });
+    } finally {
+      setRecognizingImages(false);
     }
   }
 
@@ -624,8 +738,102 @@ function ImportPageContent() {
           >
             链接导入
           </button>
+          <button
+            type="button"
+            onClick={() => setMode("image")}
+            className={`rounded-md px-3 py-1.5 text-sm ${
+              mode === "image"
+                ? "bg-emerald-600 text-white"
+                : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            }`}
+          >
+            截图 / 拍照
+          </button>
         </div>
       </Card>
+
+      {mode === "image" ? (
+        <Card>
+          <CardTitle className="text-base">截图 / 拍照导入</CardTitle>
+          <CardDescription>
+            适合 X、Facebook 等帖子截图和报纸照片。一次最多 {MAX_IMPORT_IMAGES} 张，按顺序排好（长帖可截多张，重叠部分会自动去掉）。AI 只转写正文，去掉昵称、点赞数、按钮和别人的评论；原图不保存。
+          </CardDescription>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <label className="cursor-pointer rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-800 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800">
+              选择图片
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                className="sr-only"
+                onChange={(e) => {
+                  onPickImages(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            <label className="cursor-pointer rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-800 hover:bg-zinc-50 md:hidden dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800">
+              拍照
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="sr-only"
+                onChange={(e) => {
+                  onPickImages(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            {imageFiles.length ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setImageFiles([]);
+                  setImageMessage(null);
+                }}
+                className="px-2 text-sm text-zinc-500 hover:underline"
+              >
+                清空
+              </button>
+            ) : null}
+          </div>
+          {imageFiles.length ? (
+            <ol className="mt-3 list-decimal space-y-0.5 pl-5 text-xs text-zinc-600 dark:text-zinc-400">
+              {imageFiles.map((f, i) => (
+                <li key={`${f.name}-${i}`}>{f.name || `图片 ${i + 1}`}</li>
+              ))}
+            </ol>
+          ) : null}
+          {imageMessage ? (
+            <p
+              className={`mt-2 text-xs ${
+                imageMessage.tone === "success"
+                  ? "text-emerald-700 dark:text-emerald-300"
+                  : "text-amber-700 dark:text-amber-300"
+              }`}
+              role={imageMessage.tone === "error" ? "alert" : "status"}
+            >
+              {imageMessage.text}
+            </p>
+          ) : null}
+          <div className="mt-3">
+            <Button
+              type="button"
+              className="bg-emerald-600 text-white hover:bg-emerald-700"
+              onClick={() => void onRecognizeImages()}
+              disabled={recognizingImages || imageFiles.length === 0}
+            >
+              {recognizingImages
+                ? "识别中…（多张时约需半分钟）"
+                : `识别文字${imageFiles.length ? `（${imageFiles.length} 张）` : ""}`}
+            </Button>
+          </div>
+          <p className="mt-2 text-xs text-zinc-500">
+            每张约花费不到 1 美分的 AI 费用。不想花费时，也可以把截图发给自己的 ChatGPT 等 App 转成文字，复制后用「手动粘贴 → 从剪贴板读取」。
+          </p>
+        </Card>
+      ) : null}
 
       {mode === "url" ? (
         <Card>
@@ -703,7 +911,9 @@ function ImportPageContent() {
           placeholder={
             mode === "paste"
               ? "在此编辑正文，或使用「从剪贴板读取」导入网页全文…"
-              : "链接抓取成功后，正文会出现在这里；也可直接在此编辑…"
+              : mode === "image"
+                ? "图片识别成功后，文字会出现在这里，请核对后保存…"
+                : "链接抓取成功后，正文会出现在这里；也可直接在此编辑…"
           }
           className="mt-3 w-full resize-y rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none ring-emerald-500/30 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
         />
