@@ -357,3 +357,21 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.vocabulary_senses TO authenticate
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.vocabulary_occurrences TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.grammar_items TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.grammar_occurrences TO authenticated;
+-- ---------------------------------------------------------------------------
+-- 复习进度（迁移 012_review_progress.sql）
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.vocabulary_review_progress (
+  user_id uuid NOT NULL REFERENCES public.profiles (id) ON DELETE CASCADE,
+  vocabulary_item_id uuid NOT NULL REFERENCES public.vocabulary_items (id) ON DELETE CASCADE,
+  box smallint NOT NULL CHECK (box BETWEEN 1 AND 10),
+  due_at timestamptz NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, vocabulary_item_id)
+);
+CREATE INDEX IF NOT EXISTS vocabulary_review_progress_item_idx ON public.vocabulary_review_progress (vocabulary_item_id);
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.vocabulary_review_progress TO authenticated;
+ALTER TABLE public.vocabulary_review_progress ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "vocabulary_review_progress_select_own" ON public.vocabulary_review_progress FOR SELECT USING (user_id = auth.uid());
+CREATE POLICY "vocabulary_review_progress_insert_own" ON public.vocabulary_review_progress FOR INSERT WITH CHECK (user_id = auth.uid());
+CREATE POLICY "vocabulary_review_progress_update_own" ON public.vocabulary_review_progress FOR UPDATE USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+CREATE POLICY "vocabulary_review_progress_delete_own" ON public.vocabulary_review_progress FOR DELETE USING (user_id = auth.uid());

@@ -283,6 +283,14 @@ Supabase 会收紧 **PostgREST / Data API** 对 **`public` schema** 内表的默
 - 不新增表、不改 RLS。关闭：`drop trigger if exists on_auth_user_created_notify on auth.users;`
 - 排查：`select status_code, content, created from net._http_response order by created desc limit 5;`
 
+### 10.9 复习进度 `vocabulary_review_progress`（2026-10-15 起，`012_review_progress.sql`）
+
+- 列：`user_id`、`vocabulary_item_id`（主键二者组合，删词条级联删除）、`box`（Leitner 盒子 1–5）、`due_at`（下次复习时间）、`updated_at`。
+- RLS：`user_id = auth.uid()`；`authenticated` 有 SELECT/INSERT/UPDATE/DELETE。
+- 单独建表而不在 `vocabulary_items` 加列：避免每次复习都触发 `updated_at`，影响词库按时间分组。
+- 语言隔离：词条本身带 `language`，复习页只读当前语言词条的进度。
+- 未执行 012 时复习页退回浏览器 localStorage；执行后首次打开复习页自动把本机排期搬入并清掉本机副本。
+
 ## 11. 后续接入 Supabase 的步骤（建议）
 
 1. 在 [Supabase](https://supabase.com) 创建项目，记录 **Project URL** 与 **anon / service_role** key（勿提交到公开仓库）。（**本项目：建库与执行 schema 已完成**，进入客户端与 Auth 配置阶段。）
