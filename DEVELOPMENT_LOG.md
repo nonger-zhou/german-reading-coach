@@ -5,6 +5,14 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-10-15 — 新用户注册邮件通知（分支 `feat/signup-notify`）
+
+- **完成**：有人注册时自动发邮件给站长。Supabase 触发器（pg_net，异步）→ `POST /api/hooks/new-user`（校验 `x-webhook-secret`）→ Resend 发信（收件人、密钥均为环境变量）。邮件含注册邮箱、瑞士时间、注册方式、用户 ID 与 Supabase 用户页链接。
+- **主要文件**：`src/lib/notify/signupNotification.ts`（+ 测试）、`src/app/api/hooks/new-user/route.ts`、`supabase/fixes/011_signup_notify.sql`、`.env.example`、`README.md`、`docs/DATABASE.md` §10.8、`docs/DEPLOY_VERCEL.md`。
+- **状态**：代码完成；需配置 Vercel 环境变量、合并部署后再执行 `011`。不改任何页面，德语/英语学习功能不受影响。
+- **已知问题**：未验证域名时 Resend 只能发到注册邮箱，发件人为 `onboarding@resend.dev`，可能进垃圾箱。
+- **下一步**：以后有自有域名时在 Resend 验证域名并设 `SIGNUP_NOTIFY_FROM`。
+
 ### 2026-10-15 — 文档：备忘补充欧美市场与竞品
 
 **本次完成**：`docs/BUSINESS_AND_CHINA_NOTES.md` 新增 §6「欧美市场与竞品」（LingQ、Readlang、Language Reactor、Readle 等定价与功能；我们的差异；英语界面给英语母语者学德语暂不建议作为第一步；先用自有渠道低成本验证付费意愿），结论表与重新启动顺序同步更新。

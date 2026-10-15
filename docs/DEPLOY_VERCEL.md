@@ -112,3 +112,8 @@ npm.cmd run vercel:prod:system-ca
 - **GitHub Actions**（`.github/workflows/vercel-production.yml`，名称 CI）：每次推送 / PR 跑 `npm test` + `npm run build`，只做检查、**不再部署**（原「七、GitHub Actions 自动部署」已停用，部署统一由 Vercel Git 集成完成）。
 - 出问题时：Vercel → Deployments → 上一条 Production → ⋯ → **Instant Rollback**。回滚期间新部署**不会自动上线**，需对新部署点 **Promote** 解除。
 
+
+
+## 附：新用户注册邮件通知（可选，2026-10-15）
+
+Production 环境变量：`RESEND_API_KEY`（Sensitive）、`SIGNUP_NOTIFY_TO`、`SIGNUP_WEBHOOK_SECRET`（Sensitive），可选 `SIGNUP_NOTIFY_FROM`。部署后在 Supabase SQL Editor 执行 `supabase/fixes/011_signup_notify.sql`（先把其中的占位密钥换成与 `SIGNUP_WEBHOOK_SECRET` 相同的值）。详见 `docs/DATABASE.md` §10.8。
