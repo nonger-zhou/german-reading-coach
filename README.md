@@ -85,15 +85,9 @@ npm run lint
 
 当前 Production 地址：[`https://german-reading-coach.vercel.app`](https://german-reading-coach.vercel.app)。本次 CLI 部署已在 Vercel Production 配置 `NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY`、`OPENAI_API_KEY`。完整步骤、环境变量表、Supabase **Redirect URLs** 与 **`maxDuration`** 说明见 **[`docs/DEPLOY_VERCEL.md`](./docs/DEPLOY_VERCEL.md)**。
 
-CLI 预览 / 生产（需先 `npx vercel login`）：
+**部署方式（2026-10-15 起）**：Vercel 已连接 GitHub，**推送 / 合并到 `main` 即自动部署 Production**；Vercel 构建使用 `vercel-build`（先跑 `vitest`，测试失败不上线）。GitHub Actions（CI）只做测试与构建检查。
 
-```bash
-npm.cmd run vercel       # 预览部署
-npm.cmd run vercel:prod  # 生产部署
-npm.cmd run vercel:prod:system-ca  # 生产部署（遇 TLS 证书错误时，子进程带 --use-system-ca）
-```
-
-推荐长期用 **Vercel Dashboard 连接 Git**：向默认分支 **push** 即自动构建部署。亦可配置 **`.github/workflows/vercel-production.yml`**（需在 GitHub Actions Secrets 填入 `VERCEL_TOKEN`、`VERCEL_ORG_ID`、`VERCEL_PROJECT_ID`，见 **`docs/DEPLOY_VERCEL.md` §七**）。
+**不要再从本机运行 `npm.cmd run vercel:prod`**（会上传本机未提交的改动，导致线上与 GitHub 不一致）；`vercel` / `vercel:prod` 脚本仅保留作紧急备用。详见 **`docs/DEPLOY_VERCEL.md` §八**。
 
 **若线上界面与本地 `npm run dev` 不一致（例如仍见词汇卡底部「状态」、静态「学习中」徽标、主标题已带 der/die/das 却仍显示「名词性：…」）**：说明 **Production 尚未包含当前构建**。请在本机项目根目录执行 **`npm.cmd run vercel:prod`**（或 **`npm.cmd run vercel:prod:system-ca`**）并等待 Vercel 部署成功；在 [Vercel Dashboard](https://vercel.com) 核对该项目 **最新一次 Production 部署的时间与来源**。浏览器侧请对 **`german-reading-coach.vercel.app`** 做一次 **硬刷新**（Ctrl+Shift+R）或无痕窗口排除缓存。若你只在桌面保留**无 `.git` 的拷贝**，须用 **CLI 部署**或把代码同步到有远程的仓库后再由 Git 触发部署，否则线上不会变。
 

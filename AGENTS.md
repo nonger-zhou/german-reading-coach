@@ -19,7 +19,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 每完成一次开发任务后，**必须**更新：
 
-1. **`DEVELOPMENT_LOG.md`** — 追加或修订与本次任务相关的记录。
+1. **`DEVELOPMENT_LOG.md`** — 在「更新记录」最上方追加本次任务记录（旧记录已归档到 `docs/archive/`，无需阅读归档文件）。
 2. **`PROJECT_STATUS.md`** — 同步当前版本/状态、未接入项、页面列表、阶段目标等。
 
 若本次任务涉及以下任一类，**还须同步更新 `README.md`**：
@@ -46,10 +46,13 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - 若 **build 失败**：先修复代码/配置错误，**再次** `npm run build` 直至通过，**再**提交文档更新。
 - 文档-only 任务若未改代码，仍应运行 `npm run build` 以确认仓库健康（除非维护者明确豁免；默认不豁免）。
 
-## 部署（Vercel）
+## 部署（Vercel）与提交（2026-10-15 起）
 
-- 完成 **可验收的用户可见功能**（或与线上同步的修复）且 **`npm run build` 通过后**：若当前环境已配置 **Vercel CLI**（`vercel login`、项目已 `vercel link`），助手应执行 **`npm.cmd run vercel:prod`** 更新 Production；若遇 **TLS / 证书** 错误可改用 **`npm.cmd run vercel:prod:system-ca`**；若 CLI 未登录或命令仍失败，须在 **`DEVELOPMENT_LOG.md`** 中写明「待维护者部署」，并提醒通过 **Git push（仓库已连 Vercel）** 或配置 **`.github/workflows/vercel-production.yml`** 的 Secrets（见 **`docs/DEPLOY_VERCEL.md` §七**）实现自动部署。
-- 长期推荐：在 Vercel Dashboard **Import Git 仓库**，使默认分支 **push 即自动部署**，避免本地与线上版本漂移。
+- **改完即提交并推送到 GitHub**：每完成一个任务（`npm test` 与 `npm run build` 通过后），立即 `git add` → `git commit`（中文说明本次改了什么）→ `git push origin main`。**不要把改动长期留在本机未提交**——2026-05 曾因本机改动 5 个月未提交，导致本机、GitHub、线上三处版本不一致。
+- **部署只走 Git**：Vercel 已连接 GitHub，推送 / 合并到 `main` 即自动部署 Production；Vercel 构建使用 `vercel-build`（先跑单元测试，失败不上线）。
+- **禁止从本机执行 `npm.cmd run vercel:prod` / `vercel --prod`**：它上传本机文件（含未提交改动），会让线上与 GitHub 不一致。仅在维护者明确要求的紧急情况下使用，事后须立刻把同样的改动提交到 GitHub。
+- 较大或有风险的改动可先推到新分支、开 PR，确认后再合并到 `main`。
+- 回滚：Vercel → Deployments → 上一条 Production → ⋯ → Instant Rollback（详见 `docs/DEPLOY_VERCEL.md` §八）。
 
 ## 功能范围约束
 

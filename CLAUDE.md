@@ -9,7 +9,7 @@
 
 ## 任务结束后必须更新
 
-1. **`DEVELOPMENT_LOG.md`**
+1. **`DEVELOPMENT_LOG.md`**（在「更新记录」最上方追加；旧记录在 `docs/archive/`，不必读）
 2. **`PROJECT_STATUS.md`**
 
 若任务涉及 **安装依赖、运行方式、页面、API、数据库、部署、环境变量**，还须更新 **`README.md`**。
@@ -26,9 +26,11 @@
 
 任务结束前必须运行 **`npm run build`**。若失败，**先修复错误**，再次 build 通过后，再更新文档。
 
-## 部署（与线上同步）
+## 提交与部署（与线上同步）
 
-用户可见功能在 build 通过后：若本机已 **`vercel login`** 且项目已 link，应执行 **`npm.cmd run vercel:prod`**；若遇 **TLS / 证书** 错误可改用 **`npm.cmd run vercel:prod:system-ca`**；否则在开发日志中注明待部署，并指向 **`docs/DEPLOY_VERCEL.md`**（Git 自动部署或 GitHub Actions）。
+- **改完即提交**：`npm test` + `npm run build` 通过后，立即 commit 并 `git push origin main`；不要把改动留在本机。
+- **部署只走 Git**：推送到 `main` 由 Vercel 自动部署（构建前自动跑测试）。**不要**在本机运行 `npm.cmd run vercel:prod`。
+- 详见 [`AGENTS.md`](./AGENTS.md)「部署与提交」与 `docs/DEPLOY_VERCEL.md` §八。
 
 ## 不要擅自改动产品行为
 
