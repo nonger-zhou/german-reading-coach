@@ -11,8 +11,8 @@ import {
  * - 「还不熟」：回到第 1 盒，明天再复习。
  * - 「已掌握」：由页面直接把总词库状态改为 mastered（不再推荐、不再复习），这里只删掉调度记录。
  *
- * 调度记录存在浏览器本地（每个账号一份），不改数据库结构；换设备会从头开始排期，
- * 但「已掌握」写入的是总词库，所有设备一致。
+ * 调度记录优先存数据库（表 vocabulary_review_progress，迁移 012，所有设备一致）；
+ * 未执行 012 时退回浏览器本地（每个账号每种语言一份）。「已掌握」写入总词库。
  */
 
 export const REVIEW_INTERVAL_DAYS = [1, 3, 7, 14, 30] as const;
@@ -164,5 +164,17 @@ export function saveReviewState(
     window.localStorage.setItem(reviewStorageKey(userId, language), JSON.stringify(state));
   } catch {
     /* 隐私模式等情况下无法保存，只影响排期，不影响复习本身 */
+  }
+}
+
+/** 排期已搬进数据库后，清掉本机副本，避免以后被重复搬回 */
+export function clearReviewState(
+  userId: string,
+  language: LearningLanguage = DEFAULT_LEARNING_LANGUAGE,
+): void {
+  try {
+    window.localStorage.removeItem(reviewStorageKey(userId, language));
+  } catch {
+    /* ignore */
   }
 }

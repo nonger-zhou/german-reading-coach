@@ -16,7 +16,14 @@ import { selectInChunks } from "@/lib/supabase/inChunks";
 import { updateVocabularyItemMastery } from "@/lib/supabase/vocabulary";
 import { vocabularyHeadwordDe } from "@/lib/vocabulary/grammaticalGender";
 import {
+  deleteReviewEntry,
+  fetchReviewProgress,
+  localEntriesMissingInDb,
+  upsertReviewEntries,
+} from "@/lib/supabase/reviewProgress";
+import {
   applyReviewAnswer,
+  clearReviewState,
   buildReviewQueue,
   countReviewBuckets,
   DEFAULT_SESSION_SIZE,
@@ -74,6 +81,8 @@ function ReviewPageContent() {
   const [items, setItems] = useState<ReviewItem[]>([]);
   const [occByItem, setOccByItem] = useState<Map<string, OccurrenceRow>>(new Map());
   const [reviewState, setReviewState] = useState<ReviewState>({});
+  /** db：排期存数据库（已执行 012）；local：退回浏览器本地 */
+  const [storageMode, setStorageMode] = useState<"db" | "local">("local");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -133,8 +142,31 @@ function ReviewPageContent() {
         }
         if (cancelled) return;
         const learningIds = new Set(rows.map((r) => r.id));
-        const state = pruneReviewState(loadReviewState(userId, language), learningIds);
-        saveReviewState(userId, state, language);
+        const local = pruneReviewState(loadReviewState(userId, language), learningIds);
+        let state = local;
+        let mode: "db" | "local" = "local";
+        try {
+          const res = await fetchReviewProgress(sb, userId, rows.map((r) => r.id));
+          if (!res.missingTable) {
+            mode = "db";
+            // 一次性把本浏览器里已有、数据库还没有的排期搬进数据库
+            const toMigrate = localEntriesMissingInDb(local, res.state, learningIds);
+            state = { ...res.state, ...toMigrate };
+            if (Object.keys(toMigrate).length) {
+              const { error: me } = await upsertReviewEntries(sb, userId, toMigrate);
+              if (!me) clearReviewState(userId, language);
+            } else if (Object.keys(local).length) {
+              clearReviewState(userId, language);
+            }
+          }
+        } catch {
+          /* 数据库读取失败：退回本地排期，不影响复习 */
+          state = local;
+          mode = "local";
+        }
+        if (cancelled) return;
+        if (mode === "local") saveReviewState(userId, state, language);
+        setStorageMode(mode);
         setItems(rows);
         setReviewState(state);
       } catch (e) {
@@ -190,10 +222,23 @@ function ReviewPageContent() {
     }
   }
 
-  function persist(next: ReviewState) {
+  /** 保存排期：`changedId` 为本次变化的词条（数据库模式只写这一行） */
+  function persist(next: ReviewState, changedId: string) {
     const userId = session?.user?.id;
-    if (userId) saveReviewState(userId, next, language);
     setReviewState(next);
+    if (!userId) return;
+    if (storageMode === "local") {
+      saveReviewState(userId, next, language);
+      return;
+    }
+    const sb = getSupabaseBrowserClient();
+    const entry = next[changedId];
+    void (async () => {
+      const { error: e } = entry
+        ? await upsertReviewEntries(sb, userId, { [changedId]: entry })
+        : await deleteReviewEntry(sb, userId, changedId);
+      if (e) setError(`复习进度保存失败：${formatSupabaseOrUnknownError(e)}`);
+    })();
   }
 
   function advance() {
@@ -204,7 +249,7 @@ function ReviewPageContent() {
   function answer(kind: "again" | "good") {
     if (!queue) return;
     const id = queue[index];
-    persist(applyReviewAnswer(reviewState, id, kind, new Date()));
+    persist(applyReviewAnswer(reviewState, id, kind, new Date()), id);
     setTally((t) => ({ ...t, [kind]: t[kind] + 1 }));
     advance();
   }
@@ -226,7 +271,7 @@ function ReviewPageContent() {
       setError(`标记已掌握失败：${e}`);
       return;
     }
-    persist(removeFromReview(reviewState, id));
+    persist(removeFromReview(reviewState, id), id);
     setItems((prev) => prev.filter((i) => i.id !== id));
     setTally((t) => ({ ...t, mastered: t.mastered + 1 }));
     advance();
@@ -414,7 +459,9 @@ function ReviewPageContent() {
       ) : null}
 
       <p className="text-xs text-zinc-500">
-        复习排期保存在当前浏览器（德语、英语各自一份）；换设备会重新开始排期，但「已掌握」写入总词库，所有设备一致。
+        {storageMode === "db"
+          ? "复习进度保存在您的账号里（德语、英语各自一份），换设备也能接着复习。"
+          : "复习排期暂时保存在当前浏览器（德语、英语各自一份）；换设备会重新开始排期，但「已掌握」写入总词库，所有设备一致。"}
       </p>
     </div>
     </ContentLanguageProvider>
