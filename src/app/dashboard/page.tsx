@@ -216,7 +216,7 @@ function DashboardPageContent() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-          仪表盘
+          仪表盘{language === "en" ? " · 英语" : ""}
         </h1>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
           查看最近保存的文章和学习记录。

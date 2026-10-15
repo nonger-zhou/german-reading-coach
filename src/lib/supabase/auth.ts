@@ -19,6 +19,9 @@ export type UserProfileRow = {
   explanation_intensity: string | null;
   explanation_language: string | null;
   auto_play_pronunciation_on_click: boolean;
+  /** 010 迁移起：当前学习语言与英语阅读水平（未迁移时为 undefined） */
+  target_language?: string | null;
+  self_selected_level_en?: string | null;
   created_at: string;
   updated_at: string;
 };

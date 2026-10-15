@@ -5,6 +5,24 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-10-15 — 英语扩展 · 第 4 步：界面（分支 `feat/english-language`）
+
+**本次完成**
+- **顶栏「德语 / 英语」切换**（`LearningLanguageSwitch.tsx`，挂在 `AppShell` 标题旁）：写入 `profiles.target_language`，本机缓存首屏；文章库、仪表盘、词库、语法库、复习只显示当前语言，英语时页面标题加「· 英语」。默认德语，德语用户除多出切换外无变化。
+- **导入页**：新增「文章语言」单选，默认跟随顶栏；正文明显是另一种语言时自动切换并提示（`detectArticleLanguage.ts`，按两种语言独有的高频虚词计数，太短 / 难分时不动）；用户手动选过就不再自动改。英语显示 **`EnglishLevelSelect`**（含国内考试对照表，PRD §1.5.3 要求）；保存时写入 `articles.language`，若与顶栏不同则顶栏随之切换。
+- **设置页**：阅读水平按顶栏语言分别保存（德语 = 原 `self_selected_level`，英语 = `self_selected_level_en`）；英语时多一个「测试英语发音」。
+- **阅读页**（按文章语言，不受顶栏影响）：发音用 en-US（`ContentLanguageProvider` + `PronunciationButton` 缺省读上下文语言，无 Provider 时仍为德语）；英语文章不显示「名词性」；外部深入解释与全文翻译 Prompt 用英语版（`englishExternalPrompts.ts`）；语法表单占位符、文章信息里标「语言：英语」；英语未补充时不显示德语占位句 "Wird später ergänzt."。
+- **复习页**：英语时用英语发音与文案。
+- **发音**：`pickVoiceForLang` 按语言选 voice，德语（de-DE）选择逻辑与以前逐条相同。
+- 词性标签补充 phrasal_verb / idiom / preposition_pattern（德语不产出这些词性）。
+- 首页 / 页脚文案改为「德语 / 英语」。
+- **测试**：`detectArticleLanguage.test.ts`（5 篇德语样文全部识别为德语，英语样文识别为英语）。
+
+**主要文件**：`src/components/{LearningLanguageSwitch,EnglishLevelSelect,AppShell,PronunciationButton,InteractiveArticleReader,FullArticleTranslationExternal}.tsx`、`src/lib/language/{ContentLanguageContext.tsx,detectArticleLanguage.ts,englishExternalPrompts.ts}`、`src/lib/speech.ts`、`src/app/{import,settings,review,vocabulary,grammar,articles,dashboard}/page.tsx`、`src/app/articles/[id]/page.tsx`、`src/app/page.tsx`。
+**已知问题**：总词库 / 语法库列表里，未补充解释的英语手动词条仍显示德语占位句；产品名仍为 German Reading Coach（按约定暂不改）。
+**下一步**：第 5 步 —— Chrome 插件（传页面语言、英语网站噪音过滤）；第 6 步 —— PRD / 手册 / `/help` / README。
+**验证**：`npm test`（128）/ `npm run build` 通过；本地 `next start` + Playwright 截图确认顶栏切换在桌面与手机宽度正常。
+
 ### 2026-10-15 — 英语扩展 · 第 3 步：英语提示词（分支 `feat/english-language`）
 
 **本次完成**（`src/lib/articleAnalysis/englishPrompts.ts`，德语提示词文件未改，仅给一个共用段落加了 `export`）

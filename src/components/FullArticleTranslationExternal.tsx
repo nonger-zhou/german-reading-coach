@@ -3,6 +3,8 @@
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { buildFullArticleTranslationPrompt } from "@/lib/articleAnalysis/buildFullArticleTranslationPrompt";
+import { buildFullArticleTranslationPromptEn } from "@/lib/language/englishExternalPrompts";
+import type { LearningLanguage } from "@/lib/language/learningLanguage";
 import {
   copyTextAndOpenExternalSite,
   FULL_ARTICLE_TRANSLATION_PROVIDERS,
@@ -13,12 +15,15 @@ type Props = {
   articlePlain: string;
   title?: string;
   disabled?: boolean;
+  /** 文章语言；缺省德语 */
+  language?: LearningLanguage;
 };
 
 export function FullArticleTranslationExternal({
   articlePlain,
   title,
   disabled = false,
+  language = "de",
 }: Props) {
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -28,7 +33,9 @@ export function FullArticleTranslationExternal({
         setNotice("正文为空，无法生成翻译 Prompt。");
         return;
       }
-      const prompt = buildFullArticleTranslationPrompt({
+      const prompt = (
+        language === "en" ? buildFullArticleTranslationPromptEn : buildFullArticleTranslationPrompt
+      )({
         articleText: articlePlain,
         title,
       });
@@ -39,7 +46,7 @@ export function FullArticleTranslationExternal({
       setNotice(message);
       if (!ok) return;
     },
-    [articlePlain, title],
+    [articlePlain, title, language],
   );
 
   const overseas = FULL_ARTICLE_TRANSLATION_PROVIDERS.filter(

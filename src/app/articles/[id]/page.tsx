@@ -1042,6 +1042,12 @@ function ArticleDetailPageContent() {
                 </dd>
               </div>
             ) : null}
+            {normalizeLearningLanguage(article.language) === "en" ? (
+              <div>
+                <dt className="text-zinc-500">语言</dt>
+                <dd className="text-zinc-900 dark:text-zinc-100">英语</dd>
+              </div>
+            ) : null}
             <div>
               <dt className="text-zinc-500">阅读水平</dt>
               <dd className="text-zinc-900 dark:text-zinc-100">
@@ -1169,6 +1175,7 @@ function ArticleDetailPageContent() {
                     articlePlain={articlePlain}
                     title={article?.title ?? undefined}
                     disabled={!articlePlain.trim()}
+                    language={normalizeLearningLanguage(article?.language)}
                   />
                 </div>
                 {IS_DEV ? (
@@ -1335,7 +1342,8 @@ function ArticleDetailPageContent() {
                                 {v.lemma.trim() || "—"}
                               </span>
                             </p>
-                            {shouldShowGrammaticalGenderSubtitle(
+                            {normalizeLearningLanguage(article?.language) === "de" &&
+                            shouldShowGrammaticalGenderSubtitle(
                               v.part_of_speech,
                               v.lemma,
                               v.grammatical_gender,

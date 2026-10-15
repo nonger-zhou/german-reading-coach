@@ -29,8 +29,14 @@ import {
 } from "@/components/ui/Tabs";
 import {
   DEFAULT_LEARNING_LANGUAGE,
+  LEARNING_LANGUAGE_LOCALE,
   type LearningLanguage,
 } from "@/lib/language/learningLanguage";
+import { ContentLanguageProvider } from "@/lib/language/ContentLanguageContext";
+import {
+  buildGrammarExternalDeepDivePromptEn,
+  buildVocabularyExternalDeepDivePromptEn,
+} from "@/lib/language/englishExternalPrompts";
 import {
   speakGerman,
 } from "@/lib/speech";
@@ -135,6 +141,7 @@ import {
   mergeGrammarFromEnrichmentApi,
   mergeVocabFromEnrichmentApi,
   posLabelZh,
+  isDeExplanationPlaceholder,
   vocabBadge,
   vocabExplanationsComplete,
   vocabNeedsAiEnrichEntry,
@@ -1757,7 +1764,11 @@ export function InteractiveArticleReader({
         .map((s) => (typeof s === "string" ? s.trim() : ""))
         .filter(Boolean);
       const grammarName = nameParts.join(" / ");
-      const prompt = buildGrammarExternalDeepDivePrompt({
+      const prompt = (
+        persistLanguage === "en"
+          ? buildGrammarExternalDeepDivePromptEn
+          : buildGrammarExternalDeepDivePrompt
+      )({
         userLevel: enrichLevelEffective,
         grammarName,
         selectedText: occ?.surface_form ?? "",
@@ -1790,6 +1801,7 @@ export function InteractiveArticleReader({
       grammarSelection,
       articlePlain,
       metaTitle,
+      persistLanguage,
       selectedGrammarItem,
       selectedGrammarOccurrence,
     ],
@@ -1818,7 +1830,11 @@ export function InteractiveArticleReader({
       const lev = selectedVocabItem.level_estimate;
       const levelEstimate =
         lev != null && String(lev).trim() ? String(lev).trim() : "";
-      const prompt = buildVocabularyExternalDeepDivePrompt({
+      const prompt = (
+        persistLanguage === "en"
+          ? buildVocabularyExternalDeepDivePromptEn
+          : buildVocabularyExternalDeepDivePrompt
+      )({
         userLevel: enrichLevelEffective,
         displayTerm,
         canonicalForm,
@@ -1849,6 +1865,7 @@ export function InteractiveArticleReader({
     [
       enrichLevelEffective,
       metaTitle,
+      persistLanguage,
       selectedSense,
       selectedVocabItem,
       selectedVocabOccurrence,
@@ -2184,7 +2201,7 @@ export function InteractiveArticleReader({
     const phrase =
       textSelectionUi?.text ?? selectionTextSnapshotRef.current ?? "";
     if (!phrase) return;
-    const ok = speakGerman(phrase, "de-DE");
+    const ok = speakGerman(phrase, LEARNING_LANGUAGE_LOCALE[persistLanguage]);
     if (!ok && typeof window !== "undefined") {
       window.alert("当前浏览器暂不支持发音。");
     }
@@ -2218,7 +2235,8 @@ export function InteractiveArticleReader({
               </div>
               <CardDescription>
                 {posLabelZh(selectedVocabItem.part_of_speech)}
-                {shouldShowGrammaticalGenderSubtitle(
+                {persistLanguage === "de" &&
+                shouldShowGrammaticalGenderSubtitle(
                   selectedVocabItem.part_of_speech,
                   selectedVocabItem.lemma,
                   selectedVocabItem.grammatical_gender,
@@ -2299,8 +2317,13 @@ export function InteractiveArticleReader({
             {selectedSense?.zh_meaning ?? selectedVocabItem.zh_meaning}
           </p>
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-            {selectedSense?.simple_de_explanation ??
-              selectedVocabItem.simple_de_explanation}
+            {persistLanguage === "en" &&
+            isDeExplanationPlaceholder(
+              selectedSense?.simple_de_explanation ?? selectedVocabItem.simple_de_explanation ?? "",
+            )
+              ? "（英文释义待补充）"
+              : (selectedSense?.simple_de_explanation ??
+                selectedVocabItem.simple_de_explanation)}
           </p>
           {selectedVocabItem.senses.length > 1 ? (
             <div className="mt-3 rounded-lg border border-zinc-200 p-2 dark:border-zinc-800">
@@ -2674,7 +2697,10 @@ export function InteractiveArticleReader({
           </p>
           {selectedGrammarItem.explanation_de_simple ? (
             <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-              {selectedGrammarItem.explanation_de_simple}
+              {persistLanguage === "en" &&
+              isDeExplanationPlaceholder(selectedGrammarItem.explanation_de_simple)
+                ? "（英文解释待补充）"
+                : selectedGrammarItem.explanation_de_simple}
             </p>
           ) : null}
           <details className="mt-3 rounded-lg border border-zinc-200/80 bg-zinc-50/60 dark:border-zinc-700/80 dark:bg-zinc-900/35">
@@ -2991,7 +3017,8 @@ export function InteractiveArticleReader({
             <span className="text-xs text-zinc-500">
               {v.senses[0]?.zh_meaning ?? v.zh_meaning}
             </span>
-            {shouldShowGrammaticalGenderSubtitle(
+            {persistLanguage === "de" &&
+            shouldShowGrammaticalGenderSubtitle(
               v.part_of_speech,
               v.lemma,
               v.grammatical_gender,
@@ -3625,7 +3652,7 @@ export function InteractiveArticleReader({
   );
 
   return (
-    <>
+    <ContentLanguageProvider language={persistLanguage}>
       {analysisToolbar ? (
         <div className="mb-4 space-y-2">{analysisToolbar}</div>
       ) : null}
@@ -3923,7 +3950,7 @@ export function InteractiveArticleReader({
               onChange={(e) => setGrammarFormValue(e.target.value)}
               rows={3}
               className="mt-3 w-full resize-y rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-              placeholder="粘贴或输入德语句子…"
+              placeholder={persistLanguage === "en" ? "粘贴或输入英语句子…" : "粘贴或输入德语句子…"}
             />
             <div className="mt-4 flex justify-end gap-2">
               <Button
@@ -4120,6 +4147,6 @@ export function InteractiveArticleReader({
           </div>
         </div>
       ) : null}
-    </>
+    </ContentLanguageProvider>
   );
 }

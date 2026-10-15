@@ -3,22 +3,27 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { isSpeechSynthesisAvailable, speakGerman } from "@/lib/speech";
+import { useContentLanguage } from "@/lib/language/ContentLanguageContext";
+import { LEARNING_LANGUAGE_LOCALE } from "@/lib/language/learningLanguage";
 
 const UNSUPPORTED_MSG = "当前浏览器暂不支持发音";
 
 export function PronunciationButton({
   text,
-  lang = "de-DE",
+  lang: langProp,
   className = "",
   size = "md",
   label = "发音",
 }: {
   text: string;
+  /** 朗读语言；缺省按所在页面的内容语言（无 Provider 时德语 de-DE） */
   lang?: string;
   className?: string;
   size?: "sm" | "md";
   label?: string;
 }) {
+  const contentLanguage = useContentLanguage();
+  const lang = langProp ?? LEARNING_LANGUAGE_LOCALE[contentLanguage];
   const [supported, setSupported] = useState<boolean | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const clearFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(

@@ -9,6 +9,7 @@ import { PronunciationButton } from "@/components/PronunciationButton";
 import { useAuthEntryHrefs } from "@/lib/auth/use-auth-entry-hrefs";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useLearningLanguage } from "@/lib/language/useLearningLanguage";
+import { ContentLanguageProvider } from "@/lib/language/ContentLanguageContext";
 import { formatSupabaseOrUnknownError } from "@/lib/supabase/errors";
 import { selectInChunks } from "@/lib/supabase/inChunks";
 import { updateVocabularyItemMastery } from "@/lib/supabase/vocabulary";
@@ -255,11 +256,14 @@ function ReviewPageContent() {
   const occ = current ? occByItem.get(current.id) : undefined;
 
   return (
+    <ContentLanguageProvider language={language}>
     <div className="mx-auto w-full max-w-2xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">复习</h1>
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+          {language === "en" ? "复习 · 英语" : "复习"}
+        </h1>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          复习总词库里「学习中」的词：先看德语和例句回想意思，再翻面核对。「已掌握」会写入总词库，以后不再推荐。
+          复习总词库里「学习中」的词：先看{language === "en" ? "英语" : "德语"}和例句回想意思，再翻面核对。「已掌握」会写入总词库，以后不再推荐。
         </p>
       </div>
 
@@ -408,9 +412,10 @@ function ReviewPageContent() {
       ) : null}
 
       <p className="text-xs text-zinc-500">
-        复习排期保存在当前浏览器；换设备会重新开始排期，但「已掌握」写入总词库，所有设备一致。
+        复习排期保存在当前浏览器（德语、英语各自一份）；换设备会重新开始排期，但「已掌握」写入总词库，所有设备一致。
       </p>
     </div>
+    </ContentLanguageProvider>
   );
 }
 

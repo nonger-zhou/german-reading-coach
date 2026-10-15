@@ -236,7 +236,7 @@ function ArticlesPageContent() {
             文章库
           </p>
           <h1 className="mt-1 text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-            文章库
+            文章库{language === "en" ? " · 英语" : ""}
           </h1>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
             查看所有保存过的文章，按保存时间倒序分页显示。

@@ -7,22 +7,28 @@ export function isSpeechSynthesisAvailable(): boolean {
   );
 }
 
-/** 优先选择 lang 以 de 开头的 voice；在同档中优先 de-DE。仅作增强，找不到仍应正常 speak。 */
-function pickGermanVoice(
+/**
+ * 按朗读语言选 voice：优先语言前缀相同的（de → de*，en → en*），同档中优先完全匹配（de-DE / en-US）。
+ * 德语（lang = de-DE）的选择与以前完全相同。仅作增强，找不到仍应正常 speak。
+ */
+export function pickVoiceForLang(
   voices: SpeechSynthesisVoice[],
+  lang: string,
 ): SpeechSynthesisVoice | undefined {
-  const deVoices = voices.filter((v) =>
-    (v.lang || "").toLowerCase().startsWith("de"),
+  const full = lang.toLowerCase();
+  const prefix = full.split("-")[0];
+  const sameLanguage = voices.filter((v) =>
+    (v.lang || "").toLowerCase().startsWith(prefix),
   );
-  if (deVoices.length === 0) return undefined;
-  const preferDeDe = deVoices.find((v) =>
-    (v.lang || "").toLowerCase().startsWith("de-de"),
+  if (sameLanguage.length === 0) return undefined;
+  const preferExact = sameLanguage.find((v) =>
+    (v.lang || "").toLowerCase().startsWith(full),
   );
-  return preferDeDe ?? deVoices[0];
+  return preferExact ?? sameLanguage[0];
 }
 
 /**
- * 使用 speechSynthesis 朗读德语文本。
+ * 使用 speechSynthesis 朗读文本（默认德语；英语传 en-US）。函数名沿用旧名。
  * 须在用户手势（如 click）内同步调用，否则部分浏览器会静默忽略 speak。
  * 先 cancel；voice 可选（getVoices() 为空时仍 speak，仅依赖 utterance.lang）。
  */
@@ -41,7 +47,7 @@ export function speakGerman(text: string, lang = "de-DE"): boolean {
   window.speechSynthesis.cancel();
 
   const voices = window.speechSynthesis.getVoices();
-  const voice = pickGermanVoice(voices);
+  const voice = pickVoiceForLang(voices, lang);
   const utterance = new SpeechSynthesisUtterance(trimmed);
   utterance.lang = lang;
   utterance.rate = 0.9;

@@ -175,6 +175,10 @@ export function posLabelZh(raw: string | null | undefined): string {
     compound_noun: "复合名词",
     verb_phrase: "动词短语",
     prepositional_phrase: "介词短语",
+    // 英语文章常见类型（德语分析不产出这些词性）
+    phrasal_verb: "短语动词",
+    idiom: "习语",
+    preposition_pattern: "介词搭配",
   };
   if (!k || k === "unknown" || k === "missing" || k === "—") return "词汇";
   return map[k] ?? raw?.trim() ?? "词汇";

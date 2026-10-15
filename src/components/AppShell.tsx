@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { AuthRecoveryHashBanner } from "@/components/AuthRecoveryHashBanner";
 import { AuthNav } from "@/components/AuthNav";
+import { LearningLanguageSwitch } from "@/components/LearningLanguageSwitch";
 
 const nav = [
   { href: "/", label: "首页" },
@@ -19,12 +20,15 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
       <header className="sticky top-0 z-40 border-b border-zinc-200/80 bg-white/90 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/90">
         <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <Link
-            href="/"
-            className="text-base font-semibold tracking-tight text-zinc-900 dark:text-zinc-50"
-          >
-            German Reading Coach
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/"
+              className="text-base font-semibold tracking-tight text-zinc-900 dark:text-zinc-50"
+            >
+              German Reading Coach
+            </Link>
+            <LearningLanguageSwitch />
+          </div>
           <nav
             className="-mx-1 flex flex-wrap items-center gap-1 overflow-x-auto pb-1 text-sm sm:pb-0"
             aria-label="主导航"
@@ -51,7 +55,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {children}
       </main>
       <footer className="border-t border-zinc-200 py-4 text-center text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-500">
-        German Reading Coach · 从真实德语文章中积累词汇与语法 ·{" "}
+        German Reading Coach · 从真实德语 / 英语文章中积累词汇与语法 ·{" "}
         <Link href="/help" className="hover:underline">
           使用说明
         </Link>
