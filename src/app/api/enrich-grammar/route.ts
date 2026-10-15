@@ -16,6 +16,12 @@ import { snippetAroundOffsets } from "@/lib/articleAnalysis/enrichmentContext";
 import { validateGrammarLabel } from "@/lib/grammar/labelValidation";
 import { applyGrammarAiEnrichment } from "@/lib/supabase/grammar";
 import { getSupabaseUserFromBearer } from "@/lib/supabase/routeFromBearer";
+import { resolveArticleLanguage } from "@/lib/supabase/articles";
+import {
+  GRAMMAR_ENRICHMENT_JSON_SCHEMA_EN,
+  GRAMMAR_ENRICH_SYSTEM_PROMPT_EN,
+  parseEnglishGrammarType,
+} from "@/lib/articleAnalysis/englishPrompts";
 import type { CefrLevel } from "@/lib/types";
 
 const LEVELS: CefrLevel[] = ["A1", "A2", "B1", "B2", "C1", "C2"];
@@ -187,6 +193,10 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
     original_text_snippet: snippet,
   };
 
+  /** 英语文章：英语语法类型与提示词（字段结构相同）；德语不变 */
+  const language = await resolveArticleLanguage(supabase, user.id, articleId);
+  const isEnglish = language === "en";
+
   const openai = createServerOpenAIClient({
     apiKey,
     timeout: 120_000,
@@ -198,7 +208,7 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
       model: "gpt-4o-mini",
       temperature: 0.35,
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: isEnglish ? GRAMMAR_ENRICH_SYSTEM_PROMPT_EN : SYSTEM_PROMPT },
         {
           role: "user",
           content: JSON.stringify(userPayload),
@@ -206,7 +216,7 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
       ],
       response_format: {
         type: "json_schema",
-        json_schema: GRAMMAR_ENRICHMENT_JSON_SCHEMA,
+        json_schema: isEnglish ? GRAMMAR_ENRICHMENT_JSON_SCHEMA_EN : GRAMMAR_ENRICHMENT_JSON_SCHEMA,
       },
     });
 
@@ -228,7 +238,9 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
       );
     }
 
-    const grammar_type = parseGrammarType(parsed.grammar_type);
+    const grammar_type: string = isEnglish
+      ? parseEnglishGrammarType(parsed.grammar_type)
+      : parseGrammarType(parsed.grammar_type);
     const was_label_corrected = parsed.was_label_corrected === true;
     const corrected_label = String(parsed.corrected_label ?? "").trim();
     const correction_reason = String(parsed.correction_reason ?? "").trim();

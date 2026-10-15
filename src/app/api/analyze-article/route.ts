@@ -30,6 +30,7 @@ import { fetchGrammarMasteredIgnoredKeysForArticleAnalysis } from "@/lib/supabas
 import { fetchVocabularyProfileRowsForArticleAnalysis } from "@/lib/supabase/vocabulary";
 import { buildUserVocabProfile } from "@/lib/vocabSelection/userVocabProfile";
 import { loadLexicon } from "@/lib/vocabSelection/lexicons";
+import { SYSTEM_PROMPT_VOCAB_FIRST_EN } from "@/lib/articleAnalysis/englishPrompts";
 import {
   applyVocabularySelection,
   mergeVocabularyLists,
@@ -159,8 +160,6 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
     );
   }
 
-  const legacy = isLegacyAutoGrammarAnalysisEnabled();
-
   /**
    * 文章语言以数据库为准（不信任请求体）；读不到时（如 mock 文章）用请求体，最后回落德语。
    * 词库画像、语法过滤都只取该语言，德语 / 英语互不影响。
@@ -171,6 +170,9 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
     articleId,
     b.language,
   );
+
+  /** 旧版整文语法分析只有德语提示词；英语始终走词汇优先流程 */
+  const legacy = language === "de" && isLegacyAutoGrammarAnalysisEnabled();
 
   const vocabRes = await fetchVocabularyProfileRowsForArticleAnalysis(
     auth.supabase,
@@ -259,7 +261,12 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
     maxRetries: 1,
   });
 
-  const systemPrompt = legacy ? SYSTEM_PROMPT_LEGACY : SYSTEM_PROMPT_VOCAB_FIRST;
+  const systemPrompt =
+    language === "en"
+      ? SYSTEM_PROMPT_VOCAB_FIRST_EN
+      : legacy
+        ? SYSTEM_PROMPT_LEGACY
+        : SYSTEM_PROMPT_VOCAB_FIRST;
   const jsonSchema = legacy
     ? ARTICLE_ANALYSIS_JSON_SCHEMA_LEGACY
     : ARTICLE_VOCAB_FIRST_JSON_SCHEMA;

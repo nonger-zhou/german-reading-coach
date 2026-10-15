@@ -25,7 +25,7 @@ import { normalizeTextKey } from "@/lib/articleReadingModel";
 export const OPENAI_ANALYSIS_TEXT_CHAR_LIMIT = 10_000;
 
 /** 选词 v2：程序根据用户词库与词频计算的候选/必推列表优先于模型对等级的主观判断 */
-const USER_VOCAB_PROFILE_PRIORITY_SECTION = `【用户词汇画像优先】
+export const USER_VOCAB_PROFILE_PRIORITY_SECTION = `【用户词汇画像优先】
 若 user 消息中给出【用户词汇画像】【候选生词】【必须推荐】，选词以它们为准：单个词只从候选生词中选，必须推荐的词逐条输出，按对读懂本文的重要程度排序；下文按 userLevel 的判断仅作补充。这些列表由程序根据用户真实词库计算，比你对等级的主观估计更可靠。`;
 
 export const SYSTEM_PROMPT_LEGACY = `你是德语阅读学习助手。

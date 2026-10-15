@@ -9,6 +9,8 @@ import { VOCAB_ENRICHMENT_JSON_SCHEMA } from "@/lib/articleAnalysis/enrichmentJs
 import { snippetAroundOffsets } from "@/lib/articleAnalysis/enrichmentContext";
 import { applyVocabularyAiEnrichment } from "@/lib/supabase/vocabulary";
 import { getSupabaseUserFromBearer } from "@/lib/supabase/routeFromBearer";
+import { resolveArticleLanguage } from "@/lib/supabase/articles";
+import { VOCAB_ENRICH_SYSTEM_PROMPT_EN } from "@/lib/articleAnalysis/englishPrompts";
 import type { CefrLevel } from "@/lib/types";
 
 const LEVELS: CefrLevel[] = ["A1", "A2", "B1", "B2", "C1", "C2"];
@@ -198,6 +200,10 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
     original_text_snippet: snippet,
   };
 
+  /** 英语文章用英语提示词（中文 + 简明英文释义）；德语不变 */
+  const language = await resolveArticleLanguage(supabase, user.id, articleId);
+  const systemPrompt = language === "en" ? VOCAB_ENRICH_SYSTEM_PROMPT_EN : SYSTEM_PROMPT;
+
   const openai = createServerOpenAIClient({
     apiKey,
     timeout: 120_000,
@@ -209,7 +215,7 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
       model: "gpt-4o-mini",
       temperature: 0.35,
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: systemPrompt },
         {
           role: "user",
           content: JSON.stringify(userPayload),

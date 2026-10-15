@@ -5,6 +5,21 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-10-15 — 英语扩展 · 第 3 步：英语提示词（分支 `feat/english-language`）
+
+**本次完成**（`src/lib/articleAnalysis/englishPrompts.ts`，德语提示词文件未改，仅给一个共用段落加了 `export`）
+- **整文分析**：英语文章用 `SYSTEM_PROMPT_VOCAB_FIRST_EN`：中文释义 + **简明英文释义**（learner's dictionary 风格，存入原 `simple_de_explanation` 字段），名词性恒为 `na`；覆盖单词、phrasal verbs、搭配、习语、介词搭配、学术 / 新闻词与语体；仍然 3 条中文阅读问题、用户词汇画像优先。英语不走旧版整文语法分析（`ENABLE_AUTO_GRAMMAR_ANALYSIS` 只对德语生效）。
+- **补充 AI 解释（词汇）**：`VOCAB_ENRICH_SYSTEM_PROMPT_EN`（原形、短语动词完整形式、中文 + 简明英文）。
+- **补充 AI 解释（语法）**：英语语法类型枚举（时与体、被动、条件句、关系从句、间接引语、情态、动名词 / 不定式、分词短语、倒装、强调句、虚拟、短语动词句型、介词搭配等）与同字段结构的 `GRAMMAR_ENRICHMENT_JSON_SCHEMA_EN`；`name_de` 存英文术语、`explanation_de_simple` 存简明英文。
+- **拖选「解释语法」**：`GRAMMAR_EXPLAIN_SELECTION_SYSTEM_PROMPT_EN`（结构、时态语态语气、搭配、难点、理解顺序）。
+- 三个 API 都用 `resolveArticleLanguage` 从数据库取文章语言（读不到时回落德语，德语路径与以前一致）。
+- **测试** `englishPrompts.test.ts`：英语提示词要点、英语语法 schema 与德语字段一致；**德语提示词快照**（与 `main` 上原文逐字一致）。
+
+**主要文件**：`src/lib/articleAnalysis/englishPrompts.ts`、`src/app/api/{analyze-article,enrich-vocabulary,enrich-grammar,explain-grammar-selection}/route.ts`。
+**已知问题**：界面上的字段名（「简单德语解释」等）、外部深入解释与全文翻译 Prompt 仍是德语措辞（第 4 步按文章语言切换）。
+**下一步**：第 4 步 —— 顶栏语言切换、导入页语言识别、英语水平选择（含对照表）、阅读页 / 词库 / 复习的英语文案与英语发音。
+**验证**：`npm test`（125）/ `npm run build` 通过。
+
 ### 2026-10-15 — 英语扩展 · 第 2 步：语言配置层与英语选词引擎（分支 `feat/english-language`）
 
 **本次完成**
