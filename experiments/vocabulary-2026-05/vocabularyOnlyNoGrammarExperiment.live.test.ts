@@ -1,22 +1,18 @@
 /**
- * 本地：对**你自己准备的一篇德文正文**跑 vocabulary 分析（含两次拆分）。
- * 不改生产 route / 不入库。
+ * 本地：零语法 — 仅 vocabulary 单次调用 vs 生产整文（含 Grammar v2）。
+ * 用于判断「词性偏名词」是否由语法段 prompt 引起。
  *
- * 1. 把正文存成 UTF-8 文本，例如 scripts/fixtures/my-article.txt
- * 2. 确保 .env.local 里有 OPENAI_API_KEY
+ * 默认正文：scripts/fixtures/autodiebe-schweiz-article.txt
  *
- * PowerShell 示例：
+ * PowerShell：
  *   $env:NODE_OPTIONS='--use-system-ca'
- *   $env:VOCAB_SPLIT_LIVE='1'
- *   $env:VOCAB_SPLIT_FILE='scripts/fixtures/my-article.txt'
- *   $env:VOCAB_SPLIT_TITLE='可选：文章标题'
- *   $env:VOCAB_SPLIT_LEVEL='B1'
- *   npm run vocab-split:try
+ *   $env:VOCAB_ONLY_NO_GRAMMAR_LIVE='1'
+ *   npm run vocab-only-no-grammar:try
  *
- * 只跑拆分（省一次 API，不写生产对比）：
- *   $env:VOCAB_SPLIT_STRATEGIES='mini_split_reset_vocab,mini_split_minimal_b'
+ * 自选文件：
+ *   $env:VOCAB_SPLIT_FILE='scripts/fixtures/my.txt'
  *
- * 报告：scripts/vocabulary-split-custom-report.json
+ * 报告：experiments/vocabulary-2026-05/reports/vocabulary-only-no-grammar-report.json
  */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -56,62 +52,39 @@ function loadEnvLocal(): void {
 loadEnvLocal();
 
 const apiKey = process.env.OPENAI_API_KEY?.trim();
-const splitFile = process.env.VOCAB_SPLIT_FILE?.trim();
 const runLive =
-  Boolean(apiKey) &&
-  process.env.VOCAB_SPLIT_LIVE === "1" &&
-  Boolean(splitFile);
+  Boolean(apiKey) && process.env.VOCAB_ONLY_NO_GRAMMAR_LIVE === "1";
 
-const DEFAULT_STRATEGIES: VocabularyExperimentStrategy[] = [
+const DEFAULT_FILE = "scripts/fixtures/autodiebe-schweiz-article.txt";
+const DEFAULT_TITLE =
+  "Die Schweiz ist das neue Paradies für Autodiebe – jetzt rüsten die Luxusgaragisten auf";
+
+const STRATEGIES: VocabularyExperimentStrategy[] = [
   "mini_single",
-  "mini_split_reset_vocab",
-  "mini_split_minimal_b",
+  "mini_vocab_only_reset",
+  "mini_vocab_only_minimal_b",
 ];
 
 const STRATEGY_LABELS: Record<VocabularyExperimentStrategy, string> = {
-  mini_single: "production_single_call",
+  mini_single: "production_full_prompt_with_grammar",
   gpt4o_single: "gpt4o_single",
-  mini_split: "split_reset_vocab_legacy_alias",
+  mini_split: "split_legacy",
   mini_split_reset_vocab: "split_second_call_reset_vocab",
   mini_split_minimal_b: "split_second_call_minimal_b",
   mini_vocab_only_reset: "vocab_only_single_no_grammar_reset_v1",
   mini_vocab_only_minimal_b: "vocab_only_single_no_grammar_minimal_b",
 };
 
-function parseStrategies(): VocabularyExperimentStrategy[] {
-  const raw = process.env.VOCAB_SPLIT_STRATEGIES?.trim();
-  if (!raw) return DEFAULT_STRATEGIES;
-  const allowed = new Set<VocabularyExperimentStrategy>([
-    "mini_single",
-    "mini_split_reset_vocab",
-    "mini_split_minimal_b",
-    "mini_split",
-    "gpt4o_single",
-    "mini_vocab_only_reset",
-    "mini_vocab_only_minimal_b",
-  ]);
-  const picked = raw
-    .split(",")
-    .map((s) => s.trim())
-    .filter((s): s is VocabularyExperimentStrategy =>
-      allowed.has(s as VocabularyExperimentStrategy),
-    );
-  return picked.length > 0 ? picked : DEFAULT_STRATEGIES;
-}
-
-describe.runIf(runLive)("vocabulary split custom article (live)", () => {
-  it("analyzes VOCAB_SPLIT_FILE with selected strategies", async () => {
-    const filePath = resolve(process.cwd(), splitFile!);
+describe.runIf(runLive)("vocabulary only no grammar (live)", () => {
+  it("compares full production vs vocabulary-only single call", async () => {
+    const fileRel = process.env.VOCAB_SPLIT_FILE?.trim() || DEFAULT_FILE;
+    const filePath = resolve(process.cwd(), fileRel);
     expect(existsSync(filePath)).toBe(true);
     const originalText = readFileSync(filePath, "utf8").trim();
     expect(originalText.length).toBeGreaterThan(80);
 
-    const title =
-      process.env.VOCAB_SPLIT_TITLE?.trim() ||
-      filePath.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, "") ||
-      "Custom article";
+    const title = process.env.VOCAB_SPLIT_TITLE?.trim() || DEFAULT_TITLE;
     const userLevel = process.env.VOCAB_SPLIT_LEVEL?.trim() || "B1";
-    const strategies = parseStrategies();
 
     const openai = createServerOpenAIClient({
       apiKey: apiKey!,
@@ -121,9 +94,10 @@ describe.runIf(runLive)("vocabulary split custom article (live)", () => {
 
     const runs: unknown[] = [];
 
-    for (const strategy of strategies) {
+    for (const strategy of STRATEGIES) {
+      const label = STRATEGY_LABELS[strategy];
       // eslint-disable-next-line no-console
-      console.log(`\nRunning ${STRATEGY_LABELS[strategy]}...`);
+      console.log(`\n=== ${label} ===`);
       const vocab = await requestVocabularyForStrategy(openai, strategy, {
         title,
         originalText,
@@ -133,17 +107,16 @@ describe.runIf(runLive)("vocabulary split custom article (live)", () => {
       const counts = countVocabByBucket(vocab);
       // eslint-disable-next-line no-console
       console.log(
-        STRATEGY_LABELS[strategy],
         formatVocabPosCounts(counts),
         `expressionTypes=${countExpressionTypeVocabulary(vocab)}`,
         `allNounLike=${isVocabularyAllNounLike(vocab)}`,
       );
       for (const v of vocab) {
         // eslint-disable-next-line no-console
-        console.log(`  [${v.part_of_speech}] ${v.surface_form} → ${v.lemma}`);
+        console.log(`  [${v.part_of_speech}] ${v.surface_form} → ${v.lemma} | ${v.zh_meaning}`);
       }
       runs.push({
-        strategy: STRATEGY_LABELS[strategy],
+        strategy: label,
         count: vocab.length,
         counts,
         expressionTypes: countExpressionTypeVocabulary(vocab),
@@ -159,36 +132,28 @@ describe.runIf(runLive)("vocabulary split custom article (live)", () => {
 
     const report = {
       generatedAt: new Date().toISOString(),
-      file: splitFile,
+      hypothesis:
+        "If vocab_only (no grammar) is mixed-POS but production_full is noun-heavy, grammar prompt likely competes with vocabulary.",
+      file: fileRel,
       title,
       userLevel,
       charCount: originalText.length,
-      strategies: strategies.map((s) => STRATEGY_LABELS[s]),
+      strategies: STRATEGIES.map((s) => STRATEGY_LABELS[s]),
       runs,
     };
 
     const outPath = resolve(
       process.cwd(),
-      "scripts/vocabulary-split-custom-report.json",
+      "experiments/vocabulary-2026-05/reports/vocabulary-only-no-grammar-report.json",
     );
     writeFileSync(outPath, JSON.stringify(report, null, 2), "utf8");
     // eslint-disable-next-line no-console
-    console.log(`\nReport written: ${outPath}`);
+    console.log(`\nReport: ${outPath}`);
   }, 600_000);
 });
 
-describe.runIf(!runLive)("vocabulary split custom article (skipped)", () => {
-  it("needs VOCAB_SPLIT_LIVE=1, OPENAI_API_KEY, VOCAB_SPLIT_FILE", () => {
-    if (!apiKey) {
-      // eslint-disable-next-line no-console
-      console.log("跳过：未设置 OPENAI_API_KEY（.env.local）");
-    } else if (process.env.VOCAB_SPLIT_LIVE !== "1") {
-      // eslint-disable-next-line no-console
-      console.log("跳过：请设置 VOCAB_SPLIT_LIVE=1");
-    } else if (!splitFile) {
-      // eslint-disable-next-line no-console
-      console.log("跳过：请设置 VOCAB_SPLIT_FILE=scripts/fixtures/你的文章.txt");
-    }
+describe.runIf(!runLive)("vocabulary only no grammar (skipped)", () => {
+  it("needs VOCAB_ONLY_NO_GRAMMAR_LIVE=1 and OPENAI_API_KEY", () => {
     expect(true).toBe(true);
   });
 });

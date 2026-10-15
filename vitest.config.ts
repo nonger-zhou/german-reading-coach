@@ -3,7 +3,7 @@ import path from "node:path";
 
 export default defineConfig({
   test: {
-    exclude: ["**/node_modules/**", "**/*.live.test.ts"],
+    exclude: ["**/node_modules/**", "**/*.live.test.ts", "experiments/**"],
   },
   resolve: {
     alias: {

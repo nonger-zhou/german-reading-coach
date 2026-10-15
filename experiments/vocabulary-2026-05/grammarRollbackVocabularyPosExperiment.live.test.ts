@@ -8,20 +8,20 @@
  *   $env:GRAMMAR_ROLLBACK_VOCAB_LIVE='1'
  *   npx vitest run --config vitest.live.config.ts src/lib/articleAnalysis/grammarRollbackVocabularyPosExperiment.live.test.ts --testTimeout=600000
  *
- * 报告：scripts/grammar-rollback-vocabulary-pos-report.json
+ * 报告：experiments/vocabulary-2026-05/reports/grammar-rollback-vocabulary-pos-report.json
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { ARTICLE_ANALYSIS_JSON_SCHEMA } from "./articleAnalysisJsonSchema";
+import { ARTICLE_ANALYSIS_JSON_SCHEMA } from "@/lib/articleAnalysis/articleAnalysisJsonSchema";
 import {
   buildOpenAIAnalysisUserContent,
   normalizeOpenAIArticleAnalysis,
   SYSTEM_PROMPT_LEGACY,
   truncateForOpenAIAnalysis,
-} from "./openaiArticleAnalysis";
+} from "@/lib/articleAnalysis/openaiArticleAnalysis";
 import { PRE_GRAMMAR_V2_SYSTEM_PROMPT } from "./preGrammarV2ExperimentPrompt";
-import type { AnalyzedVocabularyItem } from "./types";
+import type { AnalyzedVocabularyItem } from "@/lib/articleAnalysis/types";
 import { isVocabularyAllNounLike } from "./vocabularyRegressionDiagnostic";
 import { createServerOpenAIClient } from "../openai/createServerOpenAIClient";
 
@@ -342,7 +342,7 @@ describe.runIf(runLive)(
 
       const outPath = resolve(
         process.cwd(),
-        "scripts/grammar-rollback-vocabulary-pos-report.json",
+        "experiments/vocabulary-2026-05/reports/grammar-rollback-vocabulary-pos-report.json",
       );
       writeFileSync(outPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
       // eslint-disable-next-line no-console

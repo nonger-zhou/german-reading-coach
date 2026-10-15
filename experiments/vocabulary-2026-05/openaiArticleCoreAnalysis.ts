@@ -1,4 +1,4 @@
-import type { ArticleAnalysisResult } from "./types";
+import type { ArticleAnalysisResult } from "@/lib/articleAnalysis/types";
 import type { CefrLevel } from "@/lib/types";
 import {
   GRAMMAR_ANALYSIS_V2_SYSTEM_SECTION,

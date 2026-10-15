@@ -1,6 +1,6 @@
 /**
  * 本地一次性对比并写入 JSON 报告（需 .env.local 中 OPENAI_API_KEY）
- * node scripts/run-vocabulary-strategy-compare.mjs
+ * node experiments/vocabulary-2026-05/run-vocabulary-strategy-compare.mjs
  */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -105,7 +105,7 @@ for (const c of CASES) {
 
 const outPath = resolve(
   process.cwd(),
-  "scripts/vocabulary-strategy-compare-report.json",
+  "experiments/vocabulary-2026-05/reports/vocabulary-strategy-compare-report.json",
 );
 writeFileSync(outPath, JSON.stringify(report, null, 2), "utf8");
 console.log(`Wrote ${outPath}`);

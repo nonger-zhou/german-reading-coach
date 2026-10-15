@@ -545,6 +545,14 @@ npx vitest run --config vitest.live.config.ts src/lib/articleAnalysis/vocabulary
 
 ## 更新记录（按任务追加）
 
+### 2026-10-15 — 实验代码移出正式代码
+
+**本次完成**
+- 新建 **`experiments/vocabulary-2026-05/`**（含 README）：移入 11 个 `*.live.test.ts` OpenAI 对照实验、10 个生产未引用的实验模块（实验 prompt / schema / 拆分调用、已停用的全名词重试与诊断及其单测）、`run-vocabulary-strategy-compare.mjs`，以及 `scripts/*-report.json`、根目录 `vocab-gaullismus-report.json`（→ `reports/`）。
+- 移动后的文件里，对仍在 `src/lib/articleAnalysis/` 的模块改为 `@/lib/articleAnalysis/...` 引用；报告输出路径改到 `experiments/vocabulary-2026-05/reports/`；`package.json` 的 `vocab-*:try` 脚本与审计脚本输出路径同步。
+- `tsconfig.json` 排除 `experiments`；`vitest.config.ts` 默认测试排除 `experiments/**`；`vitest.live.config.ts` 包含 `experiments/**/*.live.test.ts`。
+- 结果：`tsc --noEmit` **零报错**（原有 4 个 live 测试类型错误不再计入）；`npm test` 91 项通过（少的 6 项是已停用代码的单测，随代码移走）；`npm run build` 通过。
+
 ### 2026-10-15 — 部署前自动测试
 
 **本次完成**

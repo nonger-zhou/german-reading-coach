@@ -1,4 +1,4 @@
-import type { ArticleAnalysisResult } from "./types";
+import type { ArticleAnalysisResult } from "@/lib/articleAnalysis/types";
 import {
   countNonNounVocabulary,
   isVocabularyAllNounLike,

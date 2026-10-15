@@ -6,7 +6,7 @@
  *   $env:VOCAB_HYPOTHESIS_LIVE='1'
  *   npm run vocab-hypothesis:try
  *
- * 报告：scripts/vocabulary-hypothesis-compare-report.json
+ * 报告：experiments/vocabulary-2026-05/reports/vocabulary-hypothesis-compare-report.json
  */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -211,7 +211,7 @@ describe.runIf(runLive)("vocabulary hypothesis compare (live)", () => {
 
     const outPath = resolve(
       process.cwd(),
-      "scripts/vocabulary-hypothesis-compare-report.json",
+      "experiments/vocabulary-2026-05/reports/vocabulary-hypothesis-compare-report.json",
     );
     writeFileSync(outPath, JSON.stringify(report, null, 2), "utf8");
     // eslint-disable-next-line no-console

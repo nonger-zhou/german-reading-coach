@@ -5,12 +5,12 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { ARTICLE_ANALYSIS_JSON_SCHEMA } from "./articleAnalysisJsonSchema";
+import { ARTICLE_ANALYSIS_JSON_SCHEMA } from "@/lib/articleAnalysis/articleAnalysisJsonSchema";
 import {
   buildOpenAIAnalysisUserContent,
   normalizeOpenAIArticleAnalysis,
   SYSTEM_PROMPT,
-} from "./openaiArticleAnalysis";
+} from "@/lib/articleAnalysis/openaiArticleAnalysis";
 import {
   countVocabByBucket,
   formatVocabPosCounts,

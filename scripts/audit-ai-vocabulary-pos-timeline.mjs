@@ -433,7 +433,7 @@ async function main() {
   const report = mergeReports(accountReports, authMode);
   const outPath = resolve(
     process.cwd(),
-    "scripts/ai-vocabulary-pos-timeline-report.json",
+    "experiments/vocabulary-2026-05/reports/ai-vocabulary-pos-timeline-report.json",
   );
   writeFileSync(outPath, JSON.stringify(report, null, 2), "utf8");
 

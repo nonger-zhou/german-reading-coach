@@ -1,4 +1,4 @@
-import type { AnalyzedVocabularyItem } from "./types";
+import type { AnalyzedVocabularyItem } from "@/lib/articleAnalysis/types";
 import { VOCABULARY_SYSTEM_SECTION } from "@/lib/articleAnalysis/vocabularySelectionPrompt";
 import { parseGrammaticalGender } from "@/lib/vocabulary/grammaticalGender";
 

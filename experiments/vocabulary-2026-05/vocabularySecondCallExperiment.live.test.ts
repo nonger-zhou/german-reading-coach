@@ -183,7 +183,7 @@ describe.runIf(runLive)("vocabulary second call experiment (live)", () => {
 
     const outPath = resolve(
       process.cwd(),
-      "scripts/vocabulary-second-call-experiment-report.json",
+      "experiments/vocabulary-2026-05/reports/vocabulary-second-call-experiment-report.json",
     );
     writeFileSync(outPath, JSON.stringify(report, null, 2), "utf8");
     // eslint-disable-next-line no-console

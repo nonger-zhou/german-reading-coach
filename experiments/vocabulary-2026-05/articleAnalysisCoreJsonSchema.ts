@@ -1,4 +1,4 @@
-import { FINITE_VERB_POSITION_VALUES, GRAMMAR_TYPE_VALUES } from "./grammarTypes";
+import { FINITE_VERB_POSITION_VALUES, GRAMMAR_TYPE_VALUES } from "@/lib/articleAnalysis/grammarTypes";
 
 /** grammar + 摘要 + 阅读问题（实验用拆分调用，不含 vocabulary） */
 export const ARTICLE_CORE_ANALYSIS_JSON_SCHEMA = {

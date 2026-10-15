@@ -5,12 +5,12 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { ARTICLE_ANALYSIS_JSON_SCHEMA } from "./articleAnalysisJsonSchema";
+import { ARTICLE_ANALYSIS_JSON_SCHEMA } from "@/lib/articleAnalysis/articleAnalysisJsonSchema";
 import {
   buildOpenAIAnalysisUserContent,
   normalizeOpenAIArticleAnalysis,
   SYSTEM_PROMPT,
-} from "./openaiArticleAnalysis";
+} from "@/lib/articleAnalysis/openaiArticleAnalysis";
 import {
   countVocabByBucket,
   formatVocabPosCounts,
@@ -156,7 +156,7 @@ describe.runIf(runLive)("vocabulary batch regression (production prompt)", () =>
       );
     }
 
-    const scriptsDir = resolve(process.cwd(), "scripts");
+    const scriptsDir = resolve(process.cwd(), "experiments/vocabulary-2026-05/reports");
     if (!existsSync(scriptsDir)) mkdirSync(scriptsDir, { recursive: true });
     const outPath = resolve(
       scriptsDir,

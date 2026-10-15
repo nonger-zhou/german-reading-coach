@@ -5,14 +5,14 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { ARTICLE_ANALYSIS_JSON_SCHEMA } from "./articleAnalysisJsonSchema";
-import { filterArticleAnalysisByArticleText } from "./filterAnalysisByArticleText";
+import { ARTICLE_ANALYSIS_JSON_SCHEMA } from "@/lib/articleAnalysis/articleAnalysisJsonSchema";
+import { filterArticleAnalysisByArticleText } from "@/lib/articleAnalysis/filterAnalysisByArticleText";
 import {
   buildOpenAIAnalysisUserContent,
   normalizeOpenAIArticleAnalysis,
   SYSTEM_PROMPT_LEGACY,
-} from "./openaiArticleAnalysis";
-import type { AnalyzedGrammarItem } from "./types";
+} from "@/lib/articleAnalysis/openaiArticleAnalysis";
+import type { AnalyzedGrammarItem } from "@/lib/articleAnalysis/types";
 import { createServerOpenAIClient } from "../openai/createServerOpenAIClient";
 
 function loadEnvLocal(): void {

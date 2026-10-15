@@ -7,24 +7,24 @@
  *   $env:VOCAB_ONLY_VS_PROD_LIVE='1'
  *   npx vitest run --config vitest.live.config.ts src/lib/articleAnalysis/vocabularyOnlyVsProductionExperiment.live.test.ts --testTimeout=600000
  *
- * 报告：scripts/vocabulary-only-vs-production-experiment-report.json
+ * 报告：experiments/vocabulary-2026-05/reports/vocabulary-only-vs-production-experiment-report.json
  *
  * Meghan：若存在 scripts/fixtures/meghan-article.txt（或 meghan-who.txt）则纳入；否则跳过并在报告中注明。
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { ARTICLE_ANALYSIS_JSON_SCHEMA } from "./articleAnalysisJsonSchema";
+import { ARTICLE_ANALYSIS_JSON_SCHEMA } from "@/lib/articleAnalysis/articleAnalysisJsonSchema";
 import { VOCABULARY_ONLY_JSON_SCHEMA } from "./articleAnalysisVocabularySchema";
 import {
   buildOpenAIAnalysisUserContent,
   normalizeOpenAIArticleAnalysis,
   SYSTEM_PROMPT,
   truncateForOpenAIAnalysis,
-} from "./openaiArticleAnalysis";
+} from "@/lib/articleAnalysis/openaiArticleAnalysis";
 import { EXPERIMENTAL_MINIMAL_B_VOCAB_ONLY_SYSTEM } from "./experimentalVocabularyOnlyMinimalPrompt";
 import { normalizeOpenAIVocabularyOnly } from "./openaiVocabularyOnlyAnalysis";
-import type { AnalyzedVocabularyItem } from "./types";
+import type { AnalyzedVocabularyItem } from "@/lib/articleAnalysis/types";
 import { findBestTextOccurrence } from "@/lib/articleReadingModel";
 import { createServerOpenAIClient } from "../openai/createServerOpenAIClient";
 
@@ -421,7 +421,7 @@ describe.runIf(runLive)(
         );
       }
 
-      const scriptsDir = resolve(process.cwd(), "scripts");
+      const scriptsDir = resolve(process.cwd(), "experiments/vocabulary-2026-05/reports");
       if (!existsSync(scriptsDir)) mkdirSync(scriptsDir, { recursive: true });
       const outPath = resolve(
         scriptsDir,

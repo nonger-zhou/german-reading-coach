@@ -1,5 +1,5 @@
 import { findBestTextOccurrence } from "@/lib/articleReadingModel";
-import type { AnalyzedVocabularyItem } from "./types";
+import type { AnalyzedVocabularyItem } from "@/lib/articleAnalysis/types";
 
 /** 动词短语 / 可分动词 / 搭配 / 固定表达等（验收用） */
 export const VOCAB_EXPRESSION_PARTS_OF_SPEECH = new Set([

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { shouldRetryAnalysisForAllNounVocabulary } from "./vocabularyAllNounRetry";
-import type { ArticleAnalysisResult } from "./types";
+import type { ArticleAnalysisResult } from "@/lib/articleAnalysis/types";
 
 function analysisWithPos(
   poses: string[],
