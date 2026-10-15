@@ -5,6 +5,14 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-10-15 — 英语空间不再显示德语占位句（分支 `fix/en-placeholder`）
+
+- **完成**：英语词条 / 语法还没补充简明解释时，总词库、语法库显示「（英文释义待补充）/（英文解释待补充）」，复习卡背面不显示占位句（阅读页原本已这样处理）。只改显示，数据库内容不变；德语空间照旧显示 "Wird später ergänzt."。
+- **主要文件**：`src/components/articleReader/learningItemHelpers.tsx`（`simpleExplanationForDisplay`，+ 测试）、`src/app/vocabulary/page.tsx`、`src/app/grammar/page.tsx`、`src/app/review/page.tsx`。
+- **状态**：待 Preview 验证后合并。
+- **已知问题**：无。
+- **下一步**：截图导入。
+
 ### 2026-10-15 — AI 词形对不上原文时自动修正（德语 / 英语，PR #5，已上线）
 
 **原因**：维护者测试德语长文时出现「das Verbrechen、die Tradition、die Rüstungsindustrie 未在原文精确匹配」——AI 给名词多加了冠词，原文是 Verbrechen / der Tradition 等；上一次的大小写回退覆盖不到。

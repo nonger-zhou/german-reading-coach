@@ -193,6 +193,22 @@ export function isDeExplanationPlaceholder(s: string): boolean {
   );
 }
 
+/**
+ * 英语空间里，未补充的简明解释在数据库里仍是德语占位句「Wird später ergänzt.」；
+ * 显示时换成中文提示。德语原样显示（不改德语行为）。
+ */
+export function simpleExplanationForDisplay(
+  text: string | null | undefined,
+  language: "de" | "en",
+  kind: "vocab" | "grammar" = "vocab",
+): string {
+  const s = text ?? "";
+  if (language === "en" && isDeExplanationPlaceholder(s)) {
+    return kind === "grammar" ? "（英文解释待补充）" : "（英文释义待补充）";
+  }
+  return s;
+}
+
 /** 词汇中/德解释均已有效（Phase 3.14：已有内容则不再显示「补充 AI 解释」） */
 export function vocabExplanationsComplete(v: ArticleVocabItem): boolean {
   const zh = (v.zh_meaning ?? "").trim();

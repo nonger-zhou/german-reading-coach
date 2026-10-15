@@ -1,5 +1,6 @@
 "use client";
 
+import { simpleExplanationForDisplay } from "@/components/articleReader/learningItemHelpers";
 import Link from "next/link";
 import { selectInChunks } from "@/lib/supabase/inChunks";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
@@ -816,7 +817,7 @@ function VocabularyPageContent() {
               </p>
             ) : null}
             <p className="text-sm text-zinc-700 dark:text-zinc-300">{v.zhMeaning}</p>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">{v.deExplanation}</p>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">{simpleExplanationForDisplay(v.deExplanation, language)}</p>
             {v.userDeepNote ? (
               <details className="rounded-lg border border-amber-200/80 bg-amber-50/50 px-3 py-2 text-sm dark:border-amber-900/50 dark:bg-amber-950/20">
                 <summary className="cursor-pointer text-xs font-medium text-amber-900 dark:text-amber-200">

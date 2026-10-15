@@ -1,5 +1,6 @@
 "use client";
 
+import { isDeExplanationPlaceholder } from "@/components/articleReader/learningItemHelpers";
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
@@ -345,7 +346,8 @@ function ReviewPageContent() {
               <p className="text-base text-zinc-900 dark:text-zinc-100">
                 {current.zh_meaning || "（暂无中文释义）"}
               </p>
-              {current.simple_de_explanation ? (
+              {current.simple_de_explanation &&
+              !(language === "en" && isDeExplanationPlaceholder(current.simple_de_explanation)) ? (
                 <p className="text-sm text-zinc-600 dark:text-zinc-400">
                   {current.simple_de_explanation}
                 </p>
