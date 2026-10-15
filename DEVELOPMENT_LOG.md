@@ -5,6 +5,10 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-10-15 — 协作规则：开始前先 pull
+
+`CLAUDE.md` / `AGENTS.md` 增加「开始前先 `git pull origin main`」，与「改完即提交」配对，避免多个 AI 工具 / 多台设备在旧代码上各改各的。（文档-only，未改代码。）
+
 ### 2026-10-15 — 阅读页组件拆分（第一步，行为不变）
 
 **本次完成**：把 `InteractiveArticleReader.tsx` 顶部约 540 行与组件状态无关的代码原样移到 `src/components/articleReader/`：

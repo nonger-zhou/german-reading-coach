@@ -48,6 +48,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ## 部署（Vercel）与提交（2026-10-15 起）
 
+- **开始前先同步**：每次开始任务前先 `git pull origin main`，确保在最新代码上修改（维护者可能同时用 Cursor、Claude 等多个工具或多台设备改代码）。
 - **改完即提交并推送到 GitHub**：每完成一个任务（`npm test` 与 `npm run build` 通过后），立即 `git add` → `git commit`（中文说明本次改了什么）→ `git push origin main`。**不要把改动长期留在本机未提交**——2026-05 曾因本机改动 5 个月未提交，导致本机、GitHub、线上三处版本不一致。
 - **部署只走 Git**：Vercel 已连接 GitHub，推送 / 合并到 `main` 即自动部署 Production；Vercel 构建使用 `vercel-build`（先跑单元测试，失败不上线）。
 - **禁止从本机执行 `npm.cmd run vercel:prod` / `vercel --prod`**：它上传本机文件（含未提交改动），会让线上与 GitHub 不一致。仅在维护者明确要求的紧急情况下使用，事后须立刻把同样的改动提交到 GitHub。

@@ -28,6 +28,7 @@
 
 ## 提交与部署（与线上同步）
 
+- **开始前先同步**：动手改代码前先 `git pull origin main`（可能有别的 AI / 设备刚推过改动）；有冲突先解决再改。
 - **改完即提交**：`npm test` + `npm run build` 通过后，立即 commit 并 `git push origin main`；不要把改动留在本机。
 - **部署只走 Git**：推送到 `main` 由 Vercel 自动部署（构建前自动跑测试）。**不要**在本机运行 `npm.cmd run vercel:prod`。
 - 详见 [`AGENTS.md`](./AGENTS.md)「部署与提交」与 `docs/DEPLOY_VERCEL.md` §八。
