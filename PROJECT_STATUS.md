@@ -32,6 +32,8 @@ German Reading Coach
 
 ## 当前仍未完成
 
+- **英语学习功能**：已在分支 `feat/english-language` 完成，等待执行 `010` 迁移、Preview 验收后合并到 `main`；英语分界线为初始标定，需真实使用后观察
+
 - **Chrome 插件打包发布**（当前已有本地加载版 MVP；见 **`browser-extension/chrome-mv3`**）
 - **Vercel 部署**：Production 已通过 CLI 部署到 [`https://german-reading-coach.vercel.app`](https://german-reading-coach.vercel.app)；Vercel Production 已配置 `NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY`、`OPENAI_API_KEY`。仍需在 Supabase Authentication 中将生产域名加入 Site URL / Redirect URLs 并做登录、重置密码、AI 分析自检。
 - **总词库/总语法**：复习流、编辑与批量状态管理（当前已支持单项状态管理；暂不做总库删除）
@@ -76,7 +78,7 @@ German Reading Coach
 
 ## 最近更新
 
-- **2026-10-15（英语扩展进行中，分支 `feat/english-language`）**：第 1 步完成——数据加 `language`（迁移 `010`，已有数据全为德语），推荐 / 列表 / 复习按语言隔离，界面暂无变化。后续：英语选词引擎 → 英语提示词 → 顶栏切换与界面 → 插件 → 文档；全部完成后经 Preview 验收再合并。**合并前须先执行 `010` 迁移。**
+- **2026-10-15（英语学习功能，分支 `feat/english-language`，待 Preview 验收后合并）**：德语 / 英语两个独立学习空间（顶栏切换）；数据加 `language`（迁移 `010`，已有数据全为德语）；推荐 / 列表 / 复习 / 水平按语言隔离；英语选词引擎（英语词频表、词形还原、分界线）与英语提示词（中文 + 简明英文释义）；导入自动识别语言；英语水平对照表；Chrome 插件 0.1.6。德语选词与提示词由快照测试守护。**合并前须先执行 `010` 迁移。**
 - **2026-10-15（阅读水平对照表）**：手册与 `/help` 加入德语 / 英语水平对照；水平选择处可跳转对照表。
 - **2026-10-15（使用说明）**：新增软件内 `/help`；首页、页脚、阅读页、词库页均有入口。
 - **2026-10-15（协作规则）**：开始前先 pull、改完即提交。

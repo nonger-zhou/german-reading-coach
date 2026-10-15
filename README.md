@@ -2,13 +2,13 @@
 
 **产品形态**：**Web App** 为能力主体；**Chrome 插件**为桌面端**导入入口**（MVP 见 `browser-extension/chrome-mv3`）；手机通过浏览器、粘贴/URL、未来 **PWA / 分享** 接入。**Supabase** 为统一云端库（详见 [`docs/PRD.md`](./docs/PRD.md) **§1.1–§1.2**、[`docs/DATABASE.md`](./docs/DATABASE.md)）。
 
-**定位（检查点）**：面向**真实德语文章**（尤其**新闻**）的阅读学习工具；**目标用户**为**中文母语**德语学习者，水平侧重 **A2–B2**（尤其 **B1/B2**）。**核心目标**：导入文章后，系统标出理解**主旨与关键细节**最需要的**词汇、表达与语法**，减少频繁停读查词。完整表述见 [`docs/PRD.md`](./docs/PRD.md) **§1.0**。
+**定位（检查点）**：面向**真实德语 / 英语文章**（尤其**新闻**）的阅读学习工具；**目标用户**为**中文母语**的德语或英语学习者（英语自 2026-10-15，德语与英语为两个独立学习空间，顶栏切换，见 PRD **§1.5.7**）。**核心目标**：导入文章后，系统标出理解**主旨与关键细节**最需要的**词汇、表达与语法**，减少频繁停读查词。完整表述见 [`docs/PRD.md`](./docs/PRD.md) **§1.0**。
 
-**技术底座**：远程 **Supabase** 已执行 [`supabase/schema.sql`](./supabase/schema.sql)（**7 张表**）；**`@supabase/supabase-js`**、[`.env.example`](./.env.example)、**`/settings/supabase-test`**；**Auth + `profiles`**（RLS **`001`**、GRANT **`002`**）；**`articles` GRANT/RLS `003`/`004`**；词汇/语法 **`005`/`006`**；深度笔记字段 **`008`**（`vocabulary_items` / `grammar_items` 的 `user_deep_note`，未执行时旧词汇/语法功能仍应可用）。**`/import`** 将清洗正文写入 **`articles.original_text`**（元信息入正文前部，无独立 `author`/`published_at` 列）。**`OPENAI_API_KEY`** 仅服务端（本地 **`.env.local`**；线上通过 Vercel Environment Variables）。**Vercel Production** 已部署：[`https://german-reading-coach.vercel.app`](https://german-reading-coach.vercel.app)。**`/articles/mock`** 为**演示**阅读器；真实学习数据在 **`/articles/[id]`**。时间字段与 **read_status** 规划见 **PRD §2.1、§12** 与 **DATABASE §10**。路线图见 **PRD §1.4**，进度见 [`PROJECT_STATUS.md`](./PROJECT_STATUS.md)。
+**技术底座**：远程 **Supabase** 已执行 [`supabase/schema.sql`](./supabase/schema.sql)（**7 张表**）；**`@supabase/supabase-js`**、[`.env.example`](./.env.example)、**`/settings/supabase-test`**；**Auth + `profiles`**（RLS **`001`**、GRANT **`002`**）；**`articles` GRANT/RLS `003`/`004`**；词汇/语法 **`005`/`006`**；深度笔记字段 **`008`**（`vocabulary_items` / `grammar_items` 的 `user_deep_note`，未执行时旧词汇/语法功能仍应可用）；**多语言 `010`**（`supabase/fixes/010_multilanguage.sql`：`articles` / `vocabulary_items` / `grammar_items` 加 `language`，唯一键加入语言，`profiles` 加 `target_language` / `self_selected_level_en`；**须先执行 `010` 再部署含英语功能的版本**，执行后旧版本也照常可用）。**`/import`** 将清洗正文写入 **`articles.original_text`**（元信息入正文前部，无独立 `author`/`published_at` 列）。**`OPENAI_API_KEY`** 仅服务端（本地 **`.env.local`**；线上通过 Vercel Environment Variables）。**Vercel Production** 已部署：[`https://german-reading-coach.vercel.app`](https://german-reading-coach.vercel.app)。**`/articles/mock`** 为**演示**阅读器；真实学习数据在 **`/articles/[id]`**。时间字段与 **read_status** 规划见 **PRD §2.1、§12** 与 **DATABASE §10**。路线图见 **PRD §1.4**，进度见 [`PROJECT_STATUS.md`](./PROJECT_STATUS.md)。
 
 **Supabase（2026 平台）**：在 `public` 新建表时须在迁移里**显式 `GRANT`**（并配 RLS），否则经 Data API 的读写可能报 **`42501`**；时间表与约定见 **[`docs/DATABASE.md`](./docs/DATABASE.md)**「**Supabase 平台变更：Data API 与 `public` 表的显式 `GRANT`**」。
 
-**产品愿景（扩展）**：底层可演进为**多语言 Reading Coach**；**German Reading Coach** 为德语实例；**英语**为优先扩展语言（习得维度与 CEFR 见 **[`docs/PRD.md`](./docs/PRD.md) §1.5**）。**母语 / 解释语言 / 目标语言**三维度见 **§1.5.6**。**真实 AI 词汇/语法推荐**的产品原则（读前理解、数量控制、专名过滤、CEFR 侧重、**`level_estimate`** 含义）见 **§13**；Phase 3.0 Mock 不用于评估最终质量。**当前主线仍为德语 MVP**；多语言 **`language` 字段**仅见 **[`docs/DATABASE.md`](./docs/DATABASE.md) §10.7** 规划，**未改 schema**。
+**多语言**：同一套功能支持**德语与英语**（PRD **§1.5**、**§1.5.7**）：顶栏切换当前学习语言；导入自动识别文章语言；选词引擎按语言使用各自的词频表与词形规则（`src/lib/vocabSelection/{germanLexicon,englishLexicon}.ts`，德语结果由 `germanRegression.test.ts` 快照守护）；英语提示词见 `src/lib/articleAnalysis/englishPrompts.ts`。**母语 / 解释语言 / 目标语言**三维度见 **§1.5.6**（解释语言目前统一为中文）。**真实 AI 词汇/语法推荐**的产品原则（读前理解、数量控制、专名过滤、CEFR 侧重、**`level_estimate`** 含义）见 **§13**；Phase 3.0 Mock 不用于评估最终质量。多语言数据字段见 **[`docs/DATABASE.md`](./docs/DATABASE.md) §10.7**。
 
 - **正式产品需求**（PRD）：[`docs/PRD.md`](./docs/PRD.md)（**§1.0** 目标用户与核心价值；**§5.1–§5.3**：学习中 / 已掌握 / **暂忽略** / **删除**；**§8.1.1** 广义 lexical item；**§12.8** 删除文章（未来）：文章级数据 vs 长期词库主记录；**§12.5** 总词库今日「新增 / 再次遇到」规则；**§13** / **§13.6** AI 推荐规则与软上限）
 - **用户说明手册（素材稿；含阅读页、掌握状态、AI 规则与实现对照）**：[`docs/USER_MANUAL.md`](./docs/USER_MANUAL.md)
@@ -79,7 +79,7 @@ npm run lint
 
 插件目录：`browser-extension/chrome-mv3`。用途是在桌面 Chrome 中读取当前页面已展示的标题、URL、来源和正文，并打开 `/import` 预填草稿；适合用户已登录新闻站、服务端 URL 抓取拿不到正文的场景。插件会扫描页面可见的大字号 / 粗体文字块，优先选择视觉大标题，并提取正文段落，跳过常见的 newsletter、相关阅读、作者简介、分享与评论区；导入页清理器也会对这些尾部内容做兜底截断。
 
-安装方式：打开 Chrome 的 `chrome://extensions/`，开启「开发者模式」，点击「加载已解压的扩展程序」，选择 `browser-extension/chrome-mv3`。之后可点击工具栏按钮，或在页面右键选择「导入到 German Reading Coach」。如果页面正文识别不准，可先选中文章正文再导入。
+安装方式：打开 Chrome 的 `chrome://extensions/`，开启「开发者模式」，点击「加载已解压的扩展程序」，选择 `browser-extension/chrome-mv3`。之后可点击工具栏按钮，或在页面右键选择「导入到 German Reading Coach」。如果页面正文识别不准，可先选中文章正文再导入。**0.1.6** 起支持英语网页：把网页 `lang` 传给导入页作文章语言提示，英语页面额外过滤常见按钮与推荐区（德语页面提取逻辑不变）；更新后需在扩展页**重新加载**。
 
 ## Vercel 部署（生产）
 

@@ -5,6 +5,19 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-10-15 — 英语扩展 · 第 6 步：文档（分支 `feat/english-language`）
+
+**本次完成**
+- **`docs/PRD.md`**：§1.0 目标用户含英语；§1.5 标为已实现，新增 **§1.5.7 英语版实现规则**（两个独立学习空间、已有数据归德语、导入识别、阅读页按文章语言、推荐与复习按语言隔离、中文 + 简明英文释义、水平分开保存）；§1.5.4 数据库已实现；§9 页面表加顶栏切换与设置页按语言保存；§13.6 英语选词与分界线。
+- **软件内 `/help`**：新增「德语与英语」一节；「阅读水平怎么选」加英语对照表；推荐、复习说明按语言更新。
+- **`docs/USER_MANUAL.md`**：新增 §0 德语与英语；§4.4 英语对照表标为可用；§9.2 英语选词规则与分界线；§10.5 复习按语言。
+- **`README.md`**、**`PROJECT_STATUS.md`**、`browser-extension/chrome-mv3/README.md`、`docs/DATABASE.md` §10.7（第 1 步已更新）。
+
+**当前状态**：英语功能 6 步全部完成于分支 `feat/english-language`，未合并。
+**合并前步骤**：① Supabase SQL Editor 执行 `supabase/fixes/010_multilanguage.sql` 并运行文件末尾的检查语句；② Vercel 给 Preview 配好 `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`（`OPENAI_API_KEY` 已启用 Preview）；③ 在 PR 的 Preview 链接上验收德语与英语；④ 合并到 `main`；⑤ Chrome 重新加载插件。
+**已知问题**：英语分界线为初始标定；总词库列表里未补充解释的英语手动词条仍显示德语占位句；产品名暂不改。
+**验证**：`npm test` / `npm run build` 通过。
+
 ### 2026-10-15 — 英语扩展 · 第 5 步：Chrome 插件 0.1.6（分支 `feat/english-language`）
 
 **本次完成**

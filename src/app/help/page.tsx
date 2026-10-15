@@ -27,6 +27,7 @@ function Section({
 
 const toc = [
   { id: "flow", label: "一篇文章怎么学" },
+  { id: "languages", label: "德语与英语" },
   { id: "import", label: "导入文章" },
   { id: "level", label: "阅读水平怎么选" },
   { id: "recommend", label: "AI 会推荐哪些词" },
@@ -43,7 +44,7 @@ export default function HelpPage() {
       <div>
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">使用说明</h1>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          German Reading Coach 帮你用真实德语文章学词：读前先看你不认识的词，读时随手标，读后定期复习。
+          German Reading Coach 帮你用真实德语或英语文章学词：读前先看你不认识的词，读时随手标，读后定期复习。
         </p>
         <nav className="mt-3 flex flex-wrap gap-2 text-xs" aria-label="目录">
           {toc.map((t) => (
@@ -76,6 +77,32 @@ export default function HelpPage() {
             <strong>复习</strong>：在「复习」页定期翻卡，记住的词标「已掌握」。
           </li>
         </ol>
+      </Section>
+
+      <Section id="languages" title="德语与英语">
+        <p>
+          可以学德语，也可以学英语，用的是同一套功能。两种语言的数据<strong>完全分开</strong>，像两个独立的学习空间。
+        </p>
+        <ul className="list-disc space-y-1 pl-5">
+          <li>
+            <strong>顶栏切换</strong>：页面左上角的「德语 / 英语」决定当前学习语言。文章库、词库、语法库、复习、仪表盘的统计都只显示这种语言；切换会同步到账号，换设备也一样。
+          </li>
+          <li>
+            <strong>导入</strong>：导入页默认用当前语言；正文明显是另一种语言时会自动改过来（也可以手动改）。保存另一种语言的文章后，顶栏会跟着切换。
+          </li>
+          <li>
+            <strong>阅读页</strong>：打开哪篇文章就按这篇文章的语言显示（发音、释义、外部深入解释），与顶栏无关。
+          </li>
+          <li>
+            <strong>阅读水平</strong>：德语、英语分别设置，例如德语 B2、英语 C1。在顶栏切到哪种语言，设置页就设置哪种语言的水平。
+          </li>
+          <li>
+            <strong>推荐与复习</strong>：AI 判断你认不认识一个词时只看同一种语言的词库；复习排期也各算各的。德语里标「已掌握」的 die，不会影响英语。
+          </li>
+          <li>
+            <strong>英语释义</strong>：中文释义 + 简明英文释义；推荐会特别注意短语动词（rule out）、固定搭配、习语和介词搭配。
+          </li>
+        </ul>
       </Section>
 
       <Section id="import" title="导入文章">
@@ -126,6 +153,39 @@ export default function HelpPage() {
             </tbody>
           </table>
         </div>
+        <p className="pt-2 font-medium text-zinc-900 dark:text-zinc-100">英语</p>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[22rem] text-left text-sm">
+            <thead className="text-xs text-zinc-500">
+              <tr>
+                <th className="py-1 pr-3 font-medium">国内参照</th>
+                <th className="py-1 pr-3 font-medium">大约词汇量</th>
+                <th className="py-1 font-medium">大约对应 CEFR</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+              {[
+                ["高考英语", "3500", "A2–B1"],
+                ["大学英语四级（CET-4）", "4500", "B1"],
+                ["大学英语六级（CET-6，550 分以上）", "6000", "B2"],
+                ["考研英语", "5500", "B2"],
+                ["英语专业四级（TEM-4）", "8000", "B2"],
+                ["英语专业八级（TEM-8）", "13000", "C1"],
+                ["雅思 6.5 / 托福 95", "—", "B2 偏上到 C1"],
+                ["雅思 7.5 以上 / 托福 110 以上", "—", "C1–C2"],
+              ].map(([a, b, c]) => (
+                <tr key={a}>
+                  <td className="py-1.5 pr-3">{a}</td>
+                  <td className="py-1.5 pr-3">{b}</td>
+                  <td className="py-1.5 font-medium">{c}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p>
+          英语对应关系为常见参考口径，不同机构略有出入。<strong>词汇量比证书等级更重要</strong>：做过词汇量测试的，按测出的词汇量选更准；介于两档之间时选低一档。
+        </p>
         <p>
           选高了会少推、选低了会多推；用一段时间后系统会自动往合适的方向调。
         </p>
@@ -141,10 +201,10 @@ export default function HelpPage() {
             <strong>「已掌握」或「暂忽略」的词</strong>：不再推荐（写法不同也能认出来，例如 das Mandat 和 Mandat）。
           </li>
           <li>
-            <strong>其他单词</strong>：按德语词频和你的阅读水平判断，比你水平对应的常用词更少见的才推荐。B1 大约默认认识最常用的 8000 个词。
+            <strong>其他单词</strong>：按这种语言的词频和你的阅读水平判断，比你水平对应的常用词更少见的才推荐。德语 B1 大约默认认识最常用的 8000 个词；英语各档按上面的对照表另行标定（英语 B2 约 13000 个词形）。
           </li>
           <li>
-            <strong>固定搭配、可分动词、习语</strong>：只要意思看不出来，即使每个单词都简单也会推荐。
+            <strong>固定搭配、可分动词、习语（英语还有短语动词、介词搭配）</strong>：只要意思看不出来，即使每个单词都简单也会推荐。
           </li>
         </ol>
         <p>
@@ -198,13 +258,13 @@ export default function HelpPage() {
       <Section id="review" title="复习">
         <ul className="list-disc space-y-1 pl-5">
           <li>复习词库里所有「学习中」的词，每组最多 20 个。</li>
-          <li>先看德语和原文例句回想意思，再点「显示释义」核对。</li>
+          <li>只复习顶栏当前语言的词；先看原词和原文例句回想意思，再点「显示释义」核对。</li>
           <li>
             <strong>还不熟</strong>：明天再出现。<strong>记住了</strong>：间隔逐步拉长（1 → 3 → 7 → 14 → 30 天）。
             <strong>已掌握</strong>：写入词库，以后不推荐、不复习。
           </li>
           <li>出现顺序：先到期该复习的，再是还没复习过的（最近在文章里遇到的优先）。</li>
-          <li>复习排期保存在当前浏览器，换设备会重新排期；「已掌握」所有设备一致。</li>
+          <li>复习排期保存在当前浏览器（德语、英语各自一份），换设备会重新排期；「已掌握」所有设备一致。</li>
         </ul>
       </Section>
 
