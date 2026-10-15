@@ -5,6 +5,16 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-10-15 — 阅读页组件拆分（第一步，行为不变）
+
+**本次完成**：把 `InteractiveArticleReader.tsx` 顶部约 540 行与组件状态无关的代码原样移到 `src/components/articleReader/`：
+- `domSelection.ts`：滚动定位、选区矩形、选区弹层位置、点按取词、高亮命中判断。
+- `learningItemHelpers.tsx`：提示文案常量、外部深入解释链接、AI 补充解释合并、词性中文、解释完整性判断、来源徽标。
+- `ReadingMasteryControls.tsx`：学习状态下拉与标题操作区。
+主文件从 4596 行降到约 4110 行；代码逐字移动，仅加 `export` 与 import，`tsc` / eslint 零报错。
+**未做**：组件主体（约 3900 行，状态与事件高度耦合）未拆；建议今后每次改到某块功能时顺手拆出该块，并在线上手动点验（点按高亮、拖选加词、外部深入解释、AI 预览保存）。
+**验证**：`npm test`（96）/ `npm run build` 通过。
+
 ### 2026-10-15 — 复习功能 `/review`
 
 **本次完成**

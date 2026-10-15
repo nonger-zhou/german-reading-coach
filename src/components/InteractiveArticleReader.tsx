@@ -8,26 +8,37 @@ import {
   useState,
 } from "react";
 import type {
-  CSSProperties,
   KeyboardEvent as ReactKeyboardEvent,
   MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
   ReactNode,
 } from "react";
-import { PronunciationButton } from "@/components/PronunciationButton";
-import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
-import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
-import { Tabs } from "@/components/ui/Tabs";
-import { speakGerman } from "@/lib/speech";
+import {
+  PronunciationButton,
+} from "@/components/PronunciationButton";
+import {
+  Button,
+} from "@/components/ui/Button";
+import {
+  Card,
+  CardDescription,
+  CardTitle,
+} from "@/components/ui/Card";
+import {
+  Tabs,
+} from "@/components/ui/Tabs";
+import {
+  speakGerman,
+} from "@/lib/speech";
 import type {
   ArticleGrammarItem,
   ArticleVocabItem,
-  ArticleVocabSource,
   ChunkInterval,
-  VocabSense,
 } from "@/lib/articleReadingTypes";
-import type { CefrLevel, MasteryStatus } from "@/lib/types";
+import type {
+  CefrLevel,
+  MasteryStatus,
+} from "@/lib/types";
 import {
   alignVocabOccurrenceIdAfterFinalize,
   alignVocabOccurrenceIdAfterPersist,
@@ -53,9 +64,13 @@ import {
 } from "@/lib/articleReadingModel";
 import {
   formatGrammarExplainForMainField,
-  type GrammarExplainSelectionResult,
 } from "@/lib/articleAnalysis/grammarExplainSelectionSchema";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import type {
+  GrammarExplainSelectionResult,
+} from "@/lib/articleAnalysis/grammarExplainSelectionSchema";
+import {
+  getSupabaseBrowserClient,
+} from "@/lib/supabase/client";
 import {
   deleteArticleGrammarItemOccurrences,
   persistManualGrammarItem,
@@ -68,559 +83,61 @@ import {
   updateVocabularyItemDeepNote,
   updateVocabularyItemMastery,
 } from "@/lib/supabase/vocabulary";
-import { formatSupabaseOrUnknownError } from "@/lib/supabase/errors";
-import type { RunMeta } from "@/lib/articleReadingModel";
+import {
+  formatSupabaseOrUnknownError,
+} from "@/lib/supabase/errors";
+import type {
+  RunMeta,
+} from "@/lib/articleReadingModel";
 import {
   buildGrammarExternalDeepDivePrompt,
   buildVocabularyExternalDeepDivePrompt,
 } from "@/lib/grammar/labelValidation";
-import { normalizeDeepNoteMarkdown } from "@/lib/text/normalizeDeepNoteMarkdown";
+import {
+  normalizeDeepNoteMarkdown,
+} from "@/lib/text/normalizeDeepNoteMarkdown";
 import {
   displayGrammaticalGenderLabelZh,
   shouldShowGrammaticalGenderSubtitle,
   vocabularyHeadwordDe,
 } from "@/lib/vocabulary/grammaticalGender";
-
-/** 删除（remove）≠ 忽略（ignored）：删除用于误添加/重复；忽略保留记录、可恢复、表示不想继续学。 */
-const DELETE_LEARNING_ITEM_CONFIRM_ZH =
-  "确定从本文删除这个学习项吗？这不会表示你已掌握，只是移除误添加的项目。";
-
-/**
- * 正文里「可学习」高亮（词汇绿/琥珀、语法蓝/紫）统一允许 **拖选穿过**，
- * 以便跨多个已有高亮选整句加入词库；与 `resolveUserHighlightInPlain` 依赖的选区文本一致。
- * 词汇高亮在触摸时不在 `pointerdown` 上 `preventDefault`（与语法一致），以便拖选穿过绿/琥珀词选可分动词；点按打开详情在 `click` 且无文本选区时触发。
- * `-webkit-touch-callout: none` 抑制 iOS/Android「在 Google 中搜索」等系统浮层，避免挡住应用内选区工具栏。
- */
-const ARTICLE_LEARNING_HIGHLIGHT_TEXT_STYLE = {
-  WebkitTapHighlightColor: "transparent",
-  touchAction: "manipulation",
-  userSelect: "text",
-  WebkitUserSelect: "text",
-  WebkitTouchCallout: "none",
-} as CSSProperties;
-
-const GRAMMAR_ARTICLE_HIGHLIGHT_STYLE = ARTICLE_LEARNING_HIGHLIGHT_TEXT_STYLE;
-
-const GRAMMAR_EXTERNAL_DEEP_LINKS = {
-  chatgpt: "https://chatgpt.com/",
-  claude: "https://claude.ai/",
-  gemini: "https://gemini.google.com/",
-  deepseek: "https://chat.deepseek.com/",
-} as const;
-
-/** 单项 enrich / 全文重新分析前统一确认（Phase 3.14） */
-const CONFIRM_AI_REGENERATE_ZH =
-  "这会再次调用 AI，并可能产生费用。确定重新生成吗？";
-
-const VOCAB_EXTERNAL_DEEP_LINKS = {
-  chatgpt: "https://chatgpt.com/",
-  claude: "https://claude.ai/",
-  gemini: "https://gemini.google.com/",
-  deepseek: "https://chat.deepseek.com/",
-} as const;
-
-/** 在指定滚动容器内滚动到元素（避免 scrollIntoView 误滚整页） */
-function scrollElementIntoScrollContainer(
-  container: HTMLElement,
-  element: HTMLElement,
-  options?: {
-    paddingTop?: number;
-    behavior?: ScrollBehavior;
-    /** start：保留上边距；center：在容器视区内纵向居中 */
-    align?: "start" | "center";
-    /**
-     * 视区内为元素底部留出空隙（px），避免被底部固定抽屉挡住。
-     * 通过限制单次滚动量 D：D 需同时满足「顶边留白」与「底边不落入底部 reserve 区域」。
-     */
-    ensureGapBottom?: number;
-  },
-) {
-  const behavior = options?.behavior ?? "smooth";
-  const cRect = container.getBoundingClientRect();
-  const tRect = element.getBoundingClientRect();
-  const reserve = options?.ensureGapBottom ?? 0;
-  let nextTop: number;
-  if (options?.align === "center") {
-    nextTop =
-      container.scrollTop +
-      (tRect.top - cRect.top) -
-      (cRect.height / 2 - tRect.height / 2);
-  } else {
-    const pad = options?.paddingTop ?? 72;
-    const DHigh = tRect.top - cRect.top - pad;
-    let D = DHigh;
-    if (reserve > 0) {
-      const DLow = tRect.bottom - cRect.bottom + reserve;
-      D = DLow > DHigh ? DLow : DHigh;
-    }
-    nextTop = container.scrollTop + D;
-  }
-  container.scrollTo({ top: Math.max(0, nextTop), behavior });
-}
-
-/** 仅在元素未完整落在容器视区内时做最小滚动，避免「滚到中部」裁切 */
-function scrollElementIntoViewIfNeeded(
-  container: HTMLElement,
-  element: HTMLElement,
-  options?: {
-    paddingTop?: number;
-    paddingBottom?: number;
-    behavior?: ScrollBehavior;
-  },
-) {
-  const cRect = container.getBoundingClientRect();
-  const tRect = element.getBoundingClientRect();
-  const padTop = options?.paddingTop ?? 12;
-  const padBottom = options?.paddingBottom ?? 12;
-  let delta = 0;
-  if (tRect.top < cRect.top + padTop) {
-    delta = tRect.top - cRect.top - padTop;
-  } else if (tRect.bottom > cRect.bottom - padBottom) {
-    delta = tRect.bottom - cRect.bottom + padBottom;
-  }
-  if (delta !== 0) {
-    container.scrollBy({ top: delta, behavior: options?.behavior ?? "smooth" });
-  }
-}
-
-/** 将视口矩形滚入 overflow 容器（用于文本选区，无对应 DOM 节点时） */
-function scrollRectIntoScrollContainer(
-  container: HTMLElement,
-  rect: DOMRect,
-  options?: {
-    paddingTop?: number;
-    ensureGapBottom?: number;
-    behavior?: ScrollBehavior;
-  },
-) {
-  if (rect.width === 0 && rect.height === 0) return;
-  const cRect = container.getBoundingClientRect();
-  const pad = options?.paddingTop ?? 48;
-  const reserve = options?.ensureGapBottom ?? 0;
-  let delta = 0;
-  if (rect.top < cRect.top + pad) {
-    delta = rect.top - cRect.top - pad;
-  }
-  const bottomOverflow = rect.bottom - cRect.bottom + reserve;
-  if (bottomOverflow > 0) {
-    delta = Math.max(delta, bottomOverflow);
-  }
-  if (delta !== 0) {
-    container.scrollBy({ top: delta, behavior: options?.behavior ?? "smooth" });
-  }
-}
-
-/** 选区各行矩形（过滤空 rect）；用于浮层锚点，避免用整块 bounding box 盖住整句 */
-function getSelectionLineRects(range: Range): DOMRect[] {
-  return Array.from(range.getClientRects()).filter(
-    (r) => r.width > 0 && r.height > 0,
-  );
-}
-
-/** 浮层锚在线条：单行用词本身；多行用最后一行（工具栏在选区下方） */
-function getSelectionAnchorRect(range: Range): DOMRect {
-  const lines = getSelectionLineRects(range);
-  if (lines.length === 0) return range.getBoundingClientRect();
-  return lines[lines.length - 1]!;
-}
-
-/** 含手机端「已选：」一行时的浮层总高度估算 */
-const SELECTION_POPOVER_H = 68;
-const SELECTION_POPOVER_GAP = 32;
-
-/**
- * 浮层贴在选区下方（空间不足时改到第一行上方），并与各行 rect 保持间距，避免盖住选中文字。
- */
-function computeSelectionPopoverPosition(
-  anchorRect: DOMRect,
-  lineRects: DOMRect[],
-): { left: number; top: number } {
-  const margin = 12;
-  const popoverH = SELECTION_POPOVER_H;
-  const gap = SELECTION_POPOVER_GAP;
-  const left = Math.min(
-    Math.max(anchorRect.left + anchorRect.width / 2, margin + 100),
-    window.innerWidth - margin - 100,
-  );
-
-  const maxLineBottom = lineRects.length
-    ? Math.max(...lineRects.map((r) => r.bottom))
-    : anchorRect.bottom;
-  const minLineTop = lineRects.length
-    ? Math.min(...lineRects.map((r) => r.top))
-    : anchorRect.top;
-
-  let top = maxLineBottom + gap;
-
-  const overlapsSelection = (t: number) =>
-    lineRects.some(
-      (r) => t < r.bottom + 8 && t + popoverH > r.top - 8,
-    );
-
-  if (
-    top + popoverH > window.innerHeight - margin ||
-    overlapsSelection(top)
-  ) {
-    top = minLineTop - popoverH - gap;
-  }
-
-  if (overlapsSelection(top)) {
-    top = maxLineBottom + gap + 12;
-  }
-
-  top = Math.max(margin, Math.min(top, window.innerHeight - popoverH - margin));
-  return { left, top };
-}
-
-const GERMAN_WORD_CHAR_RE = /[A-Za-zÄÖÜäöüß]/;
-const GERMAN_WORD_TOKEN_RE = /[A-Za-zÄÖÜäöüß]+(?:[-'][A-Za-zÄÖÜäöüß]+)*/g;
-
-const TAP_SELECT_MOVE_PX = 12;
-const TAP_SELECT_MAX_MS = 450;
-/** 超过该位移才视为拖选，此时才暂时禁用高亮 pointer-events（避免轻点词汇打不开右侧卡） */
-const DRAG_HIGHLIGHT_PASSTHROUGH_PX = 8;
-
-function getCaretRangeFromPoint(x: number, y: number): Range | null {
-  const doc = document as Document & {
-    caretRangeFromPoint?: (x: number, y: number) => Range | null;
-    caretPositionFromPoint?: (
-      x: number,
-      y: number,
-    ) => { offsetNode: Node; offset: number } | null;
-  };
-  if (typeof doc.caretRangeFromPoint === "function") {
-    return doc.caretRangeFromPoint(x, y);
-  }
-  const pos = doc.caretPositionFromPoint?.(x, y);
-  if (!pos) return null;
-  const r = document.createRange();
-  r.setStart(pos.offsetNode, pos.offset);
-  r.collapse(true);
-  return r;
-}
-
-function expandRangeToGermanWord(caret: Range): Range | null {
-  let node: Node | null = caret.startContainer;
-  let offset = caret.startOffset;
-  if (node.nodeType === Node.ELEMENT_NODE) {
-    const el = node as Element;
-    const child = el.childNodes[offset] ?? el.childNodes[offset - 1];
-    if (child?.nodeType === Node.TEXT_NODE) {
-      node = child;
-      offset = 0;
-    } else {
-      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-      node = walker.nextNode();
-      offset = 0;
-    }
-  }
-  if (!node || node.nodeType !== Node.TEXT_NODE) return null;
-  const text = node.textContent ?? "";
-  GERMAN_WORD_TOKEN_RE.lastIndex = 0;
-  let match: RegExpExecArray | null;
-  while ((match = GERMAN_WORD_TOKEN_RE.exec(text)) !== null) {
-    const start = match.index;
-    const end = start + match[0].length;
-    if (offset >= start && offset <= end) {
-      const r = document.createRange();
-      r.setStart(node, start);
-      r.setEnd(node, end);
-      return r;
-    }
-  }
-  return null;
-}
-
-function isArticleLearningHighlightTarget(el: Element | null): boolean {
-  if (!el) return false;
-  return Boolean(
-    el.closest("button[data-occurrence-id]") ||
-      el.closest('[role="button"][data-occurrence-id]'),
-  );
-}
-
-function mergeVocabFromEnrichmentApi(
-  item: ArticleVocabItem,
-  data: {
-    canonical_form: string;
-    surface_form: string;
-    zh_meaning: string;
-    simple_de_explanation: string;
-    part_of_speech: string;
-    level_estimate: CefrLevel;
-    reason_for_selection: string;
-    example_sentence: string;
-  },
-): ArticleVocabItem {
-  const pos =
-    data.part_of_speech && data.part_of_speech.trim()
-      ? data.part_of_speech.trim()
-      : item.part_of_speech;
-  const first = item.senses[0];
-  const ex =
-    data.example_sentence?.trim() ||
-    first?.example_sentence ||
-    undefined;
-  const updatedFirst: VocabSense =
-    first != null
-      ? {
-          ...first,
-          zh_meaning: data.zh_meaning,
-          simple_de_explanation: data.simple_de_explanation,
-          example_sentence: ex,
-        }
-      : {
-          id: `sense-ui-${item.dbItemId ?? item.id}`,
-          dbSenseId: null,
-          zh_meaning: data.zh_meaning,
-          simple_de_explanation: data.simple_de_explanation,
-          example_sentence: ex,
-        };
-  return {
-    ...item,
-    lemma:
-      data.canonical_form && data.canonical_form.trim()
-        ? data.canonical_form.trim()
-        : item.lemma,
-    display_word:
-      data.surface_form && data.surface_form.trim()
-        ? data.surface_form.trim()
-        : item.display_word,
-    zh_meaning: data.zh_meaning,
-    simple_de_explanation: data.simple_de_explanation,
-    part_of_speech: pos && pos !== "—" ? pos : item.part_of_speech,
-    grammatical_gender: item.grammatical_gender ?? "na",
-    level_estimate: data.level_estimate,
-    reason_for_selection: null,
-    needs_ai_enrichment: false,
-    senses:
-      item.senses.length > 0
-        ? [updatedFirst, ...item.senses.slice(1)]
-        : [updatedFirst],
-  };
-}
-
-/** 保存成功后合并同 normalized_key 的重复卡片（避免 map 后列表中出现两条相同 key） */
-function applyPersistedVocabToLocalItems(
-  items: ArticleVocabItem[],
-  saved: ArticleVocabItem,
-): ArticleVocabItem[] {
-  const nk = saved.normalized_key;
-  const byKey = new Map<string, ArticleVocabItem>();
-  for (const v of items) {
-    const k = v.normalized_key;
-    byKey.set(k, k === nk ? saved : v);
-  }
-  return [...byKey.values()];
-}
-
-function mergeGrammarFromEnrichmentApi(
-  item: ArticleGrammarItem,
-  data: {
-    name_de: string;
-    name_zh: string;
-    explanation_zh: string;
-    explanation_de_simple: string;
-    level_estimate: CefrLevel;
-    reason_for_selection: string;
-  },
-): ArticleGrammarItem {
-  return {
-    ...item,
-    name_de: data.name_de,
-    name_zh: data.name_zh,
-    explanation_zh: data.explanation_zh,
-    explanation_de_simple: data.explanation_de_simple,
-    level_estimate: data.level_estimate,
-    reason_for_selection: null,
-    needs_ai_enrichment: false,
-  };
-}
-
-const AI_ENRICH_PENDING_ZH = "待 AI";
-
-function posLabelZh(raw: string | null | undefined): string {
-  const k = (raw ?? "").trim().toLowerCase();
-  const map: Record<string, string> = {
-    noun: "名词",
-    verb: "动词",
-    adjective: "形容词",
-    adverb: "副词",
-    preposition: "介词",
-    conjunction: "连词",
-    pronoun: "代词",
-    number: "数词",
-    numeral: "数词",
-    phrase: "短语",
-    collocation: "搭配",
-    fixed_expression: "固定表达",
-    separable_verb: "可分动词",
-    compound_noun: "复合名词",
-    verb_phrase: "动词短语",
-    prepositional_phrase: "介词短语",
-  };
-  if (!k || k === "unknown" || k === "missing" || k === "—") return "词汇";
-  return map[k] ?? raw?.trim() ?? "词汇";
-}
-
-function isDeExplanationPlaceholder(s: string): boolean {
-  const t = s.trim().toLowerCase();
-  return (
-    t.length === 0 ||
-    t.includes("wird später ergänzt") ||
-    t === "wird später ergänzt."
-  );
-}
-
-/** 词汇中/德解释均已有效（Phase 3.14：已有内容则不再显示「补充 AI 解释」） */
-function vocabExplanationsComplete(v: ArticleVocabItem): boolean {
-  const zh = (v.zh_meaning ?? "").trim();
-  const de = (v.simple_de_explanation ?? "").trim();
-  const s0 = v.senses[0];
-  const szh = (s0?.zh_meaning ?? "").trim();
-  const sde = (s0?.simple_de_explanation ?? "").trim();
-  if (!zh || !de || !szh || !sde) return false;
-  if (zh.includes(AI_ENRICH_PENDING_ZH) || szh.includes(AI_ENRICH_PENDING_ZH)) {
-    return false;
-  }
-  if (isDeExplanationPlaceholder(de) || isDeExplanationPlaceholder(sde)) {
-    return false;
-  }
-  return true;
-}
-
-/** 仅当用户手动添加且仍缺解释时显示「补充 AI 解释」 */
-function vocabNeedsAiEnrichEntry(v: ArticleVocabItem): boolean {
-  if (v.source !== "user_added") return false;
-  return !vocabExplanationsComplete(v);
-}
-
-function grammarExplanationsComplete(g: ArticleGrammarItem): boolean {
-  const zh = (g.explanation_zh ?? "").trim();
-  const de = (g.explanation_de_simple ?? "").trim();
-  if (!zh || !de) return false;
-  if (zh.includes(AI_ENRICH_PENDING_ZH)) return false;
-  if (isDeExplanationPlaceholder(de)) return false;
-  return true;
-}
-
-function grammarNeedsAiEnrichEntry(g: ArticleGrammarItem): boolean {
-  if (g.source !== "user_added") return false;
-  return !grammarExplanationsComplete(g);
-}
-
-function vocabBadge(source: ArticleVocabSource) {
-  switch (source) {
-    case "ai_detected":
-    case "ai_mock":
-    case "ai":
-      return <Badge tone="muted">AI</Badge>;
-    case "user_added":
-    case "ai_detected_then_user_confirmed":
-      return <Badge tone="warning">手动</Badge>;
-    default:
-      return null;
-  }
-}
-
-function grammarBadge(source: ArticleGrammarItem["source"]) {
-  switch (source) {
-    case "ai_detected":
-    case "ai_mock":
-    case "ai":
-      return <Badge tone="muted">AI</Badge>;
-    case "user_added":
-    case "ai_detected_then_user_confirmed":
-      return <Badge tone="warning">手动</Badge>;
-    default:
-      return null;
-  }
-}
-
-function masterySelectControlValue(status: MasteryStatus): MasteryStatus {
-  return status === "mastered" || status === "ignored" ? status : "new";
-}
-
-const readingMasterySelectClassName =
-  "h-7 shrink-0 rounded-md border border-zinc-300 bg-white px-2 text-xs font-medium text-zinc-800 shadow-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100";
-
-/** 顶行可改学习状态；无障碍文案用 aria-label。 */
-function ReadingMasteryStatusSelect({
-  status,
-  onStatusChange,
-  className,
-}: {
-  status: MasteryStatus;
-  onStatusChange: (status: MasteryStatus) => void;
-  className?: string;
-}) {
-  const selectValue = masterySelectControlValue(status);
-  return (
-    <select
-      value={selectValue}
-      aria-label="学习状态"
-      title="学习状态"
-      onClick={(e) => e.stopPropagation()}
-      onPointerDown={(e) => e.stopPropagation()}
-      onChange={(e) =>
-        onStatusChange(e.currentTarget.value as MasteryStatus)
-      }
-      className={
-        className
-          ? `${readingMasterySelectClassName} ${className}`
-          : readingMasterySelectClassName
-      }
-    >
-      <option value="new">学习中</option>
-      <option value="mastered">已掌握</option>
-      <option value="ignored">暂忽略</option>
-    </select>
-  );
-}
-
-/** 标题行右侧：状态下拉 + 删除；`shrink-0` + `flex-nowrap` 避免把操作挤换行，长标题在左侧 `min-w-0` 区域换行。 */
-function ReadingMasteryTitleActions({
-  status,
-  onStatusChange,
-  onDelete,
-  deleteDisabled,
-  className,
-}: {
-  status: MasteryStatus;
-  onStatusChange: (status: MasteryStatus) => void;
-  onDelete?: () => void;
-  deleteDisabled?: boolean;
-  className?: string;
-}) {
-  return (
-    <div
-      className={
-        className
-          ? `flex shrink-0 flex-nowrap items-center gap-1 ${className}`
-          : "flex shrink-0 flex-nowrap items-center gap-1"
-      }
-    >
-      <ReadingMasteryStatusSelect
-        status={status}
-        onStatusChange={onStatusChange}
-      />
-      {onDelete ? (
-        <Button
-          type="button"
-          variant="ghost"
-          className="h-7 shrink-0 px-2 text-xs text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
-          disabled={deleteDisabled}
-        >
-          删除
-        </Button>
-      ) : null}
-    </div>
-  );
-}
+import {
+  DRAG_HIGHLIGHT_PASSTHROUGH_PX,
+  GERMAN_WORD_CHAR_RE,
+  SELECTION_POPOVER_GAP,
+  SELECTION_POPOVER_H,
+  TAP_SELECT_MAX_MS,
+  TAP_SELECT_MOVE_PX,
+  computeSelectionPopoverPosition,
+  expandRangeToGermanWord,
+  getCaretRangeFromPoint,
+  getSelectionAnchorRect,
+  getSelectionLineRects,
+  isArticleLearningHighlightTarget,
+  scrollElementIntoScrollContainer,
+  scrollRectIntoScrollContainer,
+} from "@/components/articleReader/domSelection";
+import {
+  ARTICLE_LEARNING_HIGHLIGHT_TEXT_STYLE,
+  CONFIRM_AI_REGENERATE_ZH,
+  DELETE_LEARNING_ITEM_CONFIRM_ZH,
+  GRAMMAR_ARTICLE_HIGHLIGHT_STYLE,
+  GRAMMAR_EXTERNAL_DEEP_LINKS,
+  VOCAB_EXTERNAL_DEEP_LINKS,
+  applyPersistedVocabToLocalItems,
+  grammarBadge,
+  grammarExplanationsComplete,
+  grammarNeedsAiEnrichEntry,
+  mergeGrammarFromEnrichmentApi,
+  mergeVocabFromEnrichmentApi,
+  posLabelZh,
+  vocabBadge,
+  vocabExplanationsComplete,
+  vocabNeedsAiEnrichEntry,
+} from "@/components/articleReader/learningItemHelpers";
+import {
+  ReadingMasteryTitleActions,
+} from "@/components/articleReader/ReadingMasteryControls";
 
 export type InteractiveArticleReaderProps = {
   articlePlain: string;
