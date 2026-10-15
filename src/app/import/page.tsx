@@ -38,6 +38,8 @@ type ExternalImportDraftPayload = {
   published_at_text?: unknown;
   rawText?: unknown;
   text?: unknown;
+  /** 插件 0.1.6 起：网页 <html lang>，用作文章语言的提示 */
+  pageLanguage?: unknown;
 };
 
 const IMPORT_DRAFT_MESSAGE_TYPE = "german-reading-coach:import-draft";
@@ -80,6 +82,10 @@ function ImportPageContent() {
   const { language: currentLanguage, ready: languageReady } = useLearningLanguage();
   const [articleLanguage, setArticleLanguage] = useState<LearningLanguage>("de");
   const [languageTouched, setLanguageTouched] = useState(false);
+  const languageTouchedRef = useRef(false);
+  useEffect(() => {
+    languageTouchedRef.current = languageTouched;
+  }, [languageTouched]);
   const [languageAutoNote, setLanguageAutoNote] = useState<string | null>(null);
   /** 设置页里每种语言的默认阅读水平 */
   const defaultLevelsRef = useRef<Record<LearningLanguage, CefrLevel>>({ de: "B1", en: "B1" });
@@ -207,6 +213,13 @@ function ImportPageContent() {
         draftString(payload.publishedAtText) ||
         draftString(payload.published_at_text);
       const nextRawText = draftString(payload.rawText) || draftString(payload.text);
+      const pageLanguage = draftString(payload.pageLanguage).toLowerCase();
+
+      /** 网页声明的语言作为提示；随后按正文自动识别，识别得出时以正文为准 */
+      if (!languageTouchedRef.current) {
+        if (pageLanguage.startsWith("en")) applyArticleLanguage("en");
+        else if (pageLanguage.startsWith("de")) applyArticleLanguage("de");
+      }
 
       setValidationError(null);
       setSaveError(null);
@@ -238,7 +251,7 @@ function ImportPageContent() {
           : "已从浏览器插件带入文章信息。",
       });
     },
-    [],
+    [applyArticleLanguage],
   );
 
   useEffect(() => {

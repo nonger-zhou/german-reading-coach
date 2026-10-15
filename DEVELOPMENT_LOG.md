@@ -5,6 +5,18 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-10-15 — 英语扩展 · 第 5 步：Chrome 插件 0.1.6（分支 `feat/english-language`）
+
+**本次完成**
+- 插件读取网页 `<html lang>` 并作为 `pageLanguage` 传给导入页；导入页把它当作文章语言提示（随后按正文自动识别，识别得出时以正文为准；用户手动选过则不改）。
+- 仅在 `lang` 以 `en` 开头的页面启用：跳过 Advertisement / Sign up / Share / Read more 等按钮文字与 `By …` 署名行；遇到 Related / Read more / Most read / You may also like 等（含 h2 / h3 小标题）停止；累计 800 字后遇到 Sign up / Subscribe / Comments 停止。
+- 版本 0.1.5 → 0.1.6，描述改为支持德语或英语文章。
+- **回归验证**：用 Playwright 在同一德语测试页（`src/lib/import/fixtures/nationalmuseum-like.html`）分别运行旧版与新版提取函数，结果逐字段相同（仅多出 `pageLanguage`）；英语测试页新版不再带入 Related 之后的推荐段。
+
+**主要文件**：`browser-extension/chrome-mv3/{background.js,manifest.json,README.md}`、`src/app/import/page.tsx`。
+**注意**：需在 `chrome://extensions/` 重新加载插件才生效。
+**下一步**：第 6 步 —— PRD / 使用说明 / `/help` / README / DATABASE 文档。
+
 ### 2026-10-15 — 英语扩展 · 第 4 步：界面（分支 `feat/english-language`）
 
 **本次完成**

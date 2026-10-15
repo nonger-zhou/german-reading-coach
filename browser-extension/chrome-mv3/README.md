@@ -17,13 +17,14 @@
 
 ## 更新本地插件
 
-代码更新后，回到 Chrome 的 `chrome://extensions/`，点击「更新」或在本插件卡片上点击**重新加载**，再重新打开目标文章测试。
+代码更新后，回到 Chrome 的 `chrome://extensions/`，点击「更新」或在本插件卡片上点击**重新加载**，再重新打开目标文章测试。当前版本 **0.1.6**（支持英语文章）。
 
 ## 正文识别规则（摘要）
 
 - **标题**：优先 `og:title` / `twitter:title`（去掉 `| 媒体名` 后缀），并与 URL 路径词匹配校验。
 - **正文**：优先 `<p>`；若过短则再采 `article` 内叶子 **`section`**（如博物馆博客 `snm-text`）及正文 class 的 **`div`**。遇到「Das könnte Sie auch interessieren」等即停止；跳过 Cookie 占位、发布日期、Newsletter 等噪声段。
 - **兜底**：导入页 `parseArticleFromRaw` / `cleanArticleText` 会再次去掉推荐区、作者署名与上述 Cookie 占位段；错误标题（推荐区标题、人名）不会覆盖解析出的标题。
+- **英语网页（0.1.6 起）**：插件把网页 `<html lang>` 一起传给导入页，作为「文章语言」的提示（导入页还会按正文自动识别，识别得出时以正文为准）。`lang` 以 `en` 开头的页面额外过滤 Advertisement / Sign up / Share 等按钮文字与 `By …` 署名行，遇到 Related / Read more / Most read 等小标题（含 h2 / h3）即停止。德语页面的提取逻辑与 0.1.5 完全相同。
 
 ## 合规边界
 
