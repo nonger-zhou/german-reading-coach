@@ -108,5 +108,7 @@ npm.cmd run vercel:prod:system-ca
 - **不要再从本机 `npm.cmd run vercel:prod` 部署**：它上传的是本机文件（含未提交改动），会让线上与 GitHub 不一致。2026-05 曾因此导致 GitHub 落后线上。
 - 环境变量目前**只配置了 Production**（`OPENAI_API_KEY`、`NEXT_PUBLIC_SUPABASE_*`），所以 Preview 部署无法登录 / 分析；如需在 Preview 测试，在 Vercel → Environment Variables 给 Preview 也勾上。
 - 可选：**`OPENAI_ANALYSIS_MODEL`**（默认 `gpt-5-mini`）。
+- **部署前自动测试（2026-10-15）**：`package.json` 有 **`vercel-build`** 脚本（`vitest run && next build`），Vercel 构建时优先用它——**单元测试不通过就不会上线**。
+- **GitHub Actions**（`.github/workflows/vercel-production.yml`，名称 CI）：每次推送 / PR 跑 `npm test` + `npm run build`，只做检查、**不再部署**（原「七、GitHub Actions 自动部署」已停用，部署统一由 Vercel Git 集成完成）。
 - 出问题时：Vercel → Deployments → 上一条 Production → ⋯ → **Instant Rollback**。回滚期间新部署**不会自动上线**，需对新部署点 **Promote** 解除。
 

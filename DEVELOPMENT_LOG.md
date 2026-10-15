@@ -545,6 +545,14 @@ npx vitest run --config vitest.live.config.ts src/lib/articleAnalysis/vocabulary
 
 ## 更新记录（按任务追加）
 
+### 2026-10-15 — 部署前自动测试
+
+**本次完成**
+- `package.json` 新增 **`vercel-build`**：`vitest run && next build`。Vercel 构建优先执行该脚本，单元测试失败则构建失败、不上线。
+- `.github/workflows/vercel-production.yml` 改为 **CI**：push / PR 时跑 `npm test` + `npm run build`，去掉原 vercel-action 部署步骤（部署统一走 Vercel Git 集成，避免重复部署；原步骤依赖未配置的 secrets）。
+- `docs/DEPLOY_VERCEL.md` §八补充说明。
+**注**：上述两个文件的改动已在提交 `c0b4e29` 中推送（提交信息误写为 "probe"，内容即本条；为不改写 main 历史未强推修正）。
+
 ### 2026-10-15 — 长文分段分析
 
 **原因**：整文分析只送正文前 1 万字符，用插件导入的付费长文后半篇没有任何推荐。
