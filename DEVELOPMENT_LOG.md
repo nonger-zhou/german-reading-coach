@@ -5,7 +5,7 @@
 
 ## 更新记录（按任务追加）
 
-### 2026-10-15 — 截图 / 拍照导入（分支 `feat/screenshot-import`，PRD §1.4.3 A）
+### 2026-10-15 — 截图 / 拍照导入（PR #8，已上线，PRD §1.4.3 A）
 
 - **完成**：导入页新增第三种方式「截图 / 拍照」：一次最多 10 张（手机可直接拍照），浏览器先压缩（宽 ≤1280 px；长截图按 2000 px 切块并重叠），再由 `POST /api/import-image` 调 OpenAI 视觉模型逐字转写正文（去掉昵称、互动数、按钮、广告、他人评论；多图去重叠；不翻译不改写）。结果填入「正文」，标题 / 来源平台为空时自动填，语言为德 / 英时自动切换；用户核对后照常保存。原图不保存、不写日志。
 - **主要文件**：`src/lib/import/imageImport.ts`（常量、提示词、schema、校验、切块规划，+ 测试）、`src/lib/import/compressImageForImport.ts`、`src/app/api/import-image/route.ts`、`src/app/import/page.tsx`、`/help`、`docs/USER_MANUAL.md` §1.4、`docs/PRD.md` §1.4.3、`README.md`、`.env.example`。
