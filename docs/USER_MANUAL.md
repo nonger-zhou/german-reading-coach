@@ -55,6 +55,7 @@
 
 - **链接导入（默认）**：服务端抓取网页，填入标题与正文等；失败时可改**手动粘贴**或自行复制后使用「从剪贴板读取」。
 - **手动粘贴**：可直接在正文区编辑；剪贴板按钮可将网页全文读入并走解析流程。
+- **截图 / 拍照（2026-10-15 起）**：适合 X、Facebook 等帖子截图和报纸照片。一次最多 10 张，按顺序选（长帖可截多张，重叠部分自动去掉；超长截图会自动切块识别）；手机上可直接「拍照」。点「识别文字」后，AI 只逐字转写正文（去掉昵称、点赞 / 转发数、「翻译帖子」等按钮、广告和别人的评论，不翻译、不改写），结果填入「正文」框，**核对后再保存**；德语 / 英语自动识别。**原图不保存**，只用于识别。每张约花费不到 1 美分；零费用的办法：把截图发给自己的 ChatGPT 等 App 转成文字，复制后用「从剪贴板读取」。
 - **自动去掉的网页杂项（2026-10-15 起，德语 / 英语）**：整行只是按钮或元信息时自动删除，例如 Listen to the article / Artikel anhören、Save / Speichern、Share、Toggle language selector、This content was published on… / Dieser Inhalt wurde am … veröffentlicht、「9 minutes」/「Lesezeit: 4 Minuten」。正文句子里出现这些词不会被删；作者名保留。没删干净的可在「正文」框里手动删掉再保存。
 - **Chrome 插件 / 链接导入**：优先采集 `<p>`；若正文主要在 **`section` / 块级 div**（如 [blog.nationalmuseum.ch](https://blog.nationalmuseum.ch)）会自动改用块级提取。仍过滤推荐区、Cookie 占位、发布日期与 Newsletter。改插件后须在 `chrome://extensions/` **重新加载**。若仍不准，请**拖选正文**后导入或用手动粘贴。
 

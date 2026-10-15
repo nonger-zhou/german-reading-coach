@@ -27,6 +27,7 @@
 
 - **Supabase Auth**；**文章导入** **`/import`**（默认链接导入 + 可切手动粘贴 + Chrome 插件预填草稿）；**正文清理与段落/元信息**（`parseArticleFromRawInput` / `cleanArticleText`）写入 **`articles.original_text`**。导入主卡若需与「草案」对照，可访问静态示意 **`/import/mock`**（无保存、无抓取，不列入顶栏）。
 - **链接导入 API**：**`POST /api/import-url`** 服务端抓取网页并提取标题、来源、发布时间文本与正文；复用现有清理与保存逻辑；不调用 OpenAI。
+- **截图 / 拍照导入 API**（2026-10-15）：**`POST /api/import-image`**（需登录 Bearer）接收浏览器压缩后的图片（JPEG data URL，最多 20 块、合计约 4 MB），调用 OpenAI 视觉模型（默认 `gpt-4o-mini`，可用 **`OPENAI_VISION_MODEL`** 覆盖）逐字转写正文，返回标题 / 正文 / 语言 / 平台；图片不保存。导入页「截图 / 拍照」方式使用。
 - **阅读页** **`/articles/[id]`**：**左侧原文高亮**；**右侧 Tabs**：词汇 / 语法 / 摘要 / 阅读问题；移动端点击词汇高亮优先打开应用内详情；**语法高亮（蓝 / 紫）内可拖选子串**加入词库，无选区时轻点仍打开语法说明。
 - **阅读页词汇统计**：以**本篇词汇卡片条数**为主（1 短语 / 搭配 = 1 条），展示 AI 保存与手动添加、文中可高亮与暂无高亮，以及学习中 / 已掌握 / 暂忽略；**不再**以拆词 token 作为「生词数」主数字。AI 返回的 `surface_form` 若无法在正文连续匹配，词条仍会保存，卡片标「暂无高亮」，预览标「未定位」。
 - **删除文章 v1**：`/articles/[id]` 支持删除文章；删除 `articles` 与该文章关联的 `vocabulary_occurrences` / `grammar_occurrences`，保留长期 `vocabulary_items` / `vocabulary_senses` / `grammar_items`。
