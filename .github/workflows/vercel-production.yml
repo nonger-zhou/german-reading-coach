@@ -1,19 +1,17 @@
-# 在 GitHub 仓库 Settings → Secrets and variables → Actions 中配置：
-#   VERCEL_TOKEN      — Vercel → Account Settings → Tokens
-#   VERCEL_ORG_ID     — 本地 .vercel/project.json 的 orgId，或 Vercel Team 设置
-#   VERCEL_PROJECT_ID — 本地 .vercel/project.json 的 projectId
-# 配置完成后，向 main 推送即自动构建并部署 Production。
-# 未配置密钥时，本 workflow 的 Deploy 步骤会失败，可改用 Dashboard 连接 Git 自动部署。
+# CI：每次推送 / PR 跑单元测试与构建，结果显示在 GitHub 上。
+# 部署由 Vercel 的 Git 集成完成（合并到 main 即部署 Production），这里不再部署；
+# Vercel 构建使用 package.json 的 "vercel-build"（先跑 vitest，失败则不部署）。
 
-name: Vercel Production
+name: CI
 
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  test-and-build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,13 +24,8 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Unit tests
+        run: npm test
+
       - name: Build
         run: npm run build
-
-      - name: Deploy to Vercel
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: "--prod"

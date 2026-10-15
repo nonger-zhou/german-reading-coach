@@ -6,6 +6,7 @@
     "dev": "node scripts/next-dev-use-system-ca.cjs",
     "dev:clean": "node scripts/free-dev-port.cjs && node scripts/next-dev-use-system-ca.cjs",
     "build": "next build",
+    "vercel-build": "vitest run && next build",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
