@@ -4,7 +4,11 @@ import type {
   GrammarOccurrence,
 } from "@/lib/articleReadingTypes";
 import { validateGrammarLabel } from "@/lib/grammar/labelValidation";
-import { extractSentence } from "@/lib/articleReadingModel";
+import {
+  extractSentence,
+  grammarOccurrencePromptSentence,
+  normalizeGrammarSurfaceKey,
+} from "@/lib/articleReadingModel";
 import type { MasteryStatus } from "@/lib/types";
 import { formatSupabaseOrUnknownError } from "@/lib/supabase/errors";
 
@@ -152,7 +156,7 @@ export async function fetchArticleManualGrammar(
     .from("grammar_items")
     .select(itemSelectWithDeepNote)
     .in("id", itemIds)
-    .in("source", [DB_SOURCE_MANUAL, DB_SOURCE_AI_MOCK, DB_SOURCE_AI]);
+    .eq("source", DB_SOURCE_MANUAL);
   let itemRows: unknown[] | null = initialItemsResult.data;
   let itemErr: unknown = initialItemsResult.error;
 
@@ -161,7 +165,7 @@ export async function fetchArticleManualGrammar(
       .from("grammar_items")
       .select(itemSelectBase)
       .in("id", itemIds)
-      .in("source", [DB_SOURCE_MANUAL, DB_SOURCE_AI_MOCK, DB_SOURCE_AI]);
+      .eq("source", DB_SOURCE_MANUAL);
     itemRows = fallback.data;
     itemErr = fallback.error;
   }
@@ -250,7 +254,12 @@ export async function persistManualGrammarItem(
   },
 ): Promise<{ item: ArticleGrammarItem | null; error: string | null }> {
   const { userId, articleId, articlePlain, item } = params;
-  const nk = item.normalized_key;
+  const nk = normalizeGrammarSurfaceKey(
+    item.normalized_key ||
+      item.occurrences[0]?.surface_form ||
+      item.name_de ||
+      "",
+  );
   const gkey = nk;
   const dbSource =
     item.source === "ai_mock"
@@ -345,10 +354,14 @@ export async function persistManualGrammarItem(
       }
 
       const sentence =
-        occ.sentence ||
-        (start !== undefined && end !== undefined
-          ? extractSentence(articlePlain, start, end)
-          : "（未定位原文，手动添加）");
+        grammarOccurrencePromptSentence(articlePlain, {
+          sentence: occ.sentence,
+          start_offset: start,
+          end_offset: end,
+          surface_form: occ.surface_form,
+          fallbackMatchText: occ.fallbackMatchText,
+        }) ||
+        "（未定位原文，手动添加）";
 
       if (existingId) {
         nextOccurrences.push({

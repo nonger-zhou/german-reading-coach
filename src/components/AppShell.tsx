@@ -8,7 +8,6 @@ const nav = [
   { href: "/dashboard", label: "仪表盘" },
   { href: "/articles", label: "文章库" },
   { href: "/import", label: "导入" },
-  { href: "/articles/mock", label: "演示课文" },
   { href: "/vocabulary", label: "词库" },
   { href: "/grammar", label: "语法" },
   { href: "/settings", label: "设置" },

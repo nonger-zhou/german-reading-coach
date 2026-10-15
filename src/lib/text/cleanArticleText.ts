@@ -6,6 +6,8 @@
  * 段内合并软换行。未来 URL 抓取或浏览器插件导入时，可再用 HTML（h2/h3、p、time 等）识别结构。
  */
 
+import { isCookieOrExternalEmbedPlaceholder } from "@/lib/import/visibleArticleExtractLogic";
+
 const AD_KEYWORDS = [
   "Werbung",
   "Anzeige",
@@ -15,6 +17,8 @@ const AD_KEYWORDS = [
   "Galaxus",
   "Newsletter",
   "Lesen Sie auch",
+  "Das könnte Sie auch interessieren",
+  "könnte Sie auch interessieren",
   "Empfohlen",
   "Teilen",
   "Kommentar schreiben",
@@ -94,7 +98,11 @@ function lineMatchesBreadcrumbOrUiNoise(trimmedLine: string): boolean {
 }
 
 function lineMatchesTerminalSection(trimmedLine: string): boolean {
-  if (/^(Fehler gefunden|Jetzt melden|Mehr zum Thema|Auch interessant|Weitere Artikel|Weitere Newsletter|Newsletter|Kommentare?)\b/i.test(trimmedLine)) {
+  if (
+    /^(Das könnte (Sie|Ihnen) auch interessieren|Könnte (Sie|Ihnen) auch interessieren|Fehler gefunden|Jetzt melden|Mehr zum Thema|Auch interessant|Weitere Artikel|Weitere Newsletter|Newsletter|Kommentare?)\b/i.test(
+      trimmedLine,
+    )
+  ) {
     return true;
   }
   if (/^\d{1,5}\s+Kommentare?\b/i.test(trimmedLine)) {
@@ -156,6 +164,9 @@ function truncateLikelyNonArticleTail(rawLines: string[]): {
 function shouldRemoveLine(trimmedLine: string): boolean {
   if (trimmedLine.length === 0) {
     return false;
+  }
+  if (isCookieOrExternalEmbedPlaceholder(trimmedLine)) {
+    return true;
   }
   if (lineMatchesBreadcrumbOrUiNoise(trimmedLine)) {
     return true;

@@ -1,0 +1,443 @@
+{
+  "runAt": "2026-05-18T08:11:44.593Z",
+  "model": "gpt-4o-mini",
+  "meghan_fixture": "skipped_no_file",
+  "production_prompt_marker": "reading-learning value",
+  "minimal_b_prompt_excerpt": "You are helping a Chinese-speaking B1/B2 German learner read a German article (userLevel is in the user message).\nSelect",
+  "articles": [
+    {
+      "id": "news-short",
+      "file": "news-short-article.txt",
+      "charCount": 357,
+      "truncated": false,
+      "production": {
+        "vocabulary_count": 7,
+        "pos": {
+          "total": 7,
+          "noun": 4,
+          "compound_noun": 1,
+          "verb": 1,
+          "verb_phrase": 1,
+          "separable_verb": 0,
+          "collocation": 0,
+          "fixed_expression": 0,
+          "adjective": 0,
+          "adverb": 0,
+          "connector": 0,
+          "other": 0
+        },
+        "surface_form_in_text": {
+          "matchedCount": 7,
+          "total": 7,
+          "allMatched": true,
+          "missing_surface_forms": []
+        },
+        "sample": [
+          {
+            "surface_form": "Bundesregierung",
+            "lemma": "die Bundesregierung",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Klimaziele",
+            "lemma": "die Klimaziele",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Treibhausgas-Emissionen",
+            "lemma": "die Treibhausgas-Emissionen",
+            "part_of_speech": "compound_noun"
+          },
+          {
+            "surface_form": "Jobverlusten",
+            "lemma": "der Jobverlust",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Experten",
+            "lemma": "der Experte",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "beurteilen",
+            "lemma": "beurteilen",
+            "part_of_speech": "verb"
+          },
+          {
+            "surface_form": "verweisen auf",
+            "lemma": "verweisen auf",
+            "part_of_speech": "verb_phrase"
+          }
+        ]
+      },
+      "minimal_b_vocab_only": {
+        "vocabulary_count": 10,
+        "pos": {
+          "total": 10,
+          "noun": 3,
+          "compound_noun": 0,
+          "verb": 4,
+          "verb_phrase": 0,
+          "separable_verb": 0,
+          "collocation": 0,
+          "fixed_expression": 0,
+          "adjective": 1,
+          "adverb": 0,
+          "connector": 0,
+          "other": 2
+        },
+        "surface_form_in_text": {
+          "matchedCount": 10,
+          "total": 10,
+          "allMatched": true,
+          "missing_surface_forms": []
+        },
+        "sample": [
+          {
+            "surface_form": "Bundesregierung",
+            "lemma": "Bundesregierung",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Klimaziele",
+            "lemma": "Klimaziel",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "beschlossen",
+            "lemma": "beschließen",
+            "part_of_speech": "verb"
+          },
+          {
+            "surface_form": "müsse",
+            "lemma": "müssen",
+            "part_of_speech": "verb"
+          },
+          {
+            "surface_form": "senken",
+            "lemma": "senken",
+            "part_of_speech": "verb"
+          },
+          {
+            "surface_form": "warnen vor",
+            "lemma": "warnen",
+            "part_of_speech": "verb-preposition combination"
+          },
+          {
+            "surface_form": "Jobverlusten",
+            "lemma": "Jobverlust",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "beurteilen",
+            "lemma": "beurteilen",
+            "part_of_speech": "verb"
+          },
+          {
+            "surface_form": "positiv",
+            "lemma": "positiv",
+            "part_of_speech": "adjective"
+          },
+          {
+            "surface_form": "verweisen auf",
+            "lemma": "verweisen",
+            "part_of_speech": "verb-preposition combination"
+          }
+        ]
+      },
+      "comparison_notes": [
+        "minimal_b 非名词类条数更多（7 vs 2）"
+      ]
+    },
+    {
+      "id": "gaullismus",
+      "file": "gaullismus-article.txt",
+      "charCount": 9711,
+      "truncated": false,
+      "production": {
+        "vocabulary_count": 7,
+        "pos": {
+          "total": 7,
+          "noun": 2,
+          "compound_noun": 5,
+          "verb": 0,
+          "verb_phrase": 0,
+          "separable_verb": 0,
+          "collocation": 0,
+          "fixed_expression": 0,
+          "adjective": 0,
+          "adverb": 0,
+          "connector": 0,
+          "other": 0
+        },
+        "surface_form_in_text": {
+          "matchedCount": 6,
+          "total": 7,
+          "allMatched": false,
+          "missing_surface_forms": [
+            "militärischen Kapazitäten"
+          ]
+        },
+        "sample": [
+          {
+            "surface_form": "europäischen Gaullismus",
+            "lemma": "europäisch Gaullismus",
+            "part_of_speech": "compound_noun"
+          },
+          {
+            "surface_form": "militärischen Kapazitäten",
+            "lemma": "militärisch Kapazität",
+            "part_of_speech": "compound_noun"
+          },
+          {
+            "surface_form": "Souveränität",
+            "lemma": "Souveränität",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Rüstungsindustrie",
+            "lemma": "Rüstungsindustrie",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "militärischen Schutz",
+            "lemma": "militärisch Schutz",
+            "part_of_speech": "compound_noun"
+          },
+          {
+            "surface_form": "militärischen Interventionen",
+            "lemma": "militärisch Intervention",
+            "part_of_speech": "compound_noun"
+          },
+          {
+            "surface_form": "europäischen Sicherheitsarchitektur",
+            "lemma": "europäisch Sicherheitsarchitektur",
+            "part_of_speech": "compound_noun"
+          }
+        ]
+      },
+      "minimal_b_vocab_only": {
+        "vocabulary_count": 10,
+        "pos": {
+          "total": 10,
+          "noun": 10,
+          "compound_noun": 0,
+          "verb": 0,
+          "verb_phrase": 0,
+          "separable_verb": 0,
+          "collocation": 0,
+          "fixed_expression": 0,
+          "adjective": 0,
+          "adverb": 0,
+          "connector": 0,
+          "other": 0
+        },
+        "surface_form_in_text": {
+          "matchedCount": 10,
+          "total": 10,
+          "allMatched": true,
+          "missing_surface_forms": []
+        },
+        "sample": [
+          {
+            "surface_form": "europäischen Gaullismus",
+            "lemma": "europäischer Gaullismus",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Mitsprache",
+            "lemma": "Mitsprache",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "militärische Kapazitäten",
+            "lemma": "militärische Kapazität",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "vollumfänglichen Souveränität",
+            "lemma": "vollumfängliche Souveränität",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "militärischen Schutz",
+            "lemma": "militärischer Schutz",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Rüstungsindustrie",
+            "lemma": "Rüstungsindustrie",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "moralischem Eifer",
+            "lemma": "moralischer Eifer",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Nachkriegsordnung",
+            "lemma": "Nachkriegsordnung",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "geopolitisches Wissen",
+            "lemma": "geopolitisches Wissen",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Führungsrolle",
+            "lemma": "Führungsrolle",
+            "part_of_speech": "noun"
+          }
+        ]
+      },
+      "comparison_notes": [
+        "非名词类条数相同",
+        "production：本 run 为全名词类",
+        "minimal_b：本 run 为全名词类"
+      ]
+    },
+    {
+      "id": "msc-oil",
+      "file": "msc-oil-article.txt",
+      "charCount": 1623,
+      "truncated": false,
+      "production": {
+        "vocabulary_count": 6,
+        "pos": {
+          "total": 6,
+          "noun": 5,
+          "compound_noun": 1,
+          "verb": 0,
+          "verb_phrase": 0,
+          "separable_verb": 0,
+          "collocation": 0,
+          "fixed_expression": 0,
+          "adjective": 0,
+          "adverb": 0,
+          "connector": 0,
+          "other": 0
+        },
+        "surface_form_in_text": {
+          "matchedCount": 6,
+          "total": 6,
+          "allMatched": true,
+          "missing_surface_forms": []
+        },
+        "sample": [
+          {
+            "surface_form": "Ölhandel",
+            "lemma": "Ölhandel",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "fossilen Brennstoffen",
+            "lemma": "fossiler Brennstoff",
+            "part_of_speech": "compound_noun"
+          },
+          {
+            "surface_form": "Offensive",
+            "lemma": "Offensive",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Marktzugang",
+            "lemma": "Marktzugang",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Kapitänspatent",
+            "lemma": "Kapitänspatent",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Klimazielen",
+            "lemma": "Klimaziel",
+            "part_of_speech": "noun"
+          }
+        ]
+      },
+      "minimal_b_vocab_only": {
+        "vocabulary_count": 10,
+        "pos": {
+          "total": 10,
+          "noun": 7,
+          "compound_noun": 0,
+          "verb": 2,
+          "verb_phrase": 0,
+          "separable_verb": 0,
+          "collocation": 0,
+          "fixed_expression": 0,
+          "adjective": 0,
+          "adverb": 0,
+          "connector": 0,
+          "other": 1
+        },
+        "surface_form_in_text": {
+          "matchedCount": 9,
+          "total": 10,
+          "allMatched": false,
+          "missing_surface_forms": [
+            "offensive"
+          ]
+        },
+        "sample": [
+          {
+            "surface_form": "Ölhandel",
+            "lemma": "Ölhandel",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "dominieren",
+            "lemma": "dominieren",
+            "part_of_speech": "verb"
+          },
+          {
+            "surface_form": "ausweiten",
+            "lemma": "ausweiten",
+            "part_of_speech": "verb"
+          },
+          {
+            "surface_form": "Marktzugang sichern",
+            "lemma": "Marktzugang sichern",
+            "part_of_speech": "verb-preposition combination"
+          },
+          {
+            "surface_form": "Klimazielen",
+            "lemma": "Klimaziel",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Wettbewerbern",
+            "lemma": "Wettbewerber",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Routen in Asien",
+            "lemma": "Route",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Versicherungsprämien",
+            "lemma": "Versicherungsprämie",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Frachtkapazität",
+            "lemma": "Frachtkapazität",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "offensive",
+            "lemma": "Offensive",
+            "part_of_speech": "noun"
+          }
+        ]
+      },
+      "comparison_notes": [
+        "minimal_b 非名词类条数更多（3 vs 0）",
+        "production：本 run 为全名词类"
+      ]
+    }
+  ]
+}

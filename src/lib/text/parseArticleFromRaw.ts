@@ -1,3 +1,4 @@
+import { isRelatedSectionHeading } from "@/lib/import/visibleArticleExtractLogic";
 import { cleanArticleText } from "./cleanArticleText";
 
 /**
@@ -373,9 +374,13 @@ export function parseArticleFromRawInput(raw: string): ParsedArticleFromRaw {
 
   const bodyChunks: string[] = [];
   for (let i = 0; i < lines.length; i++) {
-    if (!excluded.has(i)) {
-      bodyChunks.push(lines[i].trimEnd());
+    if (excluded.has(i)) {
+      continue;
     }
+    if (isRelatedSectionHeading(trimmed[i] ?? "")) {
+      break;
+    }
+    bodyChunks.push(lines[i].trimEnd());
   }
   const bodyRaw = bodyChunks.join("\n");
 

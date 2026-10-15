@@ -15,6 +15,7 @@ import { ensureUserProfile } from "@/lib/supabase/auth";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { formatSupabaseOrUnknownError } from "@/lib/supabase/errors";
 import { useAuthEntryHrefs } from "@/lib/auth/use-auth-entry-hrefs";
+import { isBadImportPluginTitle } from "@/lib/import/visibleArticleExtractLogic";
 import { parseArticleFromRawInput } from "@/lib/text/parseArticleFromRaw";
 import type { CefrLevel } from "@/lib/types";
 
@@ -49,18 +50,10 @@ function chooseDraftTitle(
   const parsed = parsedTitle?.trim() ?? "";
   const plugin = pluginTitle.trim();
   if (!plugin) return parsed;
-  if (isReasonablePluginTitle(plugin)) return plugin;
+  if (isBadImportPluginTitle(plugin)) return parsed;
   if (!parsed) return plugin;
   if (plugin.length >= parsed.length + 12) return plugin;
   return parsed;
-}
-
-function isReasonablePluginTitle(title: string): boolean {
-  if (title.length < 20 || title.length > 260) return false;
-  if (/^\s*(Startseite|Home)\s*[|›>]/i.test(title)) return false;
-  const separatorCount = (title.match(/[|›>]/g) || []).length;
-  if (separatorCount >= 2 && title.length < 160) return false;
-  return /[A-Za-zÄÖÜäöüß]/.test(title);
 }
 
 function ImportPageContent() {

@@ -50,7 +50,7 @@ function collectVisibleArticle() {
     document.querySelector(selector)?.getAttribute("content")?.trim() || "";
   const selectedText = window.getSelection?.().toString().trim() || "";
   const slugWords = getSlugWords(window.location.pathname);
-  const title = chooseTitle(slugWords) || document.title.trim();
+  const title = chooseTitle(slugWords);
   const articleEl = chooseArticleElement(slugWords, title);
 
   const sourceName =
@@ -62,9 +62,32 @@ function collectVisibleArticle() {
     document.querySelector("time")?.getAttribute("datetime")?.trim() ||
     document.querySelector("time")?.innerText?.trim() ||
     "";
-  const extractedText = extractArticleText(articleEl, title);
+  const extractedFromP = extractArticleText(articleEl, title);
+  const extractedFromBlocks = extractBlockArticleText(articleEl, title);
+  const pLines = splitParagraphBlocks(extractedFromP);
+  const blockLines = splitParagraphBlocks(extractedFromBlocks);
+  let extractedText = extractedFromP;
+  if (shouldPreferBlockParagraphs(pLines, blockLines)) {
+    extractedText = extractedFromBlocks;
+  } else if (!extractedFromP && extractedFromBlocks) {
+    extractedText = extractedFromBlocks;
+  }
+
+  const paragraphFallbackP = extractParagraphsOnly(articleEl);
+  const paragraphFallbackBlocks = extractBlockArticleText(articleEl, "");
+  const pfPLines = splitParagraphBlocks(paragraphFallbackP);
+  const pfBlockLines = splitParagraphBlocks(paragraphFallbackBlocks);
+  let paragraphFallback = paragraphFallbackP;
+  if (shouldPreferBlockParagraphs(pfPLines, pfBlockLines)) {
+    paragraphFallback = paragraphFallbackBlocks;
+  } else if (!paragraphFallbackP && paragraphFallbackBlocks) {
+    paragraphFallback = paragraphFallbackBlocks;
+  }
+
   const candidateText =
-    extractedText || articleEl?.innerText?.trim() || document.body.innerText.trim();
+    extractedText ||
+    paragraphFallback ||
+    cropTextFromTitle(articleEl?.innerText?.trim() || "", title);
   const rawText = selectedText || cropTextFromTitle(candidateText, title);
 
   return {
@@ -109,10 +132,13 @@ function collectVisibleArticle() {
         .join(" ");
       let score = Math.min(text.length, 12000) * 0.2 + paragraphChars;
       score += wordOverlapScore(headingText, words) * 900;
+      if (paragraphs.length < 3 && text.length > 700) {
+        score -= 1200;
+      }
       if (headline && normalizeText(text).includes(normalizeText(headline))) {
         score += 1800;
       }
-      if (/newsletter|abo|login|registrieren|meistgelesen/i.test(text.slice(0, 1200))) {
+      if (/newsletter|abo|login|registrieren|meistgelesen|interessieren/i.test(text.slice(0, 1200))) {
         score -= 600;
       }
       if (el === document.body) {
@@ -127,12 +153,39 @@ function collectVisibleArticle() {
   }
 
   function chooseTitle(words) {
-    const metaTitle =
+    const metaRaw =
       textOf('meta[property="og:title"]') ||
       textOf('meta[name="twitter:title"]') ||
       "";
-    const visualTitle = collectVisibleTitleCandidates(words)[0]?.text || "";
-    return visualTitle || metaTitle || "";
+    const metaTitle = stripSiteSuffixFromTitle(metaRaw);
+    if (metaTitle && looksLikeHeadlineText(metaTitle)) {
+      return metaTitle;
+    }
+    const slugMatch = collectVisibleTitleCandidates(words).filter(
+      (c) =>
+        looksLikeHeadlineText(c.text) && wordOverlapScore(c.text, words) >= 1,
+    );
+    if (slugMatch[0]?.text) {
+      return slugMatch[0].text;
+    }
+    const visual = collectVisibleTitleCandidates(words).find((c) =>
+      looksLikeHeadlineText(c.text),
+    );
+    if (visual?.text) {
+      return visual.text;
+    }
+    const docTitle = stripSiteSuffixFromTitle(document.title.trim());
+    return docTitle;
+  }
+
+  function stripSiteSuffixFromTitle(title) {
+    const t = (title || "").replace(/\s+/g, " ").trim();
+    if (!t) return "";
+    const parts = t.split(/\s*[|•·–—›»]\s*/);
+    if (parts.length >= 2 && parts[0].trim().length >= 16) {
+      return parts[0].trim();
+    }
+    return t;
   }
 
   function collectVisibleTitleCandidates(words) {
@@ -201,24 +254,113 @@ function collectVisibleArticle() {
     return [...bestByText.values()].sort((a, b) => b.score - a.score);
   }
 
+  function shouldPreferBlockParagraphs(pLines, blockLines) {
+    const pChars = pLines.join("").length;
+    const blockChars = blockLines.join("").length;
+    if (blockLines.length < 2) return false;
+    if (blockChars < 900) return false;
+    return blockChars > Math.max(900, pChars * 1.35);
+  }
+
+  function splitParagraphBlocks(text) {
+    return (text || "")
+      .split(/\n\n+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+
+  function blockClassLooksLikeBody(className) {
+    return /(?:^|[\s_-])(?:text|content|body|article|post|entry|snm-text)(?:$|[\s_-])/i.test(
+      className || "",
+    );
+  }
+
+  function looksLikeImportBlockNoise(text) {
+    const s = normalizeInlineText(text || "");
+    if (!s) return true;
+    if (looksLikeUiText(s) || looksLikeCookieEmbedPlaceholder(s)) return true;
+    const n = normalizeText(s);
+    if (n === "videofallback" || n.startsWith("video fallback")) return true;
+    if (
+      /^(publiziert|aktualisiert|veroffentlicht|published|updated)(\s*am)?(\s|:|\d)/.test(
+        n,
+      )
+    ) {
+      return true;
+    }
+    if (/^url(\s|:|\d)/.test(n)) return true;
+    if (n.includes("wir informieren sie") && s.length < 140) return true;
+    if (n.startsWith("mehr zu ") && s.length < 120) return true;
+    if (n.includes("blog abonnieren") && s.length < 220) return true;
+    if (n.includes("weitere beitrage") && s.length < 120) return true;
+    if (n.includes("ist historiker") && n.includes("publizist") && s.length < 220) {
+      return true;
+    }
+    return false;
+  }
+
+  function extractBlockArticleText(root, headline) {
+    if (!root) return "";
+    const lines = [];
+    const seen = new Set();
+
+    function tryPush(text) {
+      const t = normalizeInlineText(text || "");
+      if (!t) return;
+      if (looksLikeImportBlockNoise(t)) return;
+      if (!looksLikeArticleParagraph(t)) return;
+      const key = normalizeText(t);
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      lines.push(t);
+    }
+
+    for (const section of root.querySelectorAll("section")) {
+      if (!isVisible(section)) continue;
+      if (hasUnwantedAncestor(section, root)) continue;
+      if (section.querySelector("section")) continue;
+      tryPush(section.innerText || "");
+    }
+
+    if (lines.length < 2) {
+      for (const div of root.querySelectorAll("div[class]")) {
+        if (!isVisible(div)) continue;
+        if (hasUnwantedAncestor(div, root)) continue;
+        if (!blockClassLooksLikeBody(div.className || "")) continue;
+        if (
+          div.querySelector(
+            "section, div[class*='text' i], div[class*='content' i], div[class*='body' i]",
+          )
+        ) {
+          continue;
+        }
+        tryPush(div.innerText || "");
+      }
+    }
+
+    if (lines.length < 2) return "";
+    const joined = lines.join("\n\n");
+    if (joined.length < 300) return "";
+    return joinWithHeadline(lines, headline);
+  }
+
   function extractArticleText(root, headline) {
     if (!root) return "";
-    const nodes = [...root.querySelectorAll("h1,p")];
     const lines = [];
     const seen = new Set();
     let collectedChars = 0;
 
-    for (const node of nodes) {
+    for (const node of root.querySelectorAll("p")) {
       if (!isVisible(node)) continue;
       if (hasUnwantedAncestor(node, root)) continue;
 
       const text = normalizeInlineText(node.innerText || "");
       if (!text) continue;
+      if (isRelatedSectionHeading(text)) break;
       if (shouldStopAtText(text, collectedChars)) break;
       if (looksLikeUiText(text)) continue;
-      if (node.tagName.toLowerCase() === "p" && !looksLikeArticleParagraph(text)) {
-        continue;
-      }
+      if (looksLikeAuthorNameLine(text)) continue;
+      if (!looksLikeArticleParagraph(text)) continue;
 
       const key = normalizeText(text);
       if (!key || seen.has(key)) continue;
@@ -230,12 +372,47 @@ function collectVisibleArticle() {
     if (lines.length < 2 || collectedChars < 300) {
       return "";
     }
+    return joinWithHeadline(lines, headline);
+  }
+
+  function extractParagraphsOnly(root) {
+    if (!root) return "";
+    const lines = [];
+    const seen = new Set();
+    let collectedChars = 0;
+
+    for (const node of root.querySelectorAll("p")) {
+      if (!isVisible(node)) continue;
+      if (hasUnwantedAncestor(node, root)) continue;
+      const text = normalizeInlineText(node.innerText || "");
+      if (!text || looksLikeUiText(text) || looksLikeAuthorNameLine(text)) continue;
+      if (!looksLikeArticleParagraph(text)) continue;
+      if (isRelatedSectionHeading(text)) break;
+      const key = normalizeText(text);
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      lines.push(text);
+      collectedChars += text.length;
+    }
+    if (lines.length < 2 || collectedChars < 300) return "";
+    return lines.join("\n\n");
+  }
+
+  function joinWithHeadline(lines, headline) {
+    const headlineTrim = normalizeInlineText(headline || "");
+    if (!headlineTrim) return lines.join("\n\n");
     const hasHeadline = lines.some((line) => {
       const lineNorm = normalizeText(line);
-      const headlineNorm = normalizeText(headline);
-      return lineNorm === headlineNorm || lineNorm.includes(headlineNorm);
+      const headlineNorm = normalizeText(headlineTrim);
+      return (
+        lineNorm === headlineNorm ||
+        lineNorm.includes(headlineNorm) ||
+        headlineNorm.includes(lineNorm)
+      );
     });
-    return (hasHeadline ? lines : [headline, ...lines]).filter(Boolean).join("\n\n");
+    return (hasHeadline ? lines : [headlineTrim, ...lines])
+      .filter(Boolean)
+      .join("\n\n");
   }
 
   function cropTextFromTitle(text, headline) {
@@ -255,20 +432,36 @@ function collectVisibleArticle() {
           joinedNorm.includes(headlineNorm) ||
           headlineNorm.includes(joinedNorm)
         ) {
-          return lines.slice(i).join("\n").trim();
+          return trimTailAtRelatedSection(lines.slice(i).join("\n"));
         }
       }
     }
-    return text.trim();
+    return trimTailAtRelatedSection(text);
+  }
+
+  function trimTailAtRelatedSection(text) {
+    const rawLines = text.split("\n");
+    const kept = [];
+    for (const line of rawLines) {
+      const t = line.trim();
+      if (t && isRelatedSectionHeading(t) && kept.some((l) => l.trim().length > 40)) {
+        break;
+      }
+      if (t && looksLikeAuthorNameLine(t) && kept.length === 0) {
+        continue;
+      }
+      kept.push(line);
+    }
+    return kept.join("\n").trim();
   }
 
   function hasUnwantedAncestor(node, root) {
     const badPattern =
-      /newsletter|related|recommend|teaser|advert|anzeige|banner|paywall|share|social|comment|kommentar|author|profile|byline|bio|sidebar|aside|footer/i;
+      /newsletter|related|recommend|interessieren|teaser|empfehl|more-stories|read-next|advert|anzeige|banner|paywall|share|social|comment|kommentar|author|profile|byline|bio|sidebar|aside|footer|contributor|personen|person-name/i;
     for (let el = node; el && el !== root.parentElement; el = el.parentElement) {
       if (el === root) return false;
       const tag = el.tagName?.toLowerCase();
-      if (["nav", "aside", "footer", "form", "button"].includes(tag)) {
+      if (["nav", "header", "aside", "footer", "form", "button"].includes(tag)) {
         return true;
       }
       const attrs = [
@@ -288,14 +481,52 @@ function collectVisibleArticle() {
     return false;
   }
 
+  function isRelatedSectionHeading(text) {
+    const n = normalizeText(text);
+    if (!n) return false;
+    if (n.includes("auch interessieren")) return true;
+    return /^(das konnte sie auch interessieren|das konnte ihnen auch interessieren|konnte sie auch interessieren|mehr zum thema|auch interessant|weitere artikel|lesen sie auch|empfohlene artikel)/.test(
+      n,
+    );
+  }
+
+  function looksLikeAuthorNameLine(text) {
+    const s = normalizeInlineText(text);
+    if (s.length < 4 || s.length > 90) return false;
+    if (/^von\s+/i.test(s)) return true;
+    if (
+      /^[A-ZÄÖÜ][a-zäöüß]+(?:\s+[A-ZÄÖÜ][a-zäöüß.-]+){0,4}$/.test(s) &&
+      !/[.!?;:«»‹›]/.test(s)
+    ) {
+      return true;
+    }
+    return false;
+  }
+
   function shouldStopAtText(text, collectedChars) {
+    if (isRelatedSectionHeading(text)) return true;
     if (collectedChars < 800) return false;
     return /^(fehler gefunden|jetzt melden|mehr zum thema|auch interessant|weitere artikel|weitere newsletter|newsletter|der morgen|\d+\s+kommentare?)/i.test(
       text,
     );
   }
 
+  function looksLikeCookieEmbedPlaceholder(text) {
+    const n = normalizeText(text);
+    if (!n) return false;
+    if (n.includes("zusatzliche cookies")) return true;
+    if (n.includes("erganzenden externen inhalt")) return true;
+    return false;
+  }
+
   function looksLikeUiText(text) {
+    if (
+      looksLikeCookieEmbedPlaceholder(text) ||
+      isRelatedSectionHeading(text) ||
+      looksLikeAuthorNameLine(text)
+    ) {
+      return true;
+    }
     if (/^(abo|einloggen|registrieren|teilen|drucken|speichern|newsletter|weitere newsletter)$/i.test(text)) {
       return true;
     }
@@ -317,6 +548,9 @@ function collectVisibleArticle() {
   function looksLikeHeadlineText(text) {
     if (text.length < 20 || text.length > 260) return false;
     if (!/[A-Za-zÄÖÜäöüß]/.test(text)) return false;
+    if (isRelatedSectionHeading(text) || looksLikeAuthorNameLine(text)) {
+      return false;
+    }
     if (/^(Startseite|Newsletter|Weitere Newsletter|Der Morgen|Abo|Podcast)$/i.test(text)) {
       return false;
     }

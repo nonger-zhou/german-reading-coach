@@ -1,0 +1,299 @@
+[
+  {
+    "case": "short-news",
+    "strategy": "mini_single",
+    "counts": {
+      "total": 5,
+      "noun": 5,
+      "verb": 0,
+      "adjective": 0,
+      "adverb": 0,
+      "phrase": 0,
+      "other": 0
+    },
+    "expressionTypes": 0,
+    "allNounLike": true,
+    "items": [
+      {
+        "pos": "noun",
+        "surface": "Klimaziele",
+        "lemma": "das Klimaziel"
+      },
+      {
+        "pos": "compound_noun",
+        "surface": "Treibhausgas-Emissionen",
+        "lemma": "die Treibhausgas-Emission"
+      },
+      {
+        "pos": "noun",
+        "surface": "Jobverlusten",
+        "lemma": "der Jobverlust"
+      },
+      {
+        "pos": "noun",
+        "surface": "Maßnahmen",
+        "lemma": "die Maßnahme"
+      },
+      {
+        "pos": "compound_noun",
+        "surface": "internationalen Vorbilder",
+        "lemma": "das internationale Vorbild"
+      }
+    ]
+  },
+  {
+    "case": "short-news",
+    "strategy": "gpt4o_single",
+    "counts": {
+      "total": 5,
+      "noun": 4,
+      "verb": 1,
+      "adjective": 0,
+      "adverb": 0,
+      "phrase": 0,
+      "other": 0
+    },
+    "expressionTypes": 0,
+    "allNounLike": false,
+    "items": [
+      {
+        "pos": "verb",
+        "surface": "beschlossen",
+        "lemma": "beschließen"
+      },
+      {
+        "pos": "compound_noun",
+        "surface": "Treibhausgas-Emissionen",
+        "lemma": "die Treibhausgas-Emission"
+      },
+      {
+        "pos": "noun",
+        "surface": "Autobauer",
+        "lemma": "der Autobauer"
+      },
+      {
+        "pos": "noun",
+        "surface": "Jobverlusten",
+        "lemma": "der Jobverlust"
+      },
+      {
+        "pos": "compound_noun",
+        "surface": "internationale Vorbilder",
+        "lemma": "das internationale Vorbild"
+      }
+    ]
+  },
+  {
+    "case": "short-news",
+    "strategy": "mini_split",
+    "counts": {
+      "total": 6,
+      "noun": 5,
+      "verb": 0,
+      "adjective": 0,
+      "adverb": 0,
+      "phrase": 0,
+      "other": 1
+    },
+    "expressionTypes": 0,
+    "allNounLike": false,
+    "items": [
+      {
+        "pos": "noun",
+        "surface": "Klimaziele",
+        "lemma": "das Klimaziel"
+      },
+      {
+        "pos": "compound_noun",
+        "surface": "Treibhausgas-Emissionen",
+        "lemma": "die Treibhausgas-Emission"
+      },
+      {
+        "pos": "noun",
+        "surface": "Jobverlusten",
+        "lemma": "der Jobverlust"
+      },
+      {
+        "pos": "noun",
+        "surface": "Maßnahmen",
+        "lemma": "die Maßnahme"
+      },
+      {
+        "pos": "na",
+        "surface": "positiv",
+        "lemma": "positiv"
+      },
+      {
+        "pos": "compound_noun",
+        "surface": "internationale Vorbilder",
+        "lemma": "das internationale Vorbild"
+      }
+    ]
+  },
+  {
+    "case": "gaullismus",
+    "strategy": "mini_single",
+    "counts": {
+      "total": 6,
+      "noun": 4,
+      "verb": 1,
+      "adjective": 0,
+      "adverb": 0,
+      "phrase": 1,
+      "other": 0
+    },
+    "expressionTypes": 2,
+    "allNounLike": false,
+    "items": [
+      {
+        "pos": "noun",
+        "surface": "Mitsprache",
+        "lemma": "die Mitsprache"
+      },
+      {
+        "pos": "noun",
+        "surface": "Souveränität",
+        "lemma": "die Souveränität"
+      },
+      {
+        "pos": "collocation",
+        "surface": "militärischen Schutz",
+        "lemma": "militärischer Schutz"
+      },
+      {
+        "pos": "noun",
+        "surface": "Rüstungsindustrie",
+        "lemma": "die Rüstungsindustrie"
+      },
+      {
+        "pos": "verb_phrase",
+        "surface": "militärisch abzusichern",
+        "lemma": "militärisch absichern"
+      },
+      {
+        "pos": "compound_noun",
+        "surface": "militärische Kapazitäten",
+        "lemma": "militärische Kapazität"
+      }
+    ]
+  },
+  {
+    "case": "gaullismus",
+    "strategy": "gpt4o_single",
+    "counts": {
+      "total": 7,
+      "noun": 4,
+      "verb": 0,
+      "adjective": 0,
+      "adverb": 0,
+      "phrase": 3,
+      "other": 0
+    },
+    "expressionTypes": 1,
+    "allNounLike": false,
+    "items": [
+      {
+        "pos": "noun",
+        "surface": "Gaullismus",
+        "lemma": "Gaullismus"
+      },
+      {
+        "pos": "collocation",
+        "surface": "vollumfänglichen Souveränität",
+        "lemma": "vollumfängliche Souveränität"
+      },
+      {
+        "pos": "noun",
+        "surface": "Mitsprache",
+        "lemma": "Mitsprache"
+      },
+      {
+        "pos": "compound_noun",
+        "surface": "transatlantische Bündnis",
+        "lemma": "transatlantisches Bündnis"
+      },
+      {
+        "pos": "phrase",
+        "surface": "Niedergang der liberalen Weltordnung",
+        "lemma": "Niedergang der liberalen Weltordnung"
+      },
+      {
+        "pos": "noun",
+        "surface": "militärische Kapazitäten",
+        "lemma": "militärische Kapazität"
+      },
+      {
+        "pos": "phrase",
+        "surface": "Erosion der transatlantischen Partnerschaft",
+        "lemma": "Erosion der transatlantischen Partnerschaft"
+      }
+    ]
+  },
+  {
+    "case": "gaullismus",
+    "strategy": "mini_split",
+    "counts": {
+      "total": 10,
+      "noun": 10,
+      "verb": 0,
+      "adjective": 0,
+      "adverb": 0,
+      "phrase": 0,
+      "other": 0
+    },
+    "expressionTypes": 0,
+    "allNounLike": true,
+    "items": [
+      {
+        "pos": "compound_noun",
+        "surface": "europäischen Gaullismus",
+        "lemma": "europäischer Gaullismus"
+      },
+      {
+        "pos": "noun",
+        "surface": "Mitsprache",
+        "lemma": "Mitsprache"
+      },
+      {
+        "pos": "compound_noun",
+        "surface": "militärischen Kapazitäten",
+        "lemma": "militärische Kapazität"
+      },
+      {
+        "pos": "compound_noun",
+        "surface": "vollumfänglichen Souveränität",
+        "lemma": "vollumfängliche Souveränität"
+      },
+      {
+        "pos": "noun",
+        "surface": "Rüstungsindustrie",
+        "lemma": "Rüstungsindustrie"
+      },
+      {
+        "pos": "compound_noun",
+        "surface": "militärischen Interventionen",
+        "lemma": "militärische Intervention"
+      },
+      {
+        "pos": "compound_noun",
+        "surface": "europäischen Sicherheitsarchitektur",
+        "lemma": "europäische Sicherheitsarchitektur"
+      },
+      {
+        "pos": "compound_noun",
+        "surface": "transatlantischen Partnerschaft",
+        "lemma": "transatlantische Partnerschaft"
+      },
+      {
+        "pos": "compound_noun",
+        "surface": "geopolitisches Wissen",
+        "lemma": "geopolitisches Wissen"
+      },
+      {
+        "pos": "compound_noun",
+        "surface": "Karolingisches Reich",
+        "lemma": "Karolingisches Reich"
+      }
+    ]
+  }
+]

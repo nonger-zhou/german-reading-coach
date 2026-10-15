@@ -19,8 +19,12 @@ import type {
 } from "@/lib/articleReadingTypes";
 import {
   buildPlainTextArticleLayout,
+  dedupeGrammarItemsBySurfaceKey,
   expandGrammarItemsWithRepeatedSurface,
+  finalizeArticleGrammarItems,
   finalizeArticleVocabularyItems,
+  findBestTextOccurrence,
+  sanitizeArticlePlainForMatching,
 } from "@/lib/articleReadingModel";
 import type { CefrLevel, MasteryStatus } from "@/lib/types";
 import type { ArticleRow } from "@/lib/supabase/articles";
@@ -44,6 +48,7 @@ import {
 import { loginPageHref } from "@/lib/auth/post-auth-redirect";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { formatSupabaseOrUnknownError } from "@/lib/supabase/errors";
+import { FullArticleTranslationExternal } from "@/components/FullArticleTranslationExternal";
 
 const IS_DEV = process.env.NODE_ENV === "development";
 
@@ -285,16 +290,15 @@ function ArticleDetailPageContent() {
     };
   }, [session, id]);
 
-  const articleTextForLayout = useMemo(() => {
-    const title = article?.title?.trim();
-    const body = article?.original_text ?? "";
-    if (title) return `${title}\n\n${body}`;
-    return body;
-  }, [article?.title, article?.original_text]);
+  /** 阅读/高亮/手动标记仅用正文；标题单独在 CardTitle 展示，避免偏移错位导致语法无法高亮 */
+  const articlePlain = useMemo(
+    () => sanitizeArticlePlainForMatching(article?.original_text ?? ""),
+    [article?.original_text],
+  );
 
-  const { articlePlain, chunkIntervals } = useMemo(
-    () => buildPlainTextArticleLayout(articleTextForLayout),
-    [articleTextForLayout],
+  const { chunkIntervals } = useMemo(
+    () => buildPlainTextArticleLayout(articlePlain),
+    [articlePlain],
   );
 
   const analysisLevel = useMemo(
@@ -330,9 +334,11 @@ function ArticleDetailPageContent() {
     const base = asideData?.grammar ?? [];
     const extra = mockStaging?.grammar ?? [];
     if (!extra.length) return base;
-    const expandedExtra = expandGrammarItemsWithRepeatedSurface(
-      extra,
-      articlePlain,
+    const expandedExtra = dedupeGrammarItemsBySurfaceKey(
+      finalizeArticleGrammarItems(
+        expandGrammarItemsWithRepeatedSurface(extra, articlePlain),
+        articlePlain,
+      ),
     );
     return [...base, ...expandedExtra];
   }, [asideData, mockStaging, articlePlain]);
@@ -377,8 +383,8 @@ function ArticleDetailPageContent() {
     }
     if (realAiPreview) {
       return {
-        summaryZh: realAiPreview.summary_zh,
-        summaryDe: realAiPreview.summary_de_simple,
+        summaryZh: "",
+        summaryDe: "",
         questions: [...realAiPreview.reading_questions],
         footerNote: null as string | null,
       };
@@ -412,7 +418,12 @@ function ArticleDetailPageContent() {
         if (seq !== asideFetchSeq.current) return;
         setAsideData({
           vocabulary: finalizeArticleVocabularyItems(v, articlePlain),
-          grammar: expandGrammarItemsWithRepeatedSurface(g, articlePlain),
+          grammar: dedupeGrammarItemsBySurfaceKey(
+            finalizeArticleGrammarItems(
+              expandGrammarItemsWithRepeatedSurface(g, articlePlain),
+              articlePlain,
+            ),
+          ),
         });
         setAsideLoadError(null);
         setAsideSnapshotVersion((n) => n + 1);
@@ -687,12 +698,7 @@ function ArticleDetailPageContent() {
     const skipParts: string[] = [];
     if (unmatched.vocabulary.length) {
       skipParts.push(
-        `词汇未在原文中找到，已跳过：${unmatched.vocabulary.join("、")}`,
-      );
-    }
-    if (unmatched.grammar.length) {
-      skipParts.push(
-        `语法片段未在原文中找到，已跳过：${unmatched.grammar.join("、")}`,
+        `下列词汇 surface 未在原文中精确匹配，仍将保存为本篇词条（文中暂无高亮；请核对）：${unmatched.vocabulary.join("、")}`,
       );
     }
     const skipMessage = skipParts.length ? skipParts.join("\n") : null;
@@ -703,37 +709,26 @@ function ArticleDetailPageContent() {
         status,
       ]),
     );
-    const grammarStatusByKey = new Map(
-      editableRealAiGrammar.map(({ item, status }) => [
-        aiGrammarCandidateKey(item),
-        status,
-      ]),
-    );
 
-    const { vocabulary: v0, grammar: g0 } =
-      convertAnalysisResultToArticleItems(filteredRealAiPreview, articlePlain, {
+    const { vocabulary: v0 } = convertAnalysisResultToArticleItems(
+      filteredRealAiPreview,
+      articlePlain,
+      {
         itemSource: "ai",
-      });
+      },
+    );
     const fv = finalizeArticleVocabularyItems(v0, articlePlain).map((item) => ({
       ...item,
       mastery_status:
         vocabStatusByKey.get(aiVocabularyCandidateKey(item)) ??
         item.mastery_status,
     }));
-    const fg = expandGrammarItemsWithRepeatedSurface(g0, articlePlain).map(
-      (item) => ({
-        ...item,
-        mastery_status:
-          grammarStatusByKey.get(aiGrammarCandidateKey(item)) ??
-          item.mastery_status,
-      }),
-    );
 
     let firstError: string | null = null;
     try {
       const sb = getSupabaseBrowserClient();
-      /** 每次保存都同步当前预览中的词汇/语法（含重新分析后）；勿仅在首次保存时写入，否则 lemma 等无法随再次保存修复 */
-      if (fv.length > 0 || fg.length > 0) {
+      /** 每次保存都同步当前预览中的词汇（含重新分析后） */
+      if (fv.length > 0) {
         for (const item of fv) {
           const { error } = await persistManualVocabularyItem(sb, {
             userId: session.user.id,
@@ -743,17 +738,6 @@ function ArticleDetailPageContent() {
           });
           if (error) {
             firstError = firstError ?? `词汇「${item.display_word}」：${error}`;
-          }
-        }
-        for (const item of fg) {
-          const { error } = await persistManualGrammarItem(sb, {
-            userId: session.user.id,
-            articleId: article.id,
-            articlePlain,
-            item,
-          });
-          if (error) {
-            firstError = firstError ?? `语法「${item.name_zh}」：${error}`;
           }
         }
 
@@ -786,8 +770,6 @@ function ArticleDetailPageContent() {
       const { error: artUpdErr } = await sb
         .from("articles")
         .update({
-          summary_zh: realAiPreview.summary_zh,
-          summary_de_simple: realAiPreview.summary_de_simple,
           reading_questions: realAiPreview.reading_questions,
         })
         .eq("id", article.id)
@@ -795,7 +777,7 @@ function ArticleDetailPageContent() {
 
       if (artUpdErr) {
         setRealAiSaveError(
-          `保存摘要与阅读问题失败：${formatSupabaseOrUnknownError(artUpdErr)}`,
+          `保存阅读问题失败：${formatSupabaseOrUnknownError(artUpdErr)}`,
         );
         return;
       }
@@ -804,8 +786,6 @@ function ArticleDetailPageContent() {
         prev
           ? {
               ...prev,
-              summary_zh: realAiPreview.summary_zh,
-              summary_de_simple: realAiPreview.summary_de_simple,
               reading_questions: realAiPreview.reading_questions,
             }
           : prev,
@@ -818,7 +798,6 @@ function ArticleDetailPageContent() {
   }, [
     article,
     articlePlain,
-    editableRealAiGrammar,
     editableRealAiVocabulary,
     filteredRealAiPreview,
     loadAsideLearningData,
@@ -883,32 +862,6 @@ function ArticleDetailPageContent() {
     }
   }, [article, deleteRunning, router, session]);
 
-  const summaryPanel =
-    summaryAndQuestionsForTabs &&
-    (summaryAndQuestionsForTabs.summaryZh ||
-      summaryAndQuestionsForTabs.summaryDe) ? (
-      <div className="space-y-3 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
-        {summaryAndQuestionsForTabs.summaryZh ? (
-          <p>{summaryAndQuestionsForTabs.summaryZh}</p>
-        ) : null}
-        {summaryAndQuestionsForTabs.summaryDe ? (
-          <p className="text-zinc-600 dark:text-zinc-400">
-            {summaryAndQuestionsForTabs.summaryDe}
-          </p>
-        ) : null}
-        {summaryAndQuestionsForTabs.footerNote ? (
-          <p className="text-xs text-zinc-500">
-            {summaryAndQuestionsForTabs.footerNote}
-          </p>
-        ) : null}
-      </div>
-    ) : (
-      <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-        暂无摘要：可在上方运行真实 AI 分析并保存。
-        {IS_DEV ? "（开发环境可在「开发工具」中使用 Mock 预览 UI，不会写入云端。）" : ""}
-      </p>
-    );
-
   const questionsPanel =
     summaryAndQuestionsForTabs &&
     summaryAndQuestionsForTabs.questions.length > 0 ? (
@@ -919,8 +872,7 @@ function ArticleDetailPageContent() {
       </ol>
     ) : (
       <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-        暂无阅读问题：可在上方运行真实 AI 分析并保存。
-        {IS_DEV ? "（开发环境可在「开发工具」中使用 Mock 预览 UI，不会写入云端。）" : ""}
+        运行 AI 分析并保存后，阅读问题会显示在这里。
       </p>
     );
 
@@ -933,11 +885,11 @@ function ArticleDetailPageContent() {
 
   const aiStatusLabel = useMemo(() => {
     if (realAiSaving) return "保存中…";
-    if (realAiError) return "OpenAI API 错误";
+    if (realAiError) return "分析失败";
     if (realAiRunning && realAiPreview) return "重新分析中…";
     if (realAiRunning) return "分析中…";
-    if (realAiPreview) return "已生成 AI 预览，尚未保存";
-    if (showRealAiSavedStatus) return "AI 分析结果已保存";
+    if (realAiPreview) return "有预览，尚未保存";
+    if (showRealAiSavedStatus) return "已保存";
     return "尚未分析";
   }, [
     realAiError,
@@ -953,7 +905,7 @@ function ArticleDetailPageContent() {
       : realAiPreview
         ? "查看 AI 预览"
         : hasSavedArticleAiBaseline
-          ? "重新分析本文（会再次调用 AI）"
+          ? "重新分析"
           : "AI 分析本文";
 
   if (session === undefined) {
@@ -1062,39 +1014,43 @@ function ArticleDetailPageContent() {
             {deleteRunning ? "删除中…" : "删除文章"}
           </Button>
         </div>
-        <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-          {article.source_name ? (
+        {article.source_name ? (
+          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+            来源：{article.source_name}
+          </p>
+        ) : null}
+        <details className="mt-2 text-sm">
+          <summary className="cursor-pointer select-none font-medium text-zinc-600 marker:hidden dark:text-zinc-400 [&::-webkit-details-marker]:hidden">
+            文章信息
+          </summary>
+          <dl className="mt-2 grid gap-2 sm:grid-cols-2">
+            {article.url ? (
+              <div className="sm:col-span-2">
+                <dt className="text-zinc-500">链接</dt>
+                <dd>
+                  <a
+                    href={article.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="break-all text-emerald-700 hover:underline dark:text-emerald-400"
+                  >
+                    {article.url}
+                  </a>
+                </dd>
+              </div>
+            ) : null}
             <div>
-              <dt className="text-zinc-500">来源</dt>
-              <dd className="text-zinc-900 dark:text-zinc-100">{article.source_name}</dd>
-            </div>
-          ) : null}
-          {article.url ? (
-            <div className="sm:col-span-2">
-              <dt className="text-zinc-500">链接</dt>
-              <dd>
-                <a
-                  href={article.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="break-all text-emerald-700 hover:underline dark:text-emerald-400"
-                >
-                  {article.url}
-                </a>
+              <dt className="text-zinc-500">阅读水平</dt>
+              <dd className="text-zinc-900 dark:text-zinc-100">
+                {article.user_level_at_analysis ?? "—"}
               </dd>
             </div>
-          ) : null}
-          <div>
-            <dt className="text-zinc-500">分析时水平</dt>
-            <dd className="text-zinc-900 dark:text-zinc-100">
-              {article.user_level_at_analysis ?? "—"}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-zinc-500">保存时间</dt>
-            <dd className="text-zinc-900 dark:text-zinc-100">{createdLabel}</dd>
-          </div>
-        </dl>
+            <div>
+              <dt className="text-zinc-500">保存时间</dt>
+              <dd className="text-zinc-900 dark:text-zinc-100">{createdLabel}</dd>
+            </div>
+          </dl>
+        </details>
       </div>
 
       {asideLoadError ? (
@@ -1102,8 +1058,11 @@ function ArticleDetailPageContent() {
           className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100"
           role="alert"
         >
-          <p className="font-medium">本篇词汇/语法未能从云端加载</p>
-          <p className="mt-1 text-xs opacity-90">{asideLoadError}</p>
+          <p className="font-medium">本篇词汇与语法加载失败</p>
+          <p className="mt-1 text-xs opacity-90">请刷新页面后重试。</p>
+          {IS_DEV ? (
+            <p className="mt-1 text-xs opacity-75">{asideLoadError}</p>
+          ) : null}
         </div>
       ) : null}
 
@@ -1145,9 +1104,7 @@ function ArticleDetailPageContent() {
           metaTitle={article.title ?? "（无标题）"}
           initialVocabularyItems={mergedVocabulary}
           initialGrammarItems={mergedGrammar}
-          summaryPanel={summaryPanel}
           questionsPanel={questionsPanel}
-          legendMode="full"
           selectionLabels={{
             addVocab: "添加为词汇",
             addGrammar: "添加为语法",
@@ -1157,6 +1114,18 @@ function ArticleDetailPageContent() {
           onPersistError={(msg) => setPersistMessage(msg)}
           enrichUserLevel={articleAnalysisLevel(article.user_level_at_analysis)}
           initialFocus={initialReaderFocus}
+          readingHelpExtra={
+            <>
+              <p>
+                阅读水平 {analysisLevel}：整文分析生成词汇与阅读问题；语法请拖选后标记。保存后写入本篇。
+              </p>
+              {hasSavedArticleAiBaseline ? (
+                <p className="text-amber-800 dark:text-amber-200/90">
+                  「重新分析」会再次调用 AI，确认后执行。
+                </p>
+              ) : null}
+            </>
+          }
           analysisToolbar={
             <div className="space-y-3">
               <div className="rounded-lg border border-zinc-200 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-900/40">
@@ -1181,21 +1150,17 @@ function ArticleDetailPageContent() {
                       disabled={realAiRunning}
                       onClick={() => void handleRealAiReanalyze()}
                     >
-                      {realAiRunning
-                        ? "重新分析中…"
-                        : "重新分析（会再次调用 OpenAI）"}
+                      {realAiRunning ? "重新分析中…" : "重新分析"}
                     </Button>
                   ) : null}
-                  <span className="text-xs text-zinc-600 dark:text-zinc-400">
-                    当前分析水平：{analysisLevel}
-                  </span>
                 </div>
-                <p className="mt-2 text-xs text-amber-800 dark:text-amber-200/90">
-                  「重新分析本文（会再次调用 AI）」会再次请求 OpenAI 并产生 API 成本；请先确认弹窗提示。
-                </p>
-                <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
-                  首次「AI 分析本文」生成预览，不会自动覆盖已保存内容；保存后才会写入词库/语法库与摘要/阅读问题。刷新或重进本文只读库内数据，不会自动重新分析。
-                </p>
+                <div className="mt-2 w-full">
+                  <FullArticleTranslationExternal
+                    articlePlain={articlePlain}
+                    title={article?.title ?? undefined}
+                    disabled={!articlePlain.trim()}
+                  />
+                </div>
                 {IS_DEV ? (
                   <details className="mt-3 rounded-md border border-dashed border-zinc-300 bg-white/60 p-2 dark:border-zinc-600 dark:bg-zinc-950/40">
                     <summary className="cursor-pointer select-none text-xs font-medium text-zinc-700 dark:text-zinc-300">
@@ -1204,7 +1169,7 @@ function ArticleDetailPageContent() {
                     <div className="mt-2 space-y-2 border-t border-zinc-200 pt-2 dark:border-zinc-700">
                       <p className="text-xs text-zinc-600 dark:text-zinc-400">
                         不调用 OpenAI，仅用于开发测试 UI。Mock 结果仅存于本页内存，不会写入云端，也不会覆盖真实
-                        AI 预览或已保存的摘要/阅读问题。
+                        AI 预览或已保存的阅读问题。
                       </p>
                       <Button
                         type="button"
@@ -1224,10 +1189,18 @@ function ArticleDetailPageContent() {
                   className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100"
                   role="status"
                 >
-                  <p className="font-medium">真实 AI 预览失败</p>
-                  <p className="mt-1 whitespace-pre-wrap break-words">
-                    {realAiError}
+                  <p className="font-medium">分析失败</p>
+                  <p className="mt-1 text-xs">
+                    请稍后再试。若持续失败，请检查网络或 API 配置。
                   </p>
+                  <details className="mt-2 text-xs">
+                    <summary className="cursor-pointer text-amber-900/80 dark:text-amber-100/80">
+                      详情
+                    </summary>
+                    <p className="mt-1 whitespace-pre-wrap break-words opacity-90">
+                      {realAiError}
+                    </p>
+                  </details>
                   <button
                     type="button"
                     className="mt-2 text-xs underline"
@@ -1244,20 +1217,13 @@ function ArticleDetailPageContent() {
                   className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4 text-sm dark:border-emerald-900/40 dark:bg-emerald-950/25"
                 >
                   <p className="font-medium text-emerald-900 dark:text-emerald-100">
-                    {realAiSavedToLibrary
-                      ? "AI 分析结果已保存（预览区）"
-                      : "AI 预览（尚未保存）"}
+                    {realAiSavedToLibrary ? "AI 分析结果" : "AI 预览"}
                   </p>
-                  <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">
+                  <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
                     {realAiSavedToLibrary
-                      ? "词汇与语法已写入本篇学习数据。再次点击「保存…」会用当前预览中的候选同步词库/语法库（含词典形 lemma 更新），并更新摘要与阅读问题。"
-                      : "结果尚未保存到词库/语法库。重新分析会再次调用 OpenAI 并产生 API 成本。"}
+                      ? "已写入本篇词汇与阅读问题；可展开查看或再次保存以同步更新。"
+                      : "保存后写入本篇词汇与阅读问题，并在正文中高亮可定位的词。"}
                   </p>
-                  {!realAiSavedToLibrary ? (
-                    <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">
-                      保存后，AI 词汇与语法将进入右侧学习面板并在原文中高亮；中文/德语摘要与阅读问题将写入本文章。
-                    </p>
-                  ) : null}
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <Button
                       type="button"
@@ -1267,8 +1233,8 @@ function ArticleDetailPageContent() {
                       {realAiSaving
                         ? "保存中…"
                         : realAiSavedToLibrary
-                          ? "保存预览并更新摘要"
-                          : "保存 AI 结果到词库/语法库"}
+                          ? "保存预览并更新阅读问题"
+                          : "保存 AI 词汇与阅读问题"}
                     </Button>
                   </div>
                   {realAiSaveError ? (
@@ -1277,9 +1243,13 @@ function ArticleDetailPageContent() {
                       role="alert"
                     >
                       <p className="font-medium">保存失败</p>
-                      <pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap break-words font-sans">
-                        {realAiSaveError}
-                      </pre>
+                      <p className="mt-1">请稍后再试。</p>
+                      <details className="mt-1 text-[11px]">
+                        <summary className="cursor-pointer">详情</summary>
+                        <pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap break-words font-sans">
+                          {realAiSaveError}
+                        </pre>
+                      </details>
                       <button
                         type="button"
                         className="mt-2 text-xs underline"
@@ -1300,21 +1270,20 @@ function ArticleDetailPageContent() {
                     </p>
                   ) : null}
 
-                  <div className="mt-4 space-y-4 text-zinc-800 dark:text-zinc-200">
+                  <details
+                    className="mt-4 text-zinc-800 dark:text-zinc-200"
+                    open={!realAiSavedToLibrary}
+                  >
+                    <summary className="cursor-pointer select-none text-xs font-medium text-zinc-700 marker:hidden dark:text-zinc-300 [&::-webkit-details-marker]:hidden">
+                      {realAiSavedToLibrary
+                        ? `查看详情（${editableRealAiVocabulary.length} 个词 · ${realAiPreview.reading_questions.length} 条问题）`
+                        : `词汇与阅读问题（${editableRealAiVocabulary.length} 个词）`}
+                    </summary>
+                    <div className="mt-3 space-y-4">
                     <section>
                       <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                        词汇（{editableRealAiVocabulary.length}
-                        {editableRealAiVocabulary.length !==
-                        realAiPreview.vocabulary.length
-                          ? ` / ${realAiPreview.vocabulary.length}`
-                          : ""}
-                        ）
+                        词汇（{editableRealAiVocabulary.length}）
                       </h3>
-                      {!realAiSavedToLibrary ? (
-                        <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
-                          保存前可删除不想要的候选，或先标为已掌握 / 暂忽略；最后一键保存。
-                        </p>
-                      ) : null}
                       <ul className="mt-2 max-h-48 space-y-2 overflow-y-auto text-xs">
                         {editableRealAiVocabulary.map(({ item: v, index, status }) => (
                           <li
@@ -1335,12 +1304,23 @@ function ArticleDetailPageContent() {
                                   · {posLabelZh(v.part_of_speech)} · {v.level_estimate}
                                 </span>
                               </p>
-                              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-900 dark:bg-amber-950/70 dark:text-amber-100">
-                                AI 候选 · {aiCandidateStatusLabel(status)}
-                              </span>
+                              <div className="flex flex-wrap items-center justify-end gap-1.5">
+                                {!findBestTextOccurrence(
+                                  articlePlain,
+                                  v.surface_form.trim(),
+                                  0,
+                                ) ? (
+                                  <span className="rounded bg-zinc-200 px-1.5 py-0.5 text-[10px] font-medium text-zinc-800 dark:bg-zinc-700 dark:text-zinc-100">
+                                    未定位
+                                  </span>
+                                ) : null}
+                                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-900 dark:bg-amber-950/70 dark:text-amber-100">
+                                  AI 候选 · {aiCandidateStatusLabel(status)}
+                                </span>
+                              </div>
                             </div>
                             <p className="mt-0.5 text-[11px] text-zinc-500 dark:text-zinc-400">
-                              词典形（lemma，将写入词库）：
+                              词典形：
                               <span className="ml-1 font-medium text-zinc-700 dark:text-zinc-200">
                                 {v.lemma.trim() || "—"}
                               </span>
@@ -1401,93 +1381,10 @@ function ArticleDetailPageContent() {
                         ))}
                         {editableRealAiVocabulary.length === 0 ? (
                           <li className="rounded border border-dashed border-zinc-300 p-2 text-xs text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-                            词汇候选已全部删除；仍可保存摘要与阅读问题。
+                            词汇候选已全部删除；仍可保存阅读问题。
                           </li>
                         ) : null}
                       </ul>
-                    </section>
-
-                    <section>
-                      <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                        语法（{editableRealAiGrammar.length}
-                        {editableRealAiGrammar.length !== realAiPreview.grammar.length
-                          ? ` / ${realAiPreview.grammar.length}`
-                          : ""}
-                        ）
-                      </h3>
-                      <ul className="mt-2 max-h-48 space-y-2 overflow-y-auto text-xs">
-                        {editableRealAiGrammar.map(({ item: g, index, status }) => (
-                          <li
-                            key={`${g.grammar_key}-${g.normalized_key}-${index}`}
-                            className="rounded border border-zinc-200/80 bg-white/80 p-2 dark:border-zinc-700 dark:bg-zinc-900/50"
-                          >
-                            <div className="flex flex-wrap items-start justify-between gap-2">
-                              <p>
-                                <span className="font-medium">
-                                  「{g.selected_text}」
-                                </span>
-                                <span className="text-zinc-500">
-                                  {" "}
-                                  · {g.name_zh} · {g.level_estimate}
-                                </span>
-                              </p>
-                              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-900 dark:bg-amber-950/70 dark:text-amber-100">
-                                AI 候选 · {aiCandidateStatusLabel(status)}
-                              </span>
-                            </div>
-                            <p className="mt-1 text-zinc-700 dark:text-zinc-300">
-                              {g.explanation_zh}
-                            </p>
-                            {!realAiSavedToLibrary ? (
-                              <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-zinc-200/70 pt-2 dark:border-zinc-700/70">
-                                <label className="text-xs text-zinc-600 dark:text-zinc-400">
-                                  状态{" "}
-                                  <select
-                                    value={status}
-                                    onChange={(e) =>
-                                      handleRealAiGrammarStatusChange(
-                                        index,
-                                        e.currentTarget.value as MasteryStatus,
-                                      )
-                                    }
-                                    className="h-7 rounded-md border border-zinc-300 bg-white px-2 text-xs font-medium text-zinc-800 shadow-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-                                  >
-                                    <option value="new">学习中</option>
-                                    <option value="mastered">已掌握</option>
-                                    <option value="ignored">暂忽略</option>
-                                  </select>
-                                </label>
-                                <button
-                                  type="button"
-                                  className="h-7 rounded-md border border-zinc-300 px-2 text-xs text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
-                                  onClick={() =>
-                                    handleRemoveRealAiGrammarCandidate(index)
-                                  }
-                                >
-                                  删除候选
-                                </button>
-                              </div>
-                            ) : null}
-                          </li>
-                        ))}
-                        {editableRealAiGrammar.length === 0 ? (
-                          <li className="rounded border border-dashed border-zinc-300 p-2 text-xs text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-                            语法候选已全部删除；仍可保存摘要与阅读问题。
-                          </li>
-                        ) : null}
-                      </ul>
-                    </section>
-
-                    <section>
-                      <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                        摘要
-                      </h3>
-                      <p className="mt-2 text-xs leading-relaxed">
-                        {realAiPreview.summary_zh}
-                      </p>
-                      <p className="mt-2 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
-                        {realAiPreview.summary_de_simple}
-                      </p>
                     </section>
 
                     <section>
@@ -1500,24 +1397,14 @@ function ArticleDetailPageContent() {
                         ))}
                       </ol>
                     </section>
-                  </div>
+                    </div>
+                  </details>
                 </div>
               ) : null}
             </div>
           }
         />
       )}
-
-      <p className="text-xs text-zinc-500">
-        完整演示（含课文嵌入词块）见{" "}
-        <Link href="/articles/mock" className="text-emerald-700 hover:underline dark:text-emerald-400">
-          演示课文
-        </Link>
-        。本篇手动添加与确认保存的真实 AI（source = ai）词汇/语法写入云端；摘要与阅读问题在保存后写入本文章。
-        {IS_DEV
-          ? " 开发环境下「开发工具」中的 Mock 分析仅本地预览，不入库。"
-          : ""}
-      </p>
     </div>
   );
 }

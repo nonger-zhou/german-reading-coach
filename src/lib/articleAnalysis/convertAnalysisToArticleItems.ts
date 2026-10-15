@@ -85,7 +85,7 @@ function buildGrammarOccurrence(
   };
 }
 
-/** 将分析结果转为阅读页词条；仅能在 `articlePlain` 中定位的项会加入。`itemSource`：`ai_mock`（Mock）或 `ai`（真实 OpenAI 保存）。 */
+/** 将分析结果转为阅读页词条。词汇：无法在正文中定位 `surface_form` 时仍生成条目（本篇词汇计数与保存一致，文中暂无高亮）。语法：仍仅保留可定位项。`itemSource`：`ai_mock`（Mock）或 `ai`（真实 OpenAI 保存）。 */
 export function convertAnalysisResultToArticleItems(
   result: ArticleAnalysisResult,
   articlePlain: string,
@@ -94,21 +94,37 @@ export function convertAnalysisResultToArticleItems(
   const itemSource = options?.itemSource ?? "ai_mock";
   const vocabulary: ArticleVocabItem[] = [];
   for (const av of result.vocabulary) {
-    const occ = buildVocabOccurrence(
-      articlePlain,
-      av.surface_form,
-      av.occurrences,
-    );
-    if (!occ) continue;
-
-    const nk = normalizeTextKey(av.normalized_key || av.surface_form);
     const sense: VocabSense = {
       id: newEntityId("sense"),
       zh_meaning: av.zh_meaning,
       simple_de_explanation: av.simple_de_explanation,
       example_sentence: av.example_sentence,
     };
-    occ.sense_id = sense.id;
+
+    const occBuilt = buildVocabOccurrence(
+      articlePlain,
+      av.surface_form,
+      av.occurrences,
+    );
+    let occ: VocabOccurrence;
+    if (!occBuilt) {
+      const surf = av.surface_form.trim();
+      if (!surf) continue;
+      occ = {
+        id: newEntityId("voc-occ"),
+        surface_form: surf,
+        sentence:
+          "（未在正文中定位到与 surface_form 一致的连续片段；保存后可在右侧学习，文中暂无高亮；请核对原文拼写。）",
+        fallbackMatchText: surf,
+        source: "ai_detected",
+        sense_id: sense.id,
+      };
+    } else {
+      occ = occBuilt;
+      occ.sense_id = sense.id;
+    }
+
+    const nk = normalizeTextKey(av.normalized_key || av.surface_form);
 
     vocabulary.push({
       id: newEntityId("v-item"),
@@ -162,7 +178,7 @@ export function convertAnalysisResultToArticleItems(
   return { vocabulary, grammar };
 }
 
-/** 预览保存前：在 `articlePlain` 中无法子串匹配的词汇/语法（不写入 occurrence）。 */
+/** 预览保存前：列出在 `articlePlain` 中无法子串匹配的词汇 surface / 语法 selected_text（用于提示；词汇仍会入库但暂无高亮）。 */
 export function listRealAiEntriesWithoutTextMatch(
   result: ArticleAnalysisResult,
   articlePlain: string,

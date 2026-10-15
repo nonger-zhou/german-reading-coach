@@ -98,8 +98,7 @@ function uiStatusFromMastery(s: MasteryStatus | null): UiStatus {
 }
 
 function sourceLabel(s: string | null): string {
-  if (s === "ai") return "AI";
-  if (s === "ai_mock") return "AI Mock";
+  if (s === "ai" || s === "ai_mock") return "AI";
   if (s === "manual") return "手动";
   return s?.trim() ? s : "未知";
 }

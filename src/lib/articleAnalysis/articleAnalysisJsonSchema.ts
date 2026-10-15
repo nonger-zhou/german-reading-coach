@@ -4,7 +4,8 @@ import { FINITE_VERB_POSITION_VALUES, GRAMMAR_TYPE_VALUES } from "./grammarTypes
  * OpenAI Chat Completions `response_format.json_schema`（strict）。
  * 与 {@link ArticleAnalysisResult} 字段对齐；不含可选 `occurrences`。
  */
-export const ARTICLE_ANALYSIS_JSON_SCHEMA = {
+/** Legacy：含 grammar + 摘要 + vocabulary + reading_questions */
+export const ARTICLE_ANALYSIS_JSON_SCHEMA_LEGACY = {
   name: "article_analysis",
   strict: true as const,
   schema: {
@@ -110,3 +111,6 @@ export const ARTICLE_ANALYSIS_JSON_SCHEMA = {
     ],
   },
 } as const;
+
+/** @deprecated 实验/回归用别名；生产默认见 ARTICLE_VOCAB_FIRST_JSON_SCHEMA */
+export const ARTICLE_ANALYSIS_JSON_SCHEMA = ARTICLE_ANALYSIS_JSON_SCHEMA_LEGACY;

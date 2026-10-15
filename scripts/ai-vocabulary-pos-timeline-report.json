@@ -1,0 +1,3188 @@
+{
+  "generatedAt": "2026-05-19T17:04:37.448Z",
+  "auth_mode": "user_jwt_2_accounts",
+  "accounts": [
+    {
+      "account": "account_1",
+      "totals": {
+        "vocabulary_items_all": 408,
+        "ai_vocabulary_items": 282,
+        "articles_with_ai_vocab": 30
+      },
+      "per_item_pos_distribution": {
+        "total": 282,
+        "noun": 257,
+        "verb": 9,
+        "phrase": 3,
+        "other": 13
+      }
+    },
+    {
+      "account": "info@schoental.ch",
+      "totals": {
+        "vocabulary_items_all": 426,
+        "ai_vocabulary_items": 334,
+        "articles_with_ai_vocab": 27
+      },
+      "per_item_pos_distribution": {
+        "total": 334,
+        "noun": 282,
+        "verb": 14,
+        "phrase": 2,
+        "other": 36
+      }
+    }
+  ],
+  "totals_merged": {
+    "vocabulary_items_all": 834,
+    "ai_vocabulary_items": 616,
+    "articles_with_ai_vocab": 57
+  },
+  "per_item_pos_distribution_merged": {
+    "total": 616,
+    "noun": 539,
+    "verb": 23,
+    "phrase": 5,
+    "other": 49
+  },
+  "month_timeline": [
+    {
+      "month": "2026-05",
+      "articles": 59,
+      "all_noun_articles": 30,
+      "with_verb_articles": 13,
+      "total_vocab": 647,
+      "bucket_sum": {
+        "noun": 568,
+        "verb": 23,
+        "phrase": 5,
+        "other": 51
+      },
+      "by_account": {
+        "account_1": {
+          "articles": 31,
+          "all_noun": 15,
+          "with_verb": 6
+        },
+        "info@schoental.ch": {
+          "articles": 28,
+          "all_noun": 15,
+          "with_verb": 7
+        }
+      }
+    }
+  ],
+  "inference": {
+    "first_all_noun_article_merged": {
+      "account": "account_1",
+      "timeline_at": "2026-05-03T08:49:28.317002+00:00",
+      "title": "Auch Swiss dabei: Schnelles Internet ermöglicht Telefonieren im Flugzeug",
+      "vocab_count": 7
+    },
+    "note": "all_noun_like：≥2 条且均为名词类（含中文「名词」）"
+  },
+  "articles_chronological": [
+    {
+      "account": "account_1",
+      "article_id": "e93fbfdf-d047-4a8b-8072-64d73634bee4",
+      "title": "Auch Swiss dabei: Schnelles Internet ermöglicht Telefonieren im Flugzeug",
+      "article_created_at": "2026-05-03T08:49:28.317002+00:00",
+      "timeline_at": "2026-05-03T08:49:28.317002+00:00",
+      "vocab_count": 7,
+      "buckets": {
+        "noun": 7,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": true,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "Noun",
+          "lemma": "Verbindung",
+          "bucket": "noun"
+        },
+        {
+          "pos": "Noun",
+          "lemma": "Anrufe",
+          "bucket": "noun"
+        },
+        {
+          "pos": "Noun",
+          "lemma": "Fluggäste",
+          "bucket": "noun"
+        },
+        {
+          "pos": "Noun",
+          "lemma": "Lufthansa",
+          "bucket": "noun"
+        },
+        {
+          "pos": "Noun",
+          "lemma": "Telefonie",
+          "bucket": "noun"
+        },
+        {
+          "pos": "Noun",
+          "lemma": "Regeln",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "account_1",
+      "article_id": "f9d54487-5f49-45f5-8690-3bffd2a35a7e",
+      "title": "Die Welt wird besser, wenn wir weniger Erdöl verbrauchen",
+      "article_created_at": "2026-05-03T09:15:20.607305+00:00",
+      "timeline_at": "2026-05-03T09:15:20.607305+00:00",
+      "vocab_count": 10,
+      "buckets": {
+        "noun": 9,
+        "verb": 0,
+        "adjective": 1,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": false,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "Noun",
+          "lemma": "Wirtschaft",
+          "bucket": "noun"
+        },
+        {
+          "pos": "Noun",
+          "lemma": "Energiewende",
+          "bucket": "noun"
+        },
+        {
+          "pos": "Adjective",
+          "lemma": "ökologisch",
+          "bucket": "adjective"
+        },
+        {
+          "pos": "Noun",
+          "lemma": "Abhängigkeit",
+          "bucket": "noun"
+        },
+        {
+          "pos": "Noun",
+          "lemma": "Klimawandel",
+          "bucket": "noun"
+        },
+        {
+          "pos": "Noun",
+          "lemma": "Folgeschäden",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "account_1",
+      "article_id": "94dd5a29-0209-4133-83c7-159c5550e255",
+      "title": "Wie können wir den Verschwendungs­trend brechen, Herr Takacs?",
+      "article_created_at": "2026-05-03T09:47:09.527693+00:00",
+      "timeline_at": "2026-05-03T09:47:09.527693+00:00",
+      "vocab_count": 13,
+      "buckets": {
+        "noun": 11,
+        "verb": 2,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": false,
+      "has_verb": true,
+      "has_phrase": false,
+      "source_mix": [
+        "ai_mock",
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "Verb",
+          "lemma": "können",
+          "bucket": "verb"
+        },
+        {
+          "pos": "Noun",
+          "lemma": "Wirtschaft",
+          "bucket": "noun"
+        },
+        {
+          "pos": "Substantiv",
+          "lemma": "Takacs",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Anleitung",
+          "bucket": "noun"
+        },
+        {
+          "pos": "Substantiv",
+          "lemma": "Verschwendungs",
+          "bucket": "noun"
+        },
+        {
+          "pos": "Verb",
+          "lemma": "brechen",
+          "bucket": "verb"
+        }
+      ]
+    },
+    {
+      "account": "account_1",
+      "article_id": "6af831d5-f4a2-48b2-b107-ab1dc2b997ea",
+      "title": "12 sonnige Wohnideen",
+      "article_created_at": "2026-05-03T10:12:18.026616+00:00",
+      "timeline_at": "2026-05-03T10:12:18.026616+00:00",
+      "vocab_count": 10,
+      "buckets": {
+        "noun": 10,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": true,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "Noun",
+          "lemma": "Wohnideen",
+          "bucket": "noun"
+        },
+        {
+          "pos": "Noun",
+          "lemma": "Sonnenlicht",
+          "bucket": "noun"
+        },
+        {
+          "pos": "Noun",
+          "lemma": "Wohngestaltung",
+          "bucket": "noun"
+        },
+        {
+          "pos": "Noun",
+          "lemma": "Sitzmöbel",
+          "bucket": "noun"
+        },
+        {
+          "pos": "Noun",
+          "lemma": "Schattenplätze",
+          "bucket": "noun"
+        },
+        {
+          "pos": "Noun",
+          "lemma": "Farbenpracht",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "account_1",
+      "article_id": "7795ccb0-bb5b-4380-8f49-fae73915eacb",
+      "title": "Kleine Dinge und grosse Ideen",
+      "article_created_at": "2026-05-03T12:20:30.188499+00:00",
+      "timeline_at": "2026-05-03T12:20:30.188499+00:00",
+      "vocab_count": 4,
+      "buckets": {
+        "noun": 2,
+        "verb": 2,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": false,
+      "has_verb": true,
+      "has_phrase": false,
+      "source_mix": [
+        "ai_mock"
+      ],
+      "sample": [
+        {
+          "pos": "Verb",
+          "lemma": "Kleine",
+          "bucket": "verb"
+        },
+        {
+          "pos": "Substantiv",
+          "lemma": "grosse",
+          "bucket": "noun"
+        },
+        {
+          "pos": "Verb",
+          "lemma": "Stylistin",
+          "bucket": "verb"
+        },
+        {
+          "pos": "Substantiv",
+          "lemma": "Camilla",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "account_1",
+      "article_id": "57a50f61-6480-4def-84a5-87cf2333f624",
+      "title": "«Die Angst vor der Waffe im Haus ist bei vielen älteren Paaren ein Thema»",
+      "article_created_at": "2026-05-03T19:32:27.848393+00:00",
+      "timeline_at": "2026-05-03T19:32:27.848393+00:00",
+      "vocab_count": 7,
+      "buckets": {
+        "noun": 7,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": true,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "Noun",
+          "lemma": "Waffe",
+          "bucket": "noun"
+        },
+        {
+          "pos": "Noun",
+          "lemma": "Statistik",
+          "bucket": "noun"
+        },
+        {
+          "pos": "Noun",
+          "lemma": "Tötungsdelikte",
+          "bucket": "noun"
+        },
+        {
+          "pos": "Noun",
+          "lemma": "Femizide",
+          "bucket": "noun"
+        },
+        {
+          "pos": "Noun",
+          "lemma": "Ermittlungen",
+          "bucket": "noun"
+        },
+        {
+          "pos": "Noun",
+          "lemma": "Häusliche Gewalt",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "account_1",
+      "article_id": "__no_article__",
+      "title": "(无文章关联)",
+      "article_created_at": null,
+      "timeline_at": "2026-05-03T19:45:57.519208+00:00",
+      "vocab_count": 17,
+      "buckets": {
+        "noun": 14,
+        "verb": 1,
+        "adjective": 1,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 1
+      },
+      "all_noun_like": false,
+      "has_verb": true,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "名词短语",
+          "lemma": "sportliche Entwicklung",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Trennung",
+          "bucket": "noun"
+        },
+        {
+          "pos": "形容词",
+          "lemma": "öffentlich",
+          "bucket": "adjective"
+        },
+        {
+          "pos": "名词",
+          "lemma": "technischer Direktor",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Lebensabschnitt",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词短语",
+          "lemma": "zärtlichen Gesten",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "account_1",
+      "article_id": "3ddd42d2-769a-4410-a15f-b8c2b515cd06",
+      "title": "70 Tote zu viel unter dem ehemaligen Klinikleiter Francesco Maisano",
+      "article_created_at": "2026-05-05T16:08:53.422318+00:00",
+      "timeline_at": "2026-05-05T16:08:53.422318+00:00",
+      "vocab_count": 7,
+      "buckets": {
+        "noun": 7,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": true,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "NOUN",
+          "lemma": "Entschuldigung",
+          "bucket": "noun"
+        },
+        {
+          "pos": "NOUN",
+          "lemma": "Patienten",
+          "bucket": "noun"
+        },
+        {
+          "pos": "NOUN",
+          "lemma": "Verfehlungen",
+          "bucket": "noun"
+        },
+        {
+          "pos": "NOUN",
+          "lemma": "Mortalität",
+          "bucket": "noun"
+        },
+        {
+          "pos": "NOUN",
+          "lemma": "Eingriffe",
+          "bucket": "noun"
+        },
+        {
+          "pos": "NOUN",
+          "lemma": "Vorwürfe",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "account_1",
+      "article_id": "4525f38e-e80e-47e8-a43b-c3e3136fa39b",
+      "title": "Die Schweiz zeigt sich von ihrer schönsten Seite",
+      "article_created_at": "2026-05-05T23:38:45.741873+00:00",
+      "timeline_at": "2026-05-05T23:38:45.741873+00:00",
+      "vocab_count": 13,
+      "buckets": {
+        "noun": 10,
+        "verb": 2,
+        "adjective": 1,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": false,
+      "has_verb": true,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "名词",
+          "lemma": "Regenbogen",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Temperaturen",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Doppelregenbogen",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "vorübergehend recht sonniges Wetter",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Regenschauer",
+          "bucket": "noun"
+        },
+        {
+          "pos": "动词",
+          "lemma": "schweigt man ehrfürchtig",
+          "bucket": "verb"
+        }
+      ]
+    },
+    {
+      "account": "account_1",
+      "article_id": "7d471e2b-0aab-4f13-b5f4-a2523fe72be3",
+      "title": "Trumps Truppenabzug sende «falsches Signal» an Putin",
+      "article_created_at": "2026-05-06T08:39:13.844523+00:00",
+      "timeline_at": "2026-05-06T08:39:13.844523+00:00",
+      "vocab_count": 9,
+      "buckets": {
+        "noun": 9,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": true,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "名词短语",
+          "lemma": "falsches Signal",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Kritik",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Truppenabzug",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Senatoren",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Marschflugkörper",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Militärpräsenz",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "account_1",
+      "article_id": "a6d425ae-e7f1-4e48-9544-d20cfd8528bc",
+      "title": "Unternehmenssteuern Schweiz: Luzern verdrängt Zug als günstigster Kanton",
+      "article_created_at": "2026-05-07T07:35:21.879326+00:00",
+      "timeline_at": "2026-05-07T07:35:21.879326+00:00",
+      "vocab_count": 13,
+      "buckets": {
+        "noun": 13,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": true,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "名词",
+          "lemma": "Zentralschweiz",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Steuerparadies",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "internationale Unternehmen",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Zentralschweiz",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Steuerbelastung für Unternehmen",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Unternehmenssteuern",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "account_1",
+      "article_id": "b25c4e6a-a186-4929-be8b-c58695ede4d7",
+      "title": "Herr Joss schenkt sein Haus der Kirchgemeinde – und Millionen dazu",
+      "article_created_at": "2026-05-07T22:44:53.982104+00:00",
+      "timeline_at": "2026-05-07T22:44:53.982104+00:00",
+      "vocab_count": 15,
+      "buckets": {
+        "noun": 14,
+        "verb": 1,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": false,
+      "has_verb": true,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "名词",
+          "lemma": "Varia",
+          "bucket": "noun"
+        },
+        {
+          "pos": "动词",
+          "lemma": "Schenken",
+          "bucket": "verb"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Lebensgeschichte",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Wohltäter",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Erinnerungsbilder",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Bibelkurse",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "account_1",
+      "article_id": "1b246754-69b7-4e20-8475-2eeda7937bbb",
+      "title": "Vüpf-Revision: Schweizer IT-Firmen drohen weiter mit Wegzug",
+      "article_created_at": "2026-05-07T23:24:34.50661+00:00",
+      "timeline_at": "2026-05-07T23:24:34.50661+00:00",
+      "vocab_count": 14,
+      "buckets": {
+        "noun": 13,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 1
+      },
+      "all_noun_like": false,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "名词",
+          "lemma": "Kritik",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "revidierte Verordnung",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "IT-Firmen",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Überwachungsverordnung",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Bundesrat",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Vüpf",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "account_1",
+      "article_id": "4adac62d-0e71-4c5e-a19d-3ea7bf9aed35",
+      "title": "Migros-Sandwich zu leicht: Pastrami-Produkt wiegt 14 Gramm zu wenig",
+      "article_created_at": "2026-05-09T20:48:20.127465+00:00",
+      "timeline_at": "2026-05-09T20:48:20.127465+00:00",
+      "vocab_count": 9,
+      "buckets": {
+        "noun": 8,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 1,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": false,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "名词",
+          "lemma": "Sandwiches",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Gewicht",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Massnahmen",
+          "bucket": "noun"
+        },
+        {
+          "pos": "副词",
+          "lemma": "definitiv",
+          "bucket": "adverb"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Unterfüllung",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Konsument",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "account_1",
+      "article_id": "b5201610-6b4e-43c2-a6dd-369dbd96ae77",
+      "title": "«Unsere Kühe holen das Beste aus dem Gras»",
+      "article_created_at": "2026-05-09T22:39:16.477989+00:00",
+      "timeline_at": "2026-05-09T22:39:16.477989+00:00",
+      "vocab_count": 10,
+      "buckets": {
+        "noun": 10,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": true,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "名词",
+          "lemma": "Nährstoffe",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Grasland",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Wiederkäuer",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Dürrfutter",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Maissilage",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Tierwohlprogramm",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "account_1",
+      "article_id": "daa3450b-3716-4bc9-b39c-1d67ffe9dfd2",
+      "title": "Tiny Houses in der Wankdorf-City",
+      "article_created_at": "2026-05-10T18:19:52.626396+00:00",
+      "timeline_at": "2026-05-10T18:19:52.626396+00:00",
+      "vocab_count": 16,
+      "buckets": {
+        "noun": 16,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": true,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "名词",
+          "lemma": "Minihäuser",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Miete",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Wohnfläche",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Gemeinschaftsraum",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Baustellenleben",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Büroflächen",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "account_1",
+      "article_id": "322d6746-097c-4fb3-adbc-3618d8dfa824",
+      "title": "Eisheilige in der Schweiz: Polarluft bringt Schnee bis 1000 Meter",
+      "article_created_at": "2026-05-11T08:02:27.014346+00:00",
+      "timeline_at": "2026-05-11T08:02:27.014346+00:00",
+      "vocab_count": 15,
+      "buckets": {
+        "noun": 14,
+        "verb": 0,
+        "adjective": 1,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": false,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "名词",
+          "lemma": "Neuschnee",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Schneefallgrenze",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Temperaturen",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Schauer",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Bodenfrost",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Polarluft",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "info@schoental.ch",
+      "article_id": "4e68ff96-92ad-4113-915a-215b8d982270",
+      "title": "Wenn aus Schwärmerei Tourismus wird: Albrecht von Haller fachte mit seinen Versen das Interesse an der Schweiz und ihren Bergen an",
+      "article_created_at": "2026-05-11T13:00:46.961801+00:00",
+      "timeline_at": "2026-05-11T13:00:46.961801+00:00",
+      "vocab_count": 15,
+      "buckets": {
+        "noun": 15,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": true,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "名词",
+          "lemma": "Städten",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Alpen",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Konkurrenz",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Reiseführer",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Natur",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Kräuter",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "info@schoental.ch",
+      "article_id": "12977442-3910-48b9-bc08-a7872dc6f3e2",
+      "title": "Erfundene Hütten, lebensgefährliche Routen – und ein paar brauchbare Ideen. KI hat unsere Wanderroute geplant",
+      "article_created_at": "2026-05-11T20:48:11.188345+00:00",
+      "timeline_at": "2026-05-11T20:48:11.188345+00:00",
+      "vocab_count": 16,
+      "buckets": {
+        "noun": 11,
+        "verb": 3,
+        "adjective": 2,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": false,
+      "has_verb": true,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "名词",
+          "lemma": "Doppelzimmer",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Wegzeit",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Test",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Routen",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词短语",
+          "lemma": "falsche Wege",
+          "bucket": "noun"
+        },
+        {
+          "pos": "形容词",
+          "lemma": "schön",
+          "bucket": "adjective"
+        }
+      ]
+    },
+    {
+      "account": "info@schoental.ch",
+      "article_id": "dfb4a43c-1b85-4e27-a67e-b9f95943b02d",
+      "title": "„Ich wusste: Ich bin endlich angekommen!”",
+      "article_created_at": "2026-05-12T11:14:10.961062+00:00",
+      "timeline_at": "2026-05-12T11:14:10.961062+00:00",
+      "vocab_count": 2,
+      "buckets": {
+        "noun": 2,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": true,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "名词",
+          "lemma": "der Bürgerkrieg",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "der Eintopf",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "info@schoental.ch",
+      "article_id": "__no_article__",
+      "title": "(无文章关联)",
+      "article_created_at": null,
+      "timeline_at": "2026-05-12T18:38:29.055817+00:00",
+      "vocab_count": 12,
+      "buckets": {
+        "noun": 7,
+        "verb": 2,
+        "adjective": 1,
+        "adverb": 1,
+        "phrase": 0,
+        "other": 1
+      },
+      "all_noun_like": false,
+      "has_verb": true,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "Noun",
+          "lemma": "Mobbing",
+          "bucket": "noun"
+        },
+        {
+          "pos": "Noun",
+          "lemma": "Verteidigungsminister",
+          "bucket": "noun"
+        },
+        {
+          "pos": "Adverb",
+          "lemma": "gemeinsam",
+          "bucket": "adverb"
+        },
+        {
+          "pos": "Noun",
+          "lemma": "Vorgehen",
+          "bucket": "noun"
+        },
+        {
+          "pos": "Noun",
+          "lemma": "Südchinesischen Meer",
+          "bucket": "noun"
+        },
+        {
+          "pos": "Verb",
+          "lemma": "wehren",
+          "bucket": "verb"
+        }
+      ]
+    },
+    {
+      "account": "info@schoental.ch",
+      "article_id": "ce4a0daf-29a6-49fb-82a5-47a529c7e1b7",
+      "title": "Er ist der Aufsteiger unter den Schweizer Bankern – nun wird er ihr Präsident",
+      "article_created_at": "2026-05-12T20:00:47.042385+00:00",
+      "timeline_at": "2026-05-12T20:00:47.042385+00:00",
+      "vocab_count": 3,
+      "buckets": {
+        "noun": 3,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": true,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "名词",
+          "lemma": "der Aufsteiger",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "die Bankiervereinigung",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "die Interessen",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "info@schoental.ch",
+      "article_id": "3d358c8e-690c-406c-a8e8-a65e3e752f95",
+      "title": "Deepfakes am Kollegium Brig: Betreuer erhält lebenslanges Tätigkeitsverbot",
+      "article_created_at": "2026-05-12T21:34:35.028594+00:00",
+      "timeline_at": "2026-05-12T21:34:35.028594+00:00",
+      "vocab_count": 10,
+      "buckets": {
+        "noun": 10,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": true,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "Noun",
+          "lemma": "Deepfakes",
+          "bucket": "noun"
+        },
+        {
+          "pos": "Noun",
+          "lemma": "Tätigkeitsverbot",
+          "bucket": "noun"
+        },
+        {
+          "pos": "Noun",
+          "lemma": "Minderjährigen",
+          "bucket": "noun"
+        },
+        {
+          "pos": "Noun",
+          "lemma": "KI-Nacktbilder",
+          "bucket": "noun"
+        },
+        {
+          "pos": "Noun",
+          "lemma": "Strafanzeige",
+          "bucket": "noun"
+        },
+        {
+          "pos": "Noun",
+          "lemma": "Rektorat",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "info@schoental.ch",
+      "article_id": "a3646dfb-b221-47e4-80e5-0a6bde50b707",
+      "title": "Deutsche verlassen Deutschland: Schweiz vor Österreich",
+      "article_created_at": "2026-05-13T09:33:12.414733+00:00",
+      "timeline_at": "2026-05-13T09:33:12.414733+00:00",
+      "vocab_count": 31,
+      "buckets": {
+        "noun": 16,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 15
+      },
+      "all_noun_like": false,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "名词",
+          "lemma": "Auswanderer",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Lebensqualität",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Zahl",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Staatsangehörige",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Zuwachs",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Nachbarland",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "info@schoental.ch",
+      "article_id": "25ec4ecc-8362-49b5-bfb7-ac85e4d739b3",
+      "title": "Kontaktabbruch durch Eltern: Influencerin dariadaria teilt ihr Schicksal",
+      "article_created_at": "2026-05-13T09:49:47.561022+00:00",
+      "timeline_at": "2026-05-13T09:49:47.561022+00:00",
+      "vocab_count": 14,
+      "buckets": {
+        "noun": 11,
+        "verb": 1,
+        "adjective": 2,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": false,
+      "has_verb": true,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "名词",
+          "lemma": "Kontaktabbruch",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Influencerin",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Schicksal",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Erschöpfung",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Hochzeit",
+          "bucket": "noun"
+        },
+        {
+          "pos": "动词",
+          "lemma": "aufgelegt",
+          "bucket": "verb"
+        }
+      ]
+    },
+    {
+      "account": "info@schoental.ch",
+      "article_id": "f1780d19-2497-4eb0-be8f-ae4bcbf0153c",
+      "title": "KI als Job-Killer? «Jeder sollte schauen, wie viel mehr Zeit er für Dinge hat, die ihn einzigartig machen»",
+      "article_created_at": "2026-05-13T09:52:51.593622+00:00",
+      "timeline_at": "2026-05-13T09:52:51.593622+00:00",
+      "vocab_count": 10,
+      "buckets": {
+        "noun": 9,
+        "verb": 1,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": false,
+      "has_verb": true,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "名词",
+          "lemma": "künstlicher Intelligenz",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Tausende Jobs",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Job-Killer",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Silicon Valley",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Superintelligenz",
+          "bucket": "noun"
+        },
+        {
+          "pos": "动词",
+          "lemma": "Meta investiert",
+          "bucket": "verb"
+        }
+      ]
+    },
+    {
+      "account": "account_1",
+      "article_id": "eab1ad99-19a8-400e-a753-90464602856f",
+      "title": "Das chinesische Handelswunder – erklärt in fünf Grafiken",
+      "article_created_at": "2026-05-13T10:27:51.232118+00:00",
+      "timeline_at": "2026-05-13T10:27:51.232118+00:00",
+      "vocab_count": 8,
+      "buckets": {
+        "noun": 8,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": true,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "noun",
+          "lemma": "der Zoll",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "der Aussenhandel",
+          "bucket": "noun"
+        },
+        {
+          "pos": "compound_noun",
+          "lemma": "der strukturelle Grund",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "der Kurswechsel",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Karte",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Unterstützung",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "info@schoental.ch",
+      "article_id": "bad4b964-e6f1-4cd8-a481-f9569b20e99b",
+      "title": "Hochbetrieb an den vielen Containerterminals im Hafen von Qingdao. China exportiert deutlich mehr und teurere Waren nach Europa als vor Beginn der Handelskriege.",
+      "article_created_at": "2026-05-13T10:37:23.873422+00:00",
+      "timeline_at": "2026-05-13T10:37:23.873422+00:00",
+      "vocab_count": 18,
+      "buckets": {
+        "noun": 18,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": true,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "名词",
+          "lemma": "Konkurrenz",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Handelskrieg",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Aussenhandel",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Wanderarbeiter",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Exportvolumen",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Wettbewerbsfähigkeit",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "info@schoental.ch",
+      "article_id": "42292c44-cf77-49cb-8a45-cb8a570a93eb",
+      "title": "8908 Schüler haben in Zürich die Gymiprüfung probiert – in diesen Bezirken hatten die meisten Kinder Erfolg",
+      "article_created_at": "2026-05-13T11:04:42.411259+00:00",
+      "timeline_at": "2026-05-13T11:04:42.411259+00:00",
+      "vocab_count": 22,
+      "buckets": {
+        "noun": 21,
+        "verb": 0,
+        "adjective": 1,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": false,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "名词",
+          "lemma": "Gymiprüfung",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Kandidaten",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Prüflinge",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Übertritt",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Langgymnasium",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "Kurzgymnasium",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "info@schoental.ch",
+      "article_id": "5c26cac5-dd3f-4de0-bc24-6218b4bdf625",
+      "title": "Warum Rominas gestohlenes Handy erst nach neun Tagen in Kappelen gefunden wurde",
+      "article_created_at": "2026-05-13T11:30:16.28933+00:00",
+      "timeline_at": "2026-05-13T11:30:16.28933+00:00",
+      "vocab_count": 2,
+      "buckets": {
+        "noun": 2,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": true,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "名词",
+          "lemma": "das SEM",
+          "bucket": "noun"
+        },
+        {
+          "pos": "名词",
+          "lemma": "die Polizei",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "info@schoental.ch",
+      "article_id": "cb8b7229-0b0c-4991-9af9-0a0cee07b0a1",
+      "title": "TRUMP-BESUCH IN PEKING : Marco Rubio reist unter neuem Namen nach China",
+      "article_created_at": "2026-05-13T12:19:17.792559+00:00",
+      "timeline_at": "2026-05-13T12:19:17.792559+00:00",
+      "vocab_count": 13,
+      "buckets": {
+        "noun": 13,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": true,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "noun",
+          "lemma": "die Sanktion",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Einreise",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Botschaft",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "das Aussenministerium",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "das Namenszeichen",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Menschenrechte",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "info@schoental.ch",
+      "article_id": "4f20a883-5243-44c7-ab9a-060eb46e5844",
+      "title": "Vorwurf Führungsversagen: Was laut dem Bericht zur Krise am Zürcher Unispital an den Top-Verantwortlichen hängen bleibt",
+      "article_created_at": "2026-05-13T12:37:30.127759+00:00",
+      "timeline_at": "2026-05-13T12:37:30.127759+00:00",
+      "vocab_count": 17,
+      "buckets": {
+        "noun": 17,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": true,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "compound_noun",
+          "lemma": "die Herzklinik",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Sterblichkeitsrate",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Verfehlung",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Untersuchungskommission",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "der CEO",
+          "bucket": "noun"
+        },
+        {
+          "pos": "compound_noun",
+          "lemma": "die Spitaldirektion",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "info@schoental.ch",
+      "article_id": "cba76bfc-f39c-47bc-87af-fe4bc339aa0e",
+      "title": "Drohen bei einem Ja zur 10-Millionen-Initiative 635 Franken mehr Steuern pro Kopf?",
+      "article_created_at": "2026-05-13T12:44:41.9327+00:00",
+      "timeline_at": "2026-05-13T12:44:41.9327+00:00",
+      "vocab_count": 17,
+      "buckets": {
+        "noun": 16,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 1,
+        "other": 0
+      },
+      "all_noun_like": false,
+      "has_verb": false,
+      "has_phrase": true,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "noun",
+          "lemma": "10-Millionen-Initiative",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Gewerkschaftsbund",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Steuererhöhung",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Pensionsalter",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Erwerbsalter",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Zuwanderung",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "info@schoental.ch",
+      "article_id": "d50fd322-6626-4420-80ca-a099e5131d76",
+      "title": "Volksentscheid zum AKW-Ausstieg unter Druck",
+      "article_created_at": "2026-05-13T13:11:22.148417+00:00",
+      "timeline_at": "2026-05-13T13:11:22.148417+00:00",
+      "vocab_count": 11,
+      "buckets": {
+        "noun": 9,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 2
+      },
+      "all_noun_like": false,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "noun",
+          "lemma": "Klimaziel",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Bundesrat",
+          "bucket": "noun"
+        },
+        {
+          "pos": "na",
+          "lemma": "AKW",
+          "bucket": "other"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Fehlinvestition",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Versorgungssicherheit",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Nachrüstung",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "info@schoental.ch",
+      "article_id": "ff56fecc-a845-4bef-8ca1-89f7e3939a7a",
+      "title": "Gregor Zünd, ehemaliger CEO",
+      "article_created_at": "2026-05-13T13:29:33.905231+00:00",
+      "timeline_at": "2026-05-13T13:29:33.905231+00:00",
+      "vocab_count": 17,
+      "buckets": {
+        "noun": 17,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": true,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "compound_noun",
+          "lemma": "die Herzklinik",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Sterblichkeitsrate",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Verfehlung",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Untersuchungskommission",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "der Whistleblower",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "das Audit",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "info@schoental.ch",
+      "article_id": "9d9477d7-ac29-47ef-963e-c2616ca3d02c",
+      "title": "Trump trifft Xi in China: Was beim Gipfel in Peking auf dem Spiel steht",
+      "article_created_at": "2026-05-13T16:16:36.813999+00:00",
+      "timeline_at": "2026-05-13T16:16:36.813999+00:00",
+      "vocab_count": 14,
+      "buckets": {
+        "noun": 9,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 5
+      },
+      "all_noun_like": false,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "na",
+          "lemma": "Handelskrieg",
+          "bucket": "other"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Sanktion",
+          "bucket": "noun"
+        },
+        {
+          "pos": "compound_noun",
+          "lemma": "KI-Chip",
+          "bucket": "noun"
+        },
+        {
+          "pos": "compound_noun",
+          "lemma": "seltene Erde",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Vertrauensverhältnis",
+          "bucket": "noun"
+        },
+        {
+          "pos": "na",
+          "lemma": "Zollstreit",
+          "bucket": "other"
+        }
+      ]
+    },
+    {
+      "account": "account_1",
+      "article_id": "6ea471e1-1850-4b75-afa9-402d58a6175d",
+      "title": "Prinzessin Kate in Italien: Erste Auslandsreise seit Krebsdiagnose",
+      "article_created_at": "2026-05-13T16:22:13.840126+00:00",
+      "timeline_at": "2026-05-13T16:22:13.840126+00:00",
+      "vocab_count": 16,
+      "buckets": {
+        "noun": 11,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 5
+      },
+      "all_noun_like": false,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "na",
+          "lemma": "Prinzessin Kate",
+          "bucket": "other"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Krebsdiagnose",
+          "bucket": "noun"
+        },
+        {
+          "pos": "compound_noun",
+          "lemma": "frühkindliche Entwicklung",
+          "bucket": "noun"
+        },
+        {
+          "pos": "na",
+          "lemma": "Reggio Emilia",
+          "bucket": "other"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Hosenanzug",
+          "bucket": "noun"
+        },
+        {
+          "pos": "na",
+          "lemma": "Piazza Camillo Prampolini",
+          "bucket": "other"
+        }
+      ]
+    },
+    {
+      "account": "info@schoental.ch",
+      "article_id": "e1301dab-9bbd-47e5-a673-1d522aec7bd2",
+      "title": "Phishing in Zürich: Ärztin verliert in der Mittagspause 2500 Franken – durch eine SMS",
+      "article_created_at": "2026-05-13T19:53:54.59022+00:00",
+      "timeline_at": "2026-05-13T19:53:54.59022+00:00",
+      "vocab_count": 17,
+      "buckets": {
+        "noun": 14,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 3
+      },
+      "all_noun_like": false,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "compound_noun",
+          "lemma": "Fake-Nachricht",
+          "bucket": "noun"
+        },
+        {
+          "pos": "na",
+          "lemma": "SMS",
+          "bucket": "other"
+        },
+        {
+          "pos": "na",
+          "lemma": "Phishing",
+          "bucket": "other"
+        },
+        {
+          "pos": "na",
+          "lemma": "Cyberkriminalität",
+          "bucket": "other"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Betrüger",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Daten",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "info@schoental.ch",
+      "article_id": "6d4e6c2e-eba6-426c-916d-0ed733ed5bd5",
+      "title": "Strack-Zimmermann zur Misere in Europa: «Liberale Antworten fehlen gerade jetzt.»",
+      "article_created_at": "2026-05-14T10:19:31.789723+00:00",
+      "timeline_at": "2026-05-14T10:19:31.789723+00:00",
+      "vocab_count": 16,
+      "buckets": {
+        "noun": 16,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": true,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "compound_noun",
+          "lemma": "die Sicherheitspolitikerin",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "der Kompromiss",
+          "bucket": "noun"
+        },
+        {
+          "pos": "compound_noun",
+          "lemma": "die liberale Revolution",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "der Wohlhabende",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Eigenverantwortung",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Demokratie",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "info@schoental.ch",
+      "article_id": "ae8427c7-14e8-4fb2-84fa-1e2ec4878322",
+      "title": "Frühstückskonflikt im Hotel",
+      "article_created_at": "2026-05-16T07:15:50.21562+00:00",
+      "timeline_at": "2026-05-16T07:15:50.21562+00:00",
+      "vocab_count": 16,
+      "buckets": {
+        "noun": 7,
+        "verb": 4,
+        "adjective": 2,
+        "adverb": 2,
+        "phrase": 1,
+        "other": 0
+      },
+      "all_noun_like": false,
+      "has_verb": true,
+      "has_phrase": true,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "verb",
+          "lemma": "sagen",
+          "bucket": "verb"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Medikament",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Brötchen",
+          "bucket": "noun"
+        },
+        {
+          "pos": "verb",
+          "lemma": "antworten",
+          "bucket": "verb"
+        },
+        {
+          "pos": "verb",
+          "lemma": "kaufen",
+          "bucket": "verb"
+        },
+        {
+          "pos": "compound_noun",
+          "lemma": "Tasche",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "info@schoental.ch",
+      "article_id": "407c2162-1ef9-47c2-b191-308f1030ab70",
+      "title": "eine neue Idee für mein Deutschlern-Produkt.",
+      "article_created_at": "2026-05-16T08:00:57.254401+00:00",
+      "timeline_at": "2026-05-16T08:00:57.254401+00:00",
+      "vocab_count": 14,
+      "buckets": {
+        "noun": 12,
+        "verb": 2,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": false,
+      "has_verb": true,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "verb",
+          "lemma": "übersetzen",
+          "bucket": "verb"
+        },
+        {
+          "pos": "compound_noun",
+          "lemma": "Deutschlern-Produkt",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Motivation",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Bedürfnis",
+          "bucket": "noun"
+        },
+        {
+          "pos": "compound_noun",
+          "lemma": "alltäglicher Ausdruck",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Formulierung",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "info@schoental.ch",
+      "article_id": "944ac36d-7b96-44eb-9ad5-80f1f75a3aeb",
+      "title": "WM in Amerika: Viele Termine, lange Reise: Lassen Bundesräte die Nati im Stich?",
+      "article_created_at": "2026-05-16T15:11:31.711298+00:00",
+      "timeline_at": "2026-05-16T15:11:31.711298+00:00",
+      "vocab_count": 4,
+      "buckets": {
+        "noun": 4,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": true,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "noun",
+          "lemma": "Bundesrat",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Stimmbevölkerung",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Zivildienst",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "WM-Pokal",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "info@schoental.ch",
+      "article_id": "9598ebc4-f93a-48ee-92ae-d2dd58c63731",
+      "title": "Wieso Schweizer Schokolade in einer Krise steckt",
+      "article_created_at": "2026-05-16T20:37:18.620164+00:00",
+      "timeline_at": "2026-05-16T20:37:18.620164+00:00",
+      "vocab_count": 8,
+      "buckets": {
+        "noun": 8,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": true,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "noun",
+          "lemma": "der Pro-Kopf-Konsum",
+          "bucket": "noun"
+        },
+        {
+          "pos": "compound_noun",
+          "lemma": "die Billigmarke",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "das Schoggiland",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Premiumstrategie",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Preiserhöhung",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "der Kakaopreis",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "info@schoental.ch",
+      "article_id": "e09aff41-42a3-40fe-9475-13804f53bda6",
+      "title": "Konservativ und innovativ",
+      "article_created_at": "2026-05-17T09:38:00.245628+00:00",
+      "timeline_at": "2026-05-17T09:38:00.245628+00:00",
+      "vocab_count": 7,
+      "buckets": {
+        "noun": 6,
+        "verb": 1,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": false,
+      "has_verb": true,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "noun",
+          "lemma": "die Mitsprache",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Souveränität",
+          "bucket": "noun"
+        },
+        {
+          "pos": "compound_noun",
+          "lemma": "militärische Kapazität",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Rüstungsindustrie",
+          "bucket": "noun"
+        },
+        {
+          "pos": "verb_phrase",
+          "lemma": "militärisch absichern",
+          "bucket": "verb"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Nachkriegsordnung",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "account_1",
+      "article_id": "652f9b02-0c0c-43ce-b374-7f185ca707b6",
+      "title": "Für einen europäischen Gaullismus – wenn Europa bei der Gestaltung der neuen Weltordnung mitreden will, muss es eine Idee von sich selbst haben",
+      "article_created_at": "2026-05-17T10:12:21.585136+00:00",
+      "timeline_at": "2026-05-17T10:12:21.585136+00:00",
+      "vocab_count": 5,
+      "buckets": {
+        "noun": 4,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 1,
+        "other": 0
+      },
+      "all_noun_like": false,
+      "has_verb": false,
+      "has_phrase": true,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "noun",
+          "lemma": "die Mitsprache",
+          "bucket": "noun"
+        },
+        {
+          "pos": "compound_noun",
+          "lemma": "die militärische Kapazität",
+          "bucket": "noun"
+        },
+        {
+          "pos": "fixed_expression",
+          "lemma": "auf sich selbst gestellt sein",
+          "bucket": "phrase"
+        },
+        {
+          "pos": "compound_noun",
+          "lemma": "der militärische Schutz",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Rüstungsindustrie",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "info@schoental.ch",
+      "article_id": "3096b46b-b214-445b-8641-cfe665dec616",
+      "title": "Der Baron auf seinem Anwesen Bledlow Manor.",
+      "article_created_at": "2026-05-17T12:53:58.493802+00:00",
+      "timeline_at": "2026-05-17T12:53:58.493802+00:00",
+      "vocab_count": 8,
+      "buckets": {
+        "noun": 8,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": true,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "noun",
+          "lemma": "die Politik",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "der Erbsitz",
+          "bucket": "noun"
+        },
+        {
+          "pos": "compound_noun",
+          "lemma": "das House of Lords",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Magna Carta",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Tradition",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "das Königreich",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "account_1",
+      "article_id": "8a8aba7e-09a5-46b6-b8c7-b04be2a6e11e",
+      "title": "Im Dienst des Landes und der Majestät – Baron Carrington glaubt, dass das Vereinigte Königreich auch diese Krise meistern wird",
+      "article_created_at": "2026-05-17T12:57:11.84861+00:00",
+      "timeline_at": "2026-05-17T12:57:11.84861+00:00",
+      "vocab_count": 9,
+      "buckets": {
+        "noun": 8,
+        "verb": 1,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": false,
+      "has_verb": true,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "noun",
+          "lemma": "der Erbsitz",
+          "bucket": "noun"
+        },
+        {
+          "pos": "compound_noun",
+          "lemma": "das House of Lords",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Tradition",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "das Königreich",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Krise",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Politik",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "account_1",
+      "article_id": "b4ed16af-1dd2-4579-b52b-e35b1f47d0b2",
+      "title": "Mitten im Iran-Krieg stösst MSC in den Ölhandel vor: Die Genfer Reederei will die Weltmeere noch mehr dominieren",
+      "article_created_at": "2026-05-17T13:15:09.67654+00:00",
+      "timeline_at": "2026-05-17T13:15:09.67654+00:00",
+      "vocab_count": 10,
+      "buckets": {
+        "noun": 9,
+        "verb": 0,
+        "adjective": 1,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": false,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "noun",
+          "lemma": "der Transportriese",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "der Öltanker",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "der Marktzugang",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Frachtkapazität",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Diversifizierung",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "der Marktanteil",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "account_1",
+      "article_id": "3bda5d00-5745-433f-8c55-127abed3d20e",
+      "title": "Mitten im Iran-Krieg stösst MSC in den Ölhandel vor: Die Genfer Reederei will die Weltmeere noch mehr dominieren",
+      "article_created_at": "2026-05-17T18:56:41.659978+00:00",
+      "timeline_at": "2026-05-17T18:56:41.659978+00:00",
+      "vocab_count": 8,
+      "buckets": {
+        "noun": 8,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": true,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "noun",
+          "lemma": "der Marktzugang",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Diversifizierung",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Sanktionen",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "der Ölhandel",
+          "bucket": "noun"
+        },
+        {
+          "pos": "compound_noun",
+          "lemma": "die Flotte von Öltankern",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die VLCC",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "account_1",
+      "article_id": "2740a5bd-9c67-4316-8b6b-9d299e40e642",
+      "title": "Swatch Royal Pop Collection: Chaos und leere Hände nach 10 Stunden Warten",
+      "article_created_at": "2026-05-17T19:03:18.820627+00:00",
+      "timeline_at": "2026-05-17T19:03:18.820627+00:00",
+      "vocab_count": 6,
+      "buckets": {
+        "noun": 5,
+        "verb": 0,
+        "adjective": 1,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": false,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "noun",
+          "lemma": "der Ansturm",
+          "bucket": "noun"
+        },
+        {
+          "pos": "adjective",
+          "lemma": "chaotisch",
+          "bucket": "adjective"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Warteschlange",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Taschenuhr",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Security",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "der Preisanstieg",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "account_1",
+      "article_id": "585413a6-18e2-4527-b905-02138681e6a9",
+      "title": "Schweizer Mikroelektronik in russischen Drohnen – Ukraine wirft Seco Versagen vor",
+      "article_created_at": "2026-05-17T19:11:58.82164+00:00",
+      "timeline_at": "2026-05-17T19:11:58.82164+00:00",
+      "vocab_count": 8,
+      "buckets": {
+        "noun": 7,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 1,
+        "other": 0
+      },
+      "all_noun_like": false,
+      "has_verb": false,
+      "has_phrase": true,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "compound_noun",
+          "lemma": "Mikroelektronik-Bauteil",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Sanktionsdurchsetzung",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Lieferkette",
+          "bucket": "noun"
+        },
+        {
+          "pos": "phrase",
+          "lemma": "Schweizer Produktion",
+          "bucket": "phrase"
+        },
+        {
+          "pos": "compound_noun",
+          "lemma": "kriegsrelevanter Export",
+          "bucket": "noun"
+        },
+        {
+          "pos": "compound_noun",
+          "lemma": "Schmugglernetzwerk",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "account_1",
+      "article_id": "e84b8552-e6b5-4370-acb1-032483b8a136",
+      "title": "«Die Wirtschaft verärgert mit den Ü55 ausgerechnet jene Generation, von der sie politisch abhängt»",
+      "article_created_at": "2026-05-17T20:34:37.047521+00:00",
+      "timeline_at": "2026-05-17T20:34:37.047521+00:00",
+      "vocab_count": 8,
+      "buckets": {
+        "noun": 8,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": true,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "noun",
+          "lemma": "die Wirtschaftslobby",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Abstimmung",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Vertrauenskrise",
+          "bucket": "noun"
+        },
+        {
+          "pos": "compound_noun",
+          "lemma": "die Lifestyle-Teilzeit",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "der Wohlstand",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Urne",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "account_1",
+      "article_id": "7e9d962e-0303-48f8-8d18-e2984dddcde2",
+      "title": "«Die Wirtschaft verärgert mit den Ü55 ausgerechnet jene Generation, von der sie politisch abhängt»",
+      "article_created_at": "2026-05-17T21:19:45.427492+00:00",
+      "timeline_at": "2026-05-17T21:19:45.427492+00:00",
+      "vocab_count": 5,
+      "buckets": {
+        "noun": 4,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 1,
+        "other": 0
+      },
+      "all_noun_like": false,
+      "has_verb": false,
+      "has_phrase": true,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "noun",
+          "lemma": "die Wirtschaftslobby",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Vertrauenskrise",
+          "bucket": "noun"
+        },
+        {
+          "pos": "fixed_expression",
+          "lemma": "Wohlstand nicht selbstverständlich",
+          "bucket": "phrase"
+        },
+        {
+          "pos": "compound_noun",
+          "lemma": "Abstimmungskampf",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Wachstumsbremse",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "info@schoental.ch",
+      "article_id": "aefb998b-6b0c-4846-8d68-553406345036",
+      "title": "Die Wirtschaft verärgert mit den Ü55 ausgerechnet jene, von denen sie politisch abhängt»",
+      "article_created_at": "2026-05-17T21:22:53.836328+00:00",
+      "timeline_at": "2026-05-17T21:22:53.836328+00:00",
+      "vocab_count": 8,
+      "buckets": {
+        "noun": 8,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": true,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "noun",
+          "lemma": "der Wohlstand",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Wirtschaftslobby",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Wachstumsbremse",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Vertrauenskrise",
+          "bucket": "noun"
+        },
+        {
+          "pos": "compound_noun",
+          "lemma": "die AHV-Rente",
+          "bucket": "noun"
+        },
+        {
+          "pos": "compound_noun",
+          "lemma": "die BVG-Reform",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "account_1",
+      "article_id": "e7b075b7-454d-47ab-837e-0decd9bf07cb",
+      "title": "«Die Wirtschaft verärgert mit den Ü55 ausgerechnet jene Generation, von der sie politisch abhängt»",
+      "article_created_at": "2026-05-17T21:39:55.227995+00:00",
+      "timeline_at": "2026-05-17T21:39:55.227995+00:00",
+      "vocab_count": 6,
+      "buckets": {
+        "noun": 6,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": true,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "noun",
+          "lemma": "die Wirtschaftslobby",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Vertrauenskrise",
+          "bucket": "noun"
+        },
+        {
+          "pos": "compound_noun",
+          "lemma": "die Lifestyle-Teilzeit",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "der Wohlstand",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Wachstumsbremse",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Zeitsouveränität",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "account_1",
+      "article_id": "8c876e40-f7ad-4e6b-9990-696fb0fb2f9d",
+      "title": "DDoS-Angriff auf Salt: Hackerattacke legte schweizweit das Festnetz lahm",
+      "article_created_at": "2026-05-17T22:45:44.872626+00:00",
+      "timeline_at": "2026-05-17T22:45:44.872626+00:00",
+      "vocab_count": 7,
+      "buckets": {
+        "noun": 7,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": true,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "noun",
+          "lemma": "der DDoS-Angriff",
+          "bucket": "noun"
+        },
+        {
+          "pos": "compound_noun",
+          "lemma": "das Opfer eines DDoS-Angriffs",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "das Festnetz",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Wiederinbetriebnahme",
+          "bucket": "noun"
+        },
+        {
+          "pos": "compound_noun",
+          "lemma": "das technische Team",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "die Abwehrmassnahme",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "account_1",
+      "article_id": "662c708c-1af7-47f3-b7cf-03df9fcb7037",
+      "title": "Herzogin Meghan in Genf: Auftritt bei WHO-Event für Kinderschutz im Netz",
+      "article_created_at": "2026-05-17T23:36:36.905607+00:00",
+      "timeline_at": "2026-05-17T23:36:36.905607+00:00",
+      "vocab_count": 6,
+      "buckets": {
+        "noun": 6,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": true,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "compound_noun",
+          "lemma": "Herzogin Meghan",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Einweihung",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Kinderschutz",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Kunstinstallation",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Schaulustiger",
+          "bucket": "noun"
+        },
+        {
+          "pos": "compound_noun",
+          "lemma": "weisse Rose",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "account_1",
+      "article_id": "644ddba0-8f3e-4a8b-b232-2b1e12b8ea97",
+      "title": "Junge Frauen drängen an die Waffen: «Sie wollen es den Männern zeigen»",
+      "article_created_at": "2026-05-17T23:38:59.528144+00:00",
+      "timeline_at": "2026-05-17T23:38:59.528144+00:00",
+      "vocab_count": 7,
+      "buckets": {
+        "noun": 7,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": true,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "noun",
+          "lemma": "Anleitung",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Schiesssport",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Zielscheibe",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Wettkampf",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Freiwilliger",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Sicherheitsbedürfnis",
+          "bucket": "noun"
+        }
+      ]
+    },
+    {
+      "account": "info@schoental.ch",
+      "article_id": "93cec34b-3db2-40d3-8fd8-fac1d6a3e067",
+      "title": "Die Schweiz ist das neue Paradies für Autodiebe – jetzt rüsten die Luxusgaragisten auf",
+      "article_created_at": "2026-05-19T11:23:31.762648+00:00",
+      "timeline_at": "2026-05-19T11:23:31.762648+00:00",
+      "vocab_count": 7,
+      "buckets": {
+        "noun": 7,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "all_noun_like": true,
+      "has_verb": false,
+      "has_phrase": false,
+      "source_mix": [
+        "ai"
+      ],
+      "sample": [
+        {
+          "pos": "noun",
+          "lemma": "PS-Bolide",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Einbruchdiebstahl",
+          "bucket": "noun"
+        },
+        {
+          "pos": "compound_noun",
+          "lemma": "hochpreisiges Auto",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Dieb",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Videoüberwachung",
+          "bucket": "noun"
+        },
+        {
+          "pos": "noun",
+          "lemma": "Taskforce",
+          "bucket": "noun"
+        }
+      ]
+    }
+  ]
+}

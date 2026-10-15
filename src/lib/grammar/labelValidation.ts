@@ -136,9 +136,13 @@ export function buildGrammarExternalDeepDivePrompt(params: {
 
 用户水平：${userLevel}
 语法名称：${grammarName}
-原文片段：${selectedText}
-上下文句子：${occurrenceSentence}
 文章标题：${articleTitle}
+
+【完整德语原句】（含主句与从句，请以此为准理解结构，不要只分析下面片段）
+${occurrenceSentence}
+
+【用户选中的片段】
+${selectedText}
 
 当前基础中文解释：
 ${explanationZh}

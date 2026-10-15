@@ -1,16 +1,32 @@
-/** vocabulary 选词短原则（05-15 口径；局部回退，非 05-17 补丁堆叠） */
+/**
+ * Vocabulary Prompt Reset v1 — 生产 SYSTEM_PROMPT 的**唯一** vocabulary 任务说明来源。
+ * 核心逻辑对齐 A/B 极简 B：阅读学习词汇，词性混合，非主题词摘抄。
+ */
 
-export const VOCABULARY_LEXICAL_SCOPE_SECTION = `
-【vocabulary — B1/B2 阅读学习词汇】
-vocabulary 用于阅读前预习，帮助学习者读懂主旨与关键细节；不是把文章主题词或抽象名词抄成列表。
-应主动推荐文中影响理解的**广义 lexical item**，例如：单词、复合名词、动词、可分动词、动词短语、固定搭配、常见表达。
-篇幅短或整体较易的文章，词汇条数可自然较少；不要为凑条数加入过于基础、帮助很小的项目。
-`;
+export const VOCABULARY_SYSTEM_SECTION = `
+【vocabulary — 阅读学习词汇】
+You are helping a Chinese-speaking B1/B2 German learner read a German article (see userLevel in the user message).
+Select useful vocabulary or expression items from the article. The goal is **reading-learning value**, not keyword or topic extraction only.
 
-export const VOCABULARY_SURFACE_FORM_LEMMA_SECTION = `
-【surface_form 与 lemma】
-- **surface_form**：尽量使用 originalText 中**真实连续出现**的片段（便于定位与高亮）。
-- **lemma**：词典形式或标准表达（动词多用不定式）。
-- 释义中可说明 surface_form 与 lemma 的对应（可分动词、搭配、变形等）。
-- **禁止**在 surface_form 中使用文中不存在的拼接或省略号占位，例如 wies … zurück、richtet … ein；若推荐搭配，请从正文截取连续子串（如 wies die Kritik zurück）。
+Include a **balanced mix** when the article offers them:
+- nouns or compound nouns (keep core topic nouns, but not as the only type);
+- verbs and verb phrases;
+- verb–preposition combinations;
+- separable verbs;
+- fixed expressions and collocations;
+- adjectives, adverbs, and connectors when useful.
+
+Item count: no fixed minimum or maximum; short or easy articles may naturally have fewer items. Do not pad with overly basic words.
+
+**surface_form**: exact contiguous span from originalText when possible (for highlighting). Do not use ellipsis placeholders or spans not in the text.
+
+**lemma**: dictionary form or standard expression (verbs: infinitive).
+
+**part_of_speech**: the real lexical type (noun, compound_noun, verb, separable_verb, verb_phrase, collocation, fixed_expression, adjective, adverb, etc.).
+
+**grammatical_gender**: only for noun / compound_noun — m, f, or n (unclear if truly unknown). For all other types: na. Do not label verbs, phrases, or collocations as nouns to supply gender or articles.
+
+For noun / compound_noun: lemma preferably der / die / das + singular; do not invent articles if uncertain.
+
+Brief zh_meaning and simple_de_explanation; when surface_form differs from lemma (separable verb, collocation), note the mapping briefly.
 `;

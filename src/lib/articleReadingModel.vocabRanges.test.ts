@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  compareArticleVocabItemsByReadingOrder,
   rebuildUserStyleVocabOccurrencesFromArticle,
+  sortArticleVocabItemsByReadingOrder,
   splitEllipsisDisplayIntoTwoSurfaceParts,
   vocabOccurrenceToRanges,
 } from "./articleReadingModel";
@@ -213,5 +215,68 @@ describe("vocabOccurrenceToRanges sentence window + stale offset", () => {
     expect(ranges[0]!.start).toBe(s);
     expect(ranges[0]!.end).toBe(e);
     expect(article.slice(s, e)).toBe("knöpfte");
+  });
+});
+
+describe("sortArticleVocabItemsByReadingOrder", () => {
+  const article =
+    "Am Anfang verschaffte sich der Mann Zugang. Später nahm er das Bargeld.";
+
+  function stubItem(
+    id: string,
+    start: number,
+    end: number,
+    source: ArticleVocabItem["source"] = "ai",
+  ): ArticleVocabItem {
+    const surface = article.slice(start, end);
+    return {
+      id,
+      dbItemId: null,
+      lemma: surface,
+      display_word: surface,
+      normalized_key: surface.toLowerCase(),
+      part_of_speech: "名词",
+      zh_meaning: "x",
+      simple_de_explanation: "y",
+      mastery_status: "new",
+      source,
+      senses: [
+        {
+          id: "s1",
+          zh_meaning: "x",
+          simple_de_explanation: "y",
+        },
+      ],
+      occurrences: [
+        {
+          id: `occ-${id}`,
+          surface_form: surface,
+          sentence: surface,
+          start_offset: start,
+          end_offset: end,
+          fallbackMatchText: surface,
+          source: source === "user_added" ? "user_added" : "ai_detected",
+        },
+      ],
+    };
+  }
+
+  it("orders manual vocab by first occurrence in text, not append order", () => {
+    const bargeldStart = article.indexOf("Bargeld");
+    const verschaffteStart = article.indexOf("verschaffte");
+    const items = [
+      stubItem("ai-bargeld", bargeldStart, bargeldStart + "Bargeld".length, "ai"),
+      stubItem(
+        "user-verschaffte",
+        verschaffteStart,
+        verschaffteStart + "verschaffte".length,
+        "user_added",
+      ),
+    ];
+    const sorted = sortArticleVocabItemsByReadingOrder(items, article);
+    expect(sorted.map((x) => x.id)).toEqual(["user-verschaffte", "ai-bargeld"]);
+    expect(
+      compareArticleVocabItemsByReadingOrder(items[0]!, items[1]!, article),
+    ).toBeGreaterThan(0);
   });
 });

@@ -3,7 +3,11 @@ import {
   createServerOpenAIClient,
   formatOpenAIRouteErrorMessage,
 } from "@/lib/openai/createServerOpenAIClient";
-import { ARTICLE_ANALYSIS_JSON_SCHEMA } from "@/lib/articleAnalysis/articleAnalysisJsonSchema";
+import {
+  ARTICLE_ANALYSIS_JSON_SCHEMA_LEGACY,
+} from "@/lib/articleAnalysis/articleAnalysisJsonSchema";
+import { ARTICLE_VOCAB_FIRST_JSON_SCHEMA } from "@/lib/articleAnalysis/articleAnalysisVocabFirstJsonSchema";
+import { isLegacyAutoGrammarAnalysisEnabled } from "@/lib/articleAnalysis/articleAnalysisFeatureFlags";
 import { filterArticleAnalysisGrammarByArticleText } from "@/lib/articleAnalysis/filterAnalysisByArticleText";
 import { listRealAiEntriesWithoutTextMatch } from "@/lib/articleAnalysis/convertAnalysisToArticleItems";
 import {
@@ -14,7 +18,9 @@ import { formatVocabLibraryBlockPromptFromRows } from "@/lib/articleAnalysis/fil
 import {
   buildOpenAIAnalysisUserContent,
   normalizeOpenAIArticleAnalysis,
-  SYSTEM_PROMPT,
+  normalizeOpenAIVocabFirstArticleAnalysis,
+  SYSTEM_PROMPT_LEGACY,
+  SYSTEM_PROMPT_VOCAB_FIRST,
   truncateForOpenAIAnalysis,
 } from "@/lib/articleAnalysis/openaiArticleAnalysis";
 import type { ArticleAnalysisResult } from "@/lib/articleAnalysis/types";
@@ -49,6 +55,7 @@ type OkBody = {
   ok: true;
   analysis: ArticleAnalysisResult;
   warning?: string;
+  schemaVersion?: "vocab_first_v1" | "legacy_full_v1";
 };
 
 type ErrBody = {
@@ -145,17 +152,12 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
     );
   }
 
-  const [vocabRes, grammarRes] = await Promise.all([
-    fetchVocabularyProfileRowsForArticleAnalysis(
-      auth.supabase,
-      auth.user.id,
-    ),
-    fetchGrammarMasteredIgnoredKeysForArticleAnalysis(
-      auth.supabase,
-      auth.user.id,
-    ),
-  ]);
+  const legacy = isLegacyAutoGrammarAnalysisEnabled();
 
+  const vocabRes = await fetchVocabularyProfileRowsForArticleAnalysis(
+    auth.supabase,
+    auth.user.id,
+  );
   if (vocabRes.error) {
     return NextResponse.json(
       {
@@ -168,17 +170,30 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
       { status: 502 },
     );
   }
-  if (grammarRes.error) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: {
-          message: grammarRes.error,
-          code: "grammar_filter_fetch_failed",
-        },
-      },
-      { status: 502 },
+
+  let grammarLibraryBlockAppendix: string | undefined;
+  let grammarBlockedSet = new Set<string>();
+
+  if (legacy) {
+    const grammarRes = await fetchGrammarMasteredIgnoredKeysForArticleAnalysis(
+      auth.supabase,
+      auth.user.id,
     );
+    if (grammarRes.error) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: {
+            message: grammarRes.error,
+            code: "grammar_filter_fetch_failed",
+          },
+        },
+        { status: 502 },
+      );
+    }
+    const formatted = formatGrammarLibraryBlockPromptFromRows(grammarRes.rows);
+    grammarLibraryBlockAppendix = formatted.blockLines;
+    grammarBlockedSet = formatted.blockedSet;
   }
 
   const vocabProfile = buildUserVocabProfile(userLevel, vocabRes.rows);
@@ -188,10 +203,6 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
         (r) => r.mastery_status === "mastered" || r.mastery_status === "ignored",
       ),
     );
-  const {
-    blockLines: grammarLibraryBlockAppendix,
-    blockedSet: grammarBlockedSet,
-  } = formatGrammarLibraryBlockPromptFromRows(grammarRes.rows);
 
   const { text: textForModel, truncated } =
     truncateForOpenAIAnalysis(originalText);
@@ -214,6 +225,11 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
     maxRetries: 1,
   });
 
+  const systemPrompt = legacy ? SYSTEM_PROMPT_LEGACY : SYSTEM_PROMPT_VOCAB_FIRST;
+  const jsonSchema = legacy
+    ? ARTICLE_ANALYSIS_JSON_SCHEMA_LEGACY
+    : ARTICLE_VOCAB_FIRST_JSON_SCHEMA;
+
   try {
     const completion = await openai.chat.completions.create({
       model: ANALYSIS_MODEL,
@@ -221,7 +237,7 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
         ? { reasoning_effort: "low" as const }
         : { temperature: 0.3 }),
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: systemPrompt },
         {
           role: "user",
           content: buildOpenAIAnalysisUserContent({
@@ -235,7 +251,7 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
       ],
       response_format: {
         type: "json_schema",
-        json_schema: ARTICLE_ANALYSIS_JSON_SCHEMA,
+        json_schema: jsonSchema,
       },
     });
 
@@ -270,15 +286,33 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
       );
     }
 
-    let analysis = normalizeOpenAIArticleAnalysis(parsed);
+    let analysis: ArticleAnalysisResult = legacy
+      ? normalizeOpenAIArticleAnalysis(parsed)
+      : normalizeOpenAIVocabFirstArticleAnalysis(parsed);
 
-    const { analysis: analysisGrammarFiltered, removedGrammar: grammarNotInText } =
-      filterArticleAnalysisGrammarByArticleText(analysis, textForModel);
-    analysis = analysisGrammarFiltered;
-    if (grammarNotInText.length > 0) {
-      warnings.push(
-        `已剔除 ${grammarNotInText.length} 条语法推荐（selected_text 非正文连续子串）：${grammarNotInText.slice(0, 3).join("、")}${grammarNotInText.length > 3 ? "…" : ""}`,
-      );
+    if (legacy) {
+      const {
+        analysis: analysisGrammarFiltered,
+        removedGrammar: grammarNotInText,
+      } = filterArticleAnalysisGrammarByArticleText(analysis, textForModel);
+      analysis = analysisGrammarFiltered;
+      if (grammarNotInText.length > 0) {
+        warnings.push(
+          `已剔除 ${grammarNotInText.length} 条语法推荐（selected_text 非正文连续子串）：${grammarNotInText.slice(0, 3).join("、")}${grammarNotInText.length > 3 ? "…" : ""}`,
+        );
+      }
+
+      const { grammar: graFiltered, removedCount: grammarRemoved } =
+        filterArticleAnalysisGrammarByBlockedSet(
+          analysis.grammar,
+          grammarBlockedSet,
+        );
+      if (grammarRemoved > 0) {
+        analysis = { ...analysis, grammar: graFiltered };
+        warnings.push(
+          `已按您总语法库中「已掌握 / 暂忽略」记录剔除 ${grammarRemoved} 条语法推荐（与 grammar_key + normalized_key 完全一致）。`,
+        );
+      }
     }
 
     const unmatchedVocab = listRealAiEntriesWithoutTextMatch(
@@ -307,21 +341,10 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
       );
     }
 
-    const { grammar: graFiltered, removedCount: grammarRemoved } =
-      filterArticleAnalysisGrammarByBlockedSet(
-        analysis.grammar,
-        grammarBlockedSet,
-      );
-    if (grammarRemoved > 0) {
-      analysis = { ...analysis, grammar: graFiltered };
-      warnings.push(
-        `已按您总语法库中「已掌握 / 暂忽略」记录剔除 ${grammarRemoved} 条语法推荐（与 grammar_key + normalized_key 完全一致）。`,
-      );
-    }
-
     const payload: OkBody = {
       ok: true,
       analysis,
+      schemaVersion: legacy ? "legacy_full_v1" : "vocab_first_v1",
     };
     if (warnings.length) {
       payload.warning = warnings.join(" ");

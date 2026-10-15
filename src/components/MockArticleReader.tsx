@@ -40,12 +40,6 @@ export function MockArticleReader() {
     [articlePlain, chunkIntervals],
   );
 
-  const summaryPanel = (
-    <p className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
-      {mockArticleMeta.summaryZh}
-    </p>
-  );
-
   const questionsPanel = (
     <ol className="list-decimal space-y-2 pl-5 text-sm text-zinc-700 dark:text-zinc-300">
       {mockArticleMeta.questions.map((q) => (
@@ -61,9 +55,7 @@ export function MockArticleReader() {
       metaTitle={mockArticleMeta.title}
       initialVocabularyItems={initialVocabularyItems}
       initialGrammarItems={initialGrammarItems}
-      summaryPanel={summaryPanel}
       questionsPanel={questionsPanel}
-      legendMode="full"
     />
   );
 }
