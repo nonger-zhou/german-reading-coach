@@ -5,6 +5,13 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-10-15 — 英语学习功能上线（PR #3 合并）
+
+**本次完成**：维护者在 Preview 上验收（德语文章 / 词库 / 高亮 / 复习与正式版一致；英语导入、分析、高亮正常）后，PR #3 合并到 `main`，Vercel Production 部署成功。迁移 `010` 已于当日执行（已有数据：文章 109、词条 1157、语法项 93，全部为 de）；Vercel Preview 已配置 `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`（Config 类型，仅 Preview）与 `OPENAI_API_KEY`。
+**用户需做**：Chrome `chrome://extensions/` 重新加载插件（0.1.6）。
+**已知问题**：英语分界线为初始标定；总词库列表中未补充解释的英语手动词条显示德语占位句。
+**下一步**：观察英语推荐数量；之后按 PRD §1.4.3 另开分支做截图 / 拍照导入。
+
 ### 2026-10-15 — 高亮大小写回退 + 网页按钮行自动清理（德语 / 英语，分支 `feat/english-language`）
 
 **原因**：Preview 测试英语文章时，AI 推荐的 swarms 没有高亮（原文为引号开头的 “Swarms”，大小写不一致）；手动粘贴的 swissinfo 英文页带入 Listen to the article、Save、Share、发布时间、阅读时长等按钮行。
