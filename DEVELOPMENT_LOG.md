@@ -545,6 +545,29 @@ npx vitest run --config vitest.live.config.ts src/lib/articleAnalysis/vocabulary
 
 ## 更新记录（按任务追加）
 
+### 2026-10-15 — 选词 v2：只推用户不认识的词（词频表 + 词库画像）
+
+**背景**：本地 5 月 17–19 日的工作此前未提交到 GitHub（线上为 5 月 25 日 CLI 部署）；本次先原样提交为 `local-work` 分支，再在其上叠加选词 v2。
+
+**问题**：推荐词几乎全是名词、偏简单（很多已掌握），真正不会的词（动词、副词、连接词）反而漏推。原因：
+- 选词完全由 `gpt-4o-mini` 凭感觉完成，只有一个 CEFR 标签可参考；
+- 已掌握剔除要求 `normalized_key` + 词性**完全一致**，而两者都由模型自由生成，常对不上；
+- 手动再次添加已掌握的词时，状态不变，仍被剔除。
+
+**本次完成**
+- **新增 `src/lib/vocabSelection/`**：德语词频表（8 万词，OpenSubtitles + 德语维基合并；生成脚本 `scripts/build-german-frequency.py`）、`frequency.ts`（屈折回退、瑞士 ss→ß、去冠词比对键）、`userVocabProfile.ts`（等级分界线 + 自适应）、`articleCandidates.ts`、`selectVocabulary.ts`（候选/必推 prompt 段 + 输出后确定性过滤）。
+- **`src/app/api/analyze-article/route.ts`**：vocab-first 与 legacy 两条路径都接入选词 v2；模型改为 **`gpt-5-mini`**（`reasoning_effort: low`），`OPENAI_ANALYSIS_MODEL` 可覆盖。
+- **`openaiArticleAnalysis.ts`**：两个 SYSTEM_PROMPT 均加【用户词汇画像优先】段。
+- **`src/lib/supabase/vocabulary.ts`**：`fetchVocabularyProfileRowsForArticleAnalysis`；`persistManualVocabularyItem` 新增 `reactivateIfMastered`。
+- **`InteractiveArticleReader.tsx`**：框选添加、表单添加两处传 `reactivateIfMastered: true`（仅此 2 行）。
+- **未改动**：外部深入解释、整篇翻译外链、框选、高亮、保存流程、按需语法解释、导入。
+
+**验证**：`npm test` 全部通过；`npm run build` 通过。未做真实 OpenAI 调用，需在 App 内重新分析文章实测。
+
+**已知问题**：词频是近似，需靠用户标记校准；复合词多不在词频表内，一律进入候选。
+
+**部署**：合并到 main 后 Vercel 自动部署（Git 已连接）。
+
 ### 2026-05-17 — vocabularySelectionPrompt 接线（narrow wiring）
 
 **本次完成**

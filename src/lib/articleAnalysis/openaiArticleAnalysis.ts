@@ -24,6 +24,10 @@ import { normalizeTextKey } from "@/lib/articleReadingModel";
  */
 export const OPENAI_ANALYSIS_TEXT_CHAR_LIMIT = 10_000;
 
+/** 选词 v2：程序根据用户词库与词频计算的候选/必推列表优先于模型对等级的主观判断 */
+const USER_VOCAB_PROFILE_PRIORITY_SECTION = `【用户词汇画像优先】
+若 user 消息中给出【用户词汇画像】【候选生词】【必须推荐】，选词以它们为准：单个词只从候选生词中选，必须推荐的词逐条输出，按对读懂本文的重要程度排序；下文按 userLevel 的判断仅作补充。这些列表由程序根据用户真实词库计算，比你对等级的主观估计更可靠。`;
+
 export const SYSTEM_PROMPT_LEGACY = `你是德语阅读学习助手。
 目标用户为中文母语德语学习者；解释语言默认为中文；simple_de_explanation / explanation_de_simple 使用简单德语。
 
@@ -35,6 +39,8 @@ export const SYSTEM_PROMPT_LEGACY = `你是德语阅读学习助手。
 - vocabulary：见下方【vocabulary】专节（唯一词汇任务说明）。
 
 ${VOCABULARY_SYSTEM_SECTION}
+
+${USER_VOCAB_PROFILE_PRIORITY_SECTION}
 
 【userLevel】
 依据 user 消息中的 userLevel 判断哪些词汇与语法值得推荐（A2 偏基础；B1 新闻常见搭配与结构；B2 减少过于基础的词；C1/C2 仅在确有帮助时提高难度）。
@@ -67,6 +73,8 @@ export const SYSTEM_PROMPT_VOCAB_FIRST = `你是德语阅读学习助手。
 ${VOCABULARY_MINIMAL_B_SYSTEM}
 
 ${READING_QUESTIONS_SHORT_SECTION}
+
+${USER_VOCAB_PROFILE_PRIORITY_SECTION}
 
 【userLevel】
 依据 user 消息中的 userLevel 判断哪些词汇值得推荐（A2 偏基础；B1 新闻常见搭配；B2 减少过于基础的词）。

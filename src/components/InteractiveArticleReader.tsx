@@ -2378,6 +2378,7 @@ export function InteractiveArticleReader({
         articleId: persistArticleId,
         articlePlain,
         item: targetMerged,
+        reactivateIfMastered: true,
       });
       if (error) {
         emitPersistError(`词汇保存失败：${error}`);
@@ -4334,6 +4335,7 @@ export function InteractiveArticleReader({
                         articleId: persistArticleId,
                         articlePlain,
                         item: targetMerged,
+                        reactivateIfMastered: true,
                       });
                     if (error) {
                       emitPersistError(`词汇保存失败：${error}`);
