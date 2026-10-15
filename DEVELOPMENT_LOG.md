@@ -545,6 +545,15 @@ npx vitest run --config vitest.live.config.ts src/lib/articleAnalysis/vocabulary
 
 ## 更新记录（按任务追加）
 
+### 2026-10-15 — 选词 v2：过滤专有名词
+
+**原因**：词频表把人名 / 政党名当成「罕见词」放进候选，例如词库里出现 `das Rassemblement`（法国政党）。
+**本次完成**
+- `articleCandidates.ts`：候选词标注「疑似专名」（全大写缩写，或大写、不在词表、也拆不成已知复合词——复合词按 2–3 段已知词 + 连接成分 s/es/n/en/e 判断）。仅作为给模型的提示，不直接删除。
+- `selectVocabulary.ts`：输出后剔除——模型释义写明是人名、地名、政党、公司、品牌、机构、媒体等，或原文为全大写缩写；**学习中的词不受影响**。路由日志新增 `droppedProperNames`。
+**已知限制**：维基词表也收录常见人名（如 Gianluigi、Köhler），这类只能靠模型释义判断。
+**验证**：`npm test`（95）/ `npm run build` 通过。
+
 ### 2026-10-15 — 总词库分页
 
 **原因**：词库约 700 条时一次性渲染全部卡片，浏览器明显卡顿。

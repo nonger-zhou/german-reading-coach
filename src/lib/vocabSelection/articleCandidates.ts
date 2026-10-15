@@ -27,7 +27,46 @@ export type CandidateWord = {
   /** 词频排名；undefined = 不在常用词表内（罕见词 / 复合词 / 专名） */
   rank: number | undefined;
   count: number;
+  /** 疑似专名（全大写缩写，或大写且不在词表、也拆不成已知复合词） */
+  maybeProperName: boolean;
 };
+
+/**
+ * 复合词判断：能拆成 2–3 段都认识的词（允许连接成分 s / es / n / en / e），
+ * 如 Untersuchungs|haft、Kanonen|boot|politik。人名如 Gianluigi 拆不出来。
+ */
+const FUGEN = ["", "s", "es", "n", "en", "e"];
+
+function isKnownPart(part: string): boolean {
+  return part.length >= 3 && rankOfWord(part) !== undefined;
+}
+
+function looksLikeCompoundOfKnownWords(lower: string, depth = 0): boolean {
+  if (depth > 2) return false;
+  for (let i = 3; i <= lower.length - 3; i++) {
+    const head = lower.slice(0, i);
+    const tail = lower.slice(i);
+    const tailOk =
+      isKnownPart(tail) || (depth < 2 && looksLikeCompoundOfKnownWords(tail, depth + 1));
+    if (!tailOk) continue;
+    for (const f of FUGEN) {
+      if (f && !head.endsWith(f)) continue;
+      const stem = f ? head.slice(0, -f.length) : head;
+      if (isKnownPart(stem)) return true;
+    }
+  }
+  return false;
+}
+
+export function looksLikeProperNameToken(surface: string): boolean {
+  if (surface.length >= 2 && surface === surface.toUpperCase() && /[A-ZÄÖÜ]/.test(surface)) {
+    return true;
+  }
+  if (!/^[A-ZÄÖÜ]/.test(surface)) return false;
+  const lower = surface.toLocaleLowerCase("de-DE");
+  if (rankOfWord(lower) !== undefined) return false;
+  return !looksLikeCompoundOfKnownWords(lower);
+}
 
 function tokenMatchesKey(tokenLower: string, key: string): boolean {
   if (!tokenLower.startsWith(key)) return false;
@@ -64,7 +103,12 @@ export function extractCandidateWords(
     if (isKnownToken(lower, profile.knownKeys)) continue;
     const rank = rankOfWord(lower);
     if (rank !== undefined && rank <= profile.cutoff) continue;
-    byLower.set(lower, { surface: t.surface, rank, count: 1 });
+    byLower.set(lower, {
+      surface: t.surface,
+      rank,
+      count: 1,
+      maybeProperName: looksLikeProperNameToken(t.surface),
+    });
   }
   return [...byLower.values()];
 }

@@ -333,7 +333,7 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
     );
     analysis = { ...analysis, vocabulary: selection.vocabulary };
     console.info(
-      `[analyze-article] vocab v2 model=${ANALYSIS_MODEL} level=${userLevel} cutoff=${vocabProfile.cutoff} (${vocabProfile.cutoffNote}) candidates=${vocabPlan.candidates.length} learningInText=${vocabPlan.learningInArticle.length} kept=${selection.vocabulary.length} droppedKnown=${selection.droppedKnown.length} droppedTooCommon=${selection.droppedTooCommon.length} addedLearning=${selection.addedLearning.length}`,
+      `[analyze-article] vocab v2 model=${ANALYSIS_MODEL} level=${userLevel} cutoff=${vocabProfile.cutoff} (${vocabProfile.cutoffNote}) candidates=${vocabPlan.candidates.length} learningInText=${vocabPlan.learningInArticle.length} kept=${selection.vocabulary.length} droppedKnown=${selection.droppedKnown.length} droppedTooCommon=${selection.droppedTooCommon.length} droppedProperNames=${selection.droppedProperNames.length} addedLearning=${selection.addedLearning.length}`,
     );
     if (selection.droppedKnown.length > 0) {
       warnings.push(

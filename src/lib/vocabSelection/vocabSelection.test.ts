@@ -9,8 +9,16 @@ import {
   LEVEL_FREQUENCY_CUTOFF,
   type UserVocabRow,
 } from "./userVocabProfile";
-import { extractCandidateWords, findLearningWordsInArticle } from "./articleCandidates";
-import { applyVocabularySelection, planVocabularySelection } from "./selectVocabulary";
+import {
+  extractCandidateWords,
+  findLearningWordsInArticle,
+  looksLikeProperNameToken,
+} from "./articleCandidates";
+import {
+  applyVocabularySelection,
+  itemLooksLikeProperName,
+  planVocabularySelection,
+} from "./selectVocabulary";
 
 function row(partial: Partial<UserVocabRow>): UserVocabRow {
   return {
@@ -170,5 +178,40 @@ describe("自适应分界线", () => {
   it("AI 推荐保存的学习中词不参与下调（未必真不认识）", () => {
     const rows = Array.from({ length: 30 }, () => row({ lemma: "krise", mastery_status: "new", source: "ai" }));
     expect(computeAdaptiveCutoff(base, rows).cutoff).toBe(base);
+  });
+});
+
+describe("专有名词", () => {
+  it("缩写与不认识的大写词标为疑似专名，复合词不算", () => {
+    expect(looksLikeProperNameToken("MSC")).toBe(true);
+    expect(looksLikeProperNameToken("Aponte")).toBe(true);
+    expect(looksLikeProperNameToken("Untersuchungshaft")).toBe(false);
+    expect(looksLikeProperNameToken("Kanonenbootpolitik")).toBe(false);
+    expect(looksLikeProperNameToken("Regierung")).toBe(false);
+  });
+
+  it("模型释义写明是政党 / 人名时剔除；学习中的词不剔除", () => {
+    const rassemblement = item({
+      surface_form: "Rassemblement",
+      lemma: "das Rassemblement",
+      zh_meaning: "法国政党名称（国民阵线/Rassemblement national）",
+    });
+    expect(itemLooksLikeProperName(rassemblement)).toBe(true);
+    expect(itemLooksLikeProperName(item({ lemma: "die Untersuchungshaft", zh_meaning: "审前羁押" }))).toBe(false);
+
+    const text = "Das Rassemblement gewann.";
+    const profile = buildUserVocabProfile("B1", []);
+    const res = applyVocabularySelection([rassemblement], planVocabularySelection(text, profile), profile, text);
+    expect(res.vocabulary).toHaveLength(0);
+    expect(res.droppedProperNames).toEqual(["das Rassemblement"]);
+
+    const learningProfile = buildUserVocabProfile("B1", [row({ lemma: "das Rassemblement", mastery_status: "learning" })]);
+    const res2 = applyVocabularySelection(
+      [rassemblement],
+      planVocabularySelection(text, learningProfile),
+      learningProfile,
+      text,
+    );
+    expect(res2.vocabulary).toHaveLength(1);
   });
 });

@@ -66,9 +66,15 @@ export function planVocabularySelection(
   }
 
   lines.push("");
-  lines.push("【候选生词】每行：文中词形\t词频排名（「罕见」= 不在常用 8 万词内）");
+  lines.push(
+    "【候选生词】每行：文中词形\t词频排名（「罕见」= 不在常用 8 万词内）；标「疑似专名」的多为人名、地名、机构、政党、品牌，确认是专名就跳过，只有本身是普通词汇（如 Eidgenossenschaft）才推荐",
+  );
   if (candidates.length) {
-    for (const c of candidates) lines.push(`${c.surface}\t${rankLabel(c.rank)}`);
+    for (const c of candidates) {
+      lines.push(
+        `${c.surface}\t${rankLabel(c.rank)}${c.maybeProperName ? "\t疑似专名" : ""}`,
+      );
+    }
   } else {
     lines.push("（无：本文单词对该用户都较常用，只推荐必须推荐的词和意思不透明的多词表达）");
   }
@@ -79,6 +85,7 @@ export function planVocabularySelection(
 export type VocabSelectionResult = {
   vocabulary: AnalyzedVocabularyItem[];
   droppedKnown: string[];
+  droppedProperNames: string[];
   droppedTooCommon: string[];
   addedLearning: string[];
 };
@@ -103,6 +110,19 @@ function itemRank(item: AnalyzedVocabularyItem): number | undefined {
     if (r !== undefined && (best === undefined || r < best)) best = r;
   }
   return best;
+}
+
+/** 模型自己的释义表明这是专名（人名、地名、政党、公司等）时剔除 */
+const PROPER_NAME_GLOSS =
+  /(人名|姓氏|地名|城市名|国名|国家名|地区名|政党|党派名|公司名|企业名|品牌|机构名|组织名|媒体名|报纸名|专有名词|专名|缩写.{0,6}(公司|组织|机构))/;
+
+export function itemLooksLikeProperName(item: AnalyzedVocabularyItem): boolean {
+  const lemma = vocabMatchKey(item.lemma);
+  if (!lemma || /\s/.test(lemma.replace(/^(der|die|das)\s+/, ""))) return false;
+  const gloss = `${item.zh_meaning ?? ""} ${item.reason_for_selection ?? ""}`;
+  if (PROPER_NAME_GLOSS.test(gloss)) return true;
+  const surf = (item.surface_form ?? "").trim();
+  return /^[A-ZÄÖÜ]{2,}$/.test(surf);
 }
 
 function learningItemFromRow(
@@ -144,6 +164,7 @@ export function applyVocabularySelection(
   const kept: AnalyzedVocabularyItem[] = [];
   const droppedKnown: string[] = [];
   const droppedTooCommon: string[] = [];
+  const droppedProperNames: string[] = [];
   const keptKeys = new Set<string>();
 
   for (const item of vocabulary) {
@@ -153,6 +174,10 @@ export function applyVocabularySelection(
     if (!isLearning) {
       if (keys.some((k) => profile.knownKeys.has(k))) {
         droppedKnown.push(item.lemma || item.surface_form);
+        continue;
+      }
+      if (itemLooksLikeProperName(item)) {
+        droppedProperNames.push(item.lemma || item.surface_form);
         continue;
       }
       const r = itemRank(item);
@@ -177,5 +202,11 @@ export function applyVocabularySelection(
     addedLearning.push(lw.row.lemma || lw.key);
   }
 
-  return { vocabulary: kept, droppedKnown, droppedTooCommon, addedLearning };
+  return {
+    vocabulary: kept,
+    droppedKnown,
+    droppedTooCommon,
+    droppedProperNames,
+    addedLearning,
+  };
 }
