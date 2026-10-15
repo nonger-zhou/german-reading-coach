@@ -11,7 +11,7 @@
 **本次完成**：新增 `src/lib/articleAnalysis/repairSurfaceForms.ts`，在 `/api/analyze-article` 拿到 AI 结果后（含长文其余各段）对**原文里找不到**的词条修正 `surface_form`：先去掉开头冠词 / to / the / a 再找；再原样找（单词整词匹配、短语子串，均先精确后不区分大小写）；最后单词允许原文词尾多 0–3 个字母（Tradition → Traditionen、concede → conceded），整词匹配，不会匹配进长词内部（Traditionsverein）。仍找不到才保留原样并提示。能精确匹配的词条完全不变。测试 5 条；`docs/USER_MANUAL.md` §9.2 说明。
 **验证**：`npm test` / `npm run build` 通过。
 
-### 2026-10-15 — 手动添加词汇 / 语法后自动生成 AI 解释（分支 `feat/auto-enrich`）
+### 2026-10-15 — 手动添加词汇 / 语法后自动生成 AI 解释（PR #5，已上线）
 
 **原因**：维护者反馈：添加单词后还要再点「补充 AI 解释」很麻烦。
 **本次完成**
@@ -21,6 +21,14 @@
 - 规则更新：PRD §1.4.1 Phase 3.14、§13.6；`/help`；`docs/USER_MANUAL.md` §6.2。
 **影响面**：只在手动添加保存成功后多一次补充解释调用；刷新、切换 Tab、重新打开文章仍不会自动调用 AI；拖选 / 点词 / 高亮逻辑未改。
 **验证**：`npm test`（136）/ `npm run build` 通过。
+
+### 2026-10-15 — 新用户注册邮件通知（PR #4，已上线）
+
+- **完成**：有人注册时自动发邮件给站长。Supabase 触发器（pg_net，异步）→ `POST /api/hooks/new-user`（校验 `x-webhook-secret`）→ Resend 发信（收件人、密钥均为环境变量）。邮件含注册邮箱、瑞士时间、注册方式、用户 ID 与 Supabase 用户页链接。
+- **主要文件**：`src/lib/notify/signupNotification.ts`（+ 测试）、`src/app/api/hooks/new-user/route.ts`、`supabase/fixes/011_signup_notify.sql`、`.env.example`、`README.md`、`docs/DATABASE.md` §10.8、`docs/DEPLOY_VERCEL.md`。
+- **状态**：已上线（PR #4）。Vercel Production 变量已配置，`011` 已在 Supabase 执行，测试邮件已送达。不改任何页面，德语/英语学习功能不受影响。
+- **已知问题**：未验证域名时 Resend 只能发到注册邮箱，发件人为 `onboarding@resend.dev`，可能进垃圾箱。
+- **下一步**：以后有自有域名时在 Resend 验证域名并设 `SIGNUP_NOTIFY_FROM`。
 
 ### 2026-10-15 — 文档：备忘补充欧美市场与竞品
 

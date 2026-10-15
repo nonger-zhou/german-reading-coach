@@ -85,6 +85,8 @@ npm run lint
 
 当前 Production 地址：[`https://german-reading-coach.vercel.app`](https://german-reading-coach.vercel.app)。本次 CLI 部署已在 Vercel Production 配置 `NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY`、`OPENAI_API_KEY`。完整步骤、环境变量表、Supabase **Redirect URLs** 与 **`maxDuration`** 说明见 **[`docs/DEPLOY_VERCEL.md`](./docs/DEPLOY_VERCEL.md)**。
 
+**新用户注册邮件通知（可选）**：`POST /api/hooks/new-user`（由 Supabase 触发器调用，见 [`supabase/fixes/011_signup_notify.sql`](./supabase/fixes/011_signup_notify.sql)）。需在 Vercel **Production** 配置 `RESEND_API_KEY`、`SIGNUP_NOTIFY_TO`、`SIGNUP_WEBHOOK_SECRET`（可选 `SIGNUP_NOTIFY_FROM`），并在 SQL 中填入相同的 webhook 密钥。未配置时接口返回 503，不影响其他功能。
+
 **部署方式（2026-10-15 起）**：Vercel 已连接 GitHub，**推送 / 合并到 `main` 即自动部署 Production**；Vercel 构建使用 `vercel-build`（先跑 `vitest`，测试失败不上线）。GitHub Actions（CI）只做测试与构建检查。
 
 **不要再从本机运行 `npm.cmd run vercel:prod`**（会上传本机未提交的改动，导致线上与 GitHub 不一致）；`vercel` / `vercel:prod` 脚本仅保留作紧急备用。详见 **`docs/DEPLOY_VERCEL.md` §八**。
