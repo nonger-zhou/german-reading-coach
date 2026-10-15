@@ -101,3 +101,12 @@ npm.cmd run vercel:prod:system-ca
 2. 将代码 **push 到 `main`** 后，在 GitHub **Actions** 页查看运行结果。
 
 若未配置上述 Secrets，可删除该 workflow 或忽略失败步骤，改用最稳妥的 **Dashboard 连接 Git 仓库**（见第一节），由 Vercel 在每次 push 时自动构建部署。
+
+## 八、当前实际部署方式（2026-10-15 更新）
+
+- Vercel 项目**已连接 GitHub**（`nonger-zhou/german-reading-coach`）：**合并 / 推送到 `main` 即自动部署 Production**；其他分支自动生成 Preview。
+- **不要再从本机 `npm.cmd run vercel:prod` 部署**：它上传的是本机文件（含未提交改动），会让线上与 GitHub 不一致。2026-05 曾因此导致 GitHub 落后线上。
+- 环境变量目前**只配置了 Production**（`OPENAI_API_KEY`、`NEXT_PUBLIC_SUPABASE_*`），所以 Preview 部署无法登录 / 分析；如需在 Preview 测试，在 Vercel → Environment Variables 给 Preview 也勾上。
+- 可选：**`OPENAI_ANALYSIS_MODEL`**（默认 `gpt-5-mini`）。
+- 出问题时：Vercel → Deployments → 上一条 Production → ⋯ → **Instant Rollback**。回滚期间新部署**不会自动上线**，需对新部署点 **Promote** 解除。
+

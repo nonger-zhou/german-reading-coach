@@ -74,7 +74,7 @@ German Reading Coach
 
 ## 最近更新
 
-- **2026-10-15（选词 v2）**：本地 5 月工作已提交到 GitHub；整文分析改为「词频表 + 用户词库画像」选词——学习中的词必推、已掌握不推（去冠词稳健比对）、其余按等级词频分界线（自适应）；手动添加已掌握词会改回学习中；模型改为 `gpt-5-mini`（`OPENAI_ANALYSIS_MODEL` 可覆盖）。**Vercel 已连 Git：合并 main 即自动部署**。
+- **2026-10-15（选词 v2）**：本地 5 月工作已提交到 GitHub；整文分析改为「词频表 + 用户词库画像」选词——学习中的词必推、已掌握不推（去冠词稳健比对）、其余按等级词频分界线（自适应）；手动添加已掌握词会改回学习中；模型改为 `gpt-5-mini`（`OPENAI_ANALYSIS_MODEL` 可覆盖）。**Vercel 已连 Git：合并 main 即自动部署，勿再本机 `vercel:prod`**。Chrome 插件未改。
 - **2026-05-19（数据清理 + 阅读 UI 精简）**：删除全部系统来源 `grammar_items`、清空 `articles` 摘要字段（脚本/SQL **`009`**）；阅读页无摘要 Tab、折叠三色高亮说明；仅加载 `manual` 语法。**`npm test`** / **`npm run build`** 已通过；Production 已部署。**须在 Supabase 执行 009 后**线上库才干净。
 - **2026-05-19（阅读页：恢复词汇原有 UI）**：词汇高亮仍为 **`<button>`**（绿/琥珀）；详情在右侧列表项下展开（非 Tab 顶 sticky）；点词后列表 **居中** 滚动；语法按需高亮/拖选 passthrough **保留**。**`npm test`**（69）/ **`npm run build`** 已通过。
 - **2026-05-17（回退方案 C）**：恢复单次 OpenAI 整文分析 + **d4aee6e** 词汇/冠词 Prompt（保留 Grammar v2）；已删除双次调用代码。

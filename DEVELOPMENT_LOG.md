@@ -566,7 +566,9 @@ npx vitest run --config vitest.live.config.ts src/lib/articleAnalysis/vocabulary
 
 **已知问题**：词频是近似，需靠用户标记校准；复合词多不在词频表内，一律进入候选。
 
-**部署**：合并到 main 后 Vercel 自动部署（Git 已连接）。
+**部署**：PR #2 合并到 main（`ecaabe8`），已 Promote 为 Production。过程中曾误把基于旧 GitHub 代码的 PR #1 自动部署上线，已 Instant Rollback 到 5 月 25 日版本后再上线 PR #2。今后**只走 Git 合并部署**，不再本机 `vercel:prod`（见 `docs/DEPLOY_VERCEL.md` §八）。
+
+**文档**：`docs/USER_MANUAL.md` §7.2、§8.1–8.2、§9.2 改为选词 v2 规则；`docs/DEPLOY_VERCEL.md` 新增 §八。
 
 ### 2026-05-17 — vocabularySelectionPrompt 接线（narrow wiring）
 
