@@ -545,6 +545,15 @@ npx vitest run --config vitest.live.config.ts src/lib/articleAnalysis/vocabulary
 
 ## 更新记录（按任务追加）
 
+### 2026-10-15 — 长文分段分析
+
+**原因**：整文分析只送正文前 1 万字符，用插件导入的付费长文后半篇没有任何推荐。
+**本次完成**
+- 新增 `src/lib/articleAnalysis/splitArticleForAnalysis.ts`：按段落（必要时按句子）切成 ≤1 万字符的段，最多 4 段。
+- `analyze-article/route.ts`（默认词汇模式）：第 2–4 段与第 1 段**并行**请求，各段独立做选词 v2 过滤（候选词、学习中必推都按该段计算），再用 `mergeVocabularyLists` 按词典形去重合并；阅读问题只取第一段；某段失败只加 warning。legacy（含 grammar）路径不变，仍只分析第一段。
+- 费用：长文按段数线性增加（4 段约为短文 4 倍）；耗时基本不增加（并行）。
+**验证**：`npm test`（97）/ `npm run build` 通过。
+
 ### 2026-10-15 — 选词 v2：过滤专有名词
 
 **原因**：词频表把人名 / 政党名当成「罕见词」放进候选，例如词库里出现 `das Rassemblement`（法国政党）。

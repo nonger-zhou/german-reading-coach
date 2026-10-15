@@ -210,3 +210,20 @@ export function applyVocabularySelection(
     addedLearning,
   };
 }
+
+/** 合并多段分析的词汇：按比对键去重，保留先出现的（前文优先） */
+export function mergeVocabularyLists(
+  lists: ReadonlyArray<ReadonlyArray<AnalyzedVocabularyItem>>,
+): AnalyzedVocabularyItem[] {
+  const out: AnalyzedVocabularyItem[] = [];
+  const seen = new Set<string>();
+  for (const list of lists) {
+    for (const item of list) {
+      const keys = itemKeys(item);
+      if (keys.some((k) => seen.has(k))) continue;
+      out.push(item);
+      keys.forEach((k) => seen.add(k));
+    }
+  }
+  return out;
+}

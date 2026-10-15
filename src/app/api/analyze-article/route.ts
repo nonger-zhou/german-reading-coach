@@ -21,7 +21,7 @@ import {
   normalizeOpenAIVocabFirstArticleAnalysis,
   SYSTEM_PROMPT_LEGACY,
   SYSTEM_PROMPT_VOCAB_FIRST,
-  truncateForOpenAIAnalysis,
+  OPENAI_ANALYSIS_TEXT_CHAR_LIMIT,
 } from "@/lib/articleAnalysis/openaiArticleAnalysis";
 import type { ArticleAnalysisResult } from "@/lib/articleAnalysis/types";
 import { getSupabaseUserFromBearer } from "@/lib/supabase/routeFromBearer";
@@ -30,8 +30,10 @@ import { fetchVocabularyProfileRowsForArticleAnalysis } from "@/lib/supabase/voc
 import { buildUserVocabProfile } from "@/lib/vocabSelection/userVocabProfile";
 import {
   applyVocabularySelection,
+  mergeVocabularyLists,
   planVocabularySelection,
 } from "@/lib/vocabSelection/selectVocabulary";
+import { splitArticleForAnalysis } from "@/lib/articleAnalysis/splitArticleForAnalysis";
 import type { CefrLevel } from "@/lib/types";
 
 /** 整文分析可能接近分钟级，放宽服务端限时（部署平台支持时生效） */
@@ -45,6 +47,9 @@ const LEVELS: CefrLevel[] = ["A1", "A2", "B1", "B2", "C1", "C2"];
  */
 const ANALYSIS_MODEL =
   process.env.OPENAI_ANALYSIS_MODEL?.trim() || "gpt-5-mini";
+
+/** 长文最多分几段分析（每段约 1 万字符；4 段 ≈ 4 万字符，单篇费用约为短文的 4 倍） */
+const MAX_ANALYSIS_CHUNKS = 4;
 
 /** gpt-5 / o 系列为推理模型：不接受 temperature，改用 reasoning_effort */
 function isReasoningModel(model: string): boolean {
@@ -204,11 +209,23 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
       ),
     );
 
-  const { text: textForModel, truncated } =
-    truncateForOpenAIAnalysis(originalText);
+  /** legacy（含 grammar）仍只分析第一段；默认词汇模式下长文分段并行分析 */
+  const { chunks, truncated, analyzedChars } = splitArticleForAnalysis(
+    originalText,
+    OPENAI_ANALYSIS_TEXT_CHAR_LIMIT,
+    legacy ? 1 : MAX_ANALYSIS_CHUNKS,
+  );
+  const textForModel = chunks[0];
+  const extraChunks = chunks.slice(1);
   const warnings: string[] = [];
   if (truncated) {
-    warnings.push("当前仅分析文章前半部分。");
+    warnings.push(
+      legacy
+        ? "当前仅分析文章前半部分。"
+        : `文章很长，只分析了前约 ${Math.round(analyzedChars / 1000)} 千字（${chunks.length} 段）。`,
+    );
+  } else if (extraChunks.length > 0) {
+    warnings.push(`长文已分 ${chunks.length} 段分析。`);
   }
 
   const vocabPlan = planVocabularySelection(textForModel, vocabProfile);
@@ -230,8 +247,8 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
     ? ARTICLE_ANALYSIS_JSON_SCHEMA_LEGACY
     : ARTICLE_VOCAB_FIRST_JSON_SCHEMA;
 
-  try {
-    const completion = await openai.chat.completions.create({
+  const requestCompletion = (text: string, vocabAppendix: string) =>
+    openai.chat.completions.create({
       model: ANALYSIS_MODEL,
       ...(isReasoningModel(ANALYSIS_MODEL)
         ? { reasoning_effort: "low" as const }
@@ -242,9 +259,9 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
           role: "user",
           content: buildOpenAIAnalysisUserContent({
             title,
-            originalText: textForModel,
+            originalText: text,
             userLevel,
-            vocabLibraryBlockAppendix,
+            vocabLibraryBlockAppendix: vocabAppendix,
             grammarLibraryBlockAppendix,
           }),
         },
@@ -254,6 +271,27 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
         json_schema: jsonSchema,
       },
     });
+
+  /** 后续段与第一段并行请求；单段失败只记 warning，不影响整体结果 */
+  const extraChunkPromises = extraChunks.map(async (chunkText, i) => {
+    const plan = planVocabularySelection(chunkText, vocabProfile);
+    const appendix = [plan.promptAppendix, vocabLibraryBlockLines]
+      .filter(Boolean)
+      .join("\n\n");
+    try {
+      const res = await requestCompletion(chunkText, appendix);
+      const raw = res.choices[0]?.message?.content;
+      if (!raw) throw new Error("empty");
+      const vocab = normalizeOpenAIVocabFirstArticleAnalysis(JSON.parse(raw)).vocabulary;
+      return { ok: true as const, chunkText, plan, vocab };
+    } catch (err) {
+      console.warn(`[analyze-article] chunk ${i + 2} failed`, err);
+      return { ok: false as const, index: i + 2 };
+    }
+  });
+
+  try {
+    const completion = await requestCompletion(textForModel, vocabLibraryBlockAppendix);
 
     const content = completion.choices[0]?.message?.content;
     if (!content) {
@@ -331,13 +369,29 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
       vocabProfile,
       textForModel,
     );
-    analysis = { ...analysis, vocabulary: selection.vocabulary };
+    const extraResults = await Promise.all(extraChunkPromises);
+    const extraLists: (typeof selection.vocabulary)[] = [];
+    let extraDroppedKnown = 0;
+    for (const r of extraResults) {
+      if (!r.ok) {
+        warnings.push(`第 ${r.index} 段分析失败，已跳过。`);
+        continue;
+      }
+      const sel = applyVocabularySelection(r.vocab, r.plan, vocabProfile, r.chunkText);
+      extraDroppedKnown += sel.droppedKnown.length;
+      extraLists.push(sel.vocabulary);
+    }
+    analysis = {
+      ...analysis,
+      vocabulary: mergeVocabularyLists([selection.vocabulary, ...extraLists]),
+    };
     console.info(
-      `[analyze-article] vocab v2 model=${ANALYSIS_MODEL} level=${userLevel} cutoff=${vocabProfile.cutoff} (${vocabProfile.cutoffNote}) candidates=${vocabPlan.candidates.length} learningInText=${vocabPlan.learningInArticle.length} kept=${selection.vocabulary.length} droppedKnown=${selection.droppedKnown.length} droppedTooCommon=${selection.droppedTooCommon.length} droppedProperNames=${selection.droppedProperNames.length} addedLearning=${selection.addedLearning.length}`,
+      `[analyze-article] vocab v2 model=${ANALYSIS_MODEL} level=${userLevel} cutoff=${vocabProfile.cutoff} (${vocabProfile.cutoffNote}) candidates=${vocabPlan.candidates.length} learningInText=${vocabPlan.learningInArticle.length} kept=${selection.vocabulary.length} droppedKnown=${selection.droppedKnown.length} droppedTooCommon=${selection.droppedTooCommon.length} droppedProperNames=${selection.droppedProperNames.length} addedLearning=${selection.addedLearning.length} chunks=${chunks.length} total=${analysis.vocabulary.length}`,
     );
-    if (selection.droppedKnown.length > 0) {
+    const droppedKnownTotal = selection.droppedKnown.length + extraDroppedKnown;
+    if (droppedKnownTotal > 0) {
       warnings.push(
-        `已按您总词库中「已掌握 / 暂忽略」记录剔除 ${selection.droppedKnown.length} 条词汇推荐。`,
+        `已按您总词库中「已掌握 / 暂忽略」记录剔除 ${droppedKnownTotal} 条词汇推荐。`,
       );
     }
 

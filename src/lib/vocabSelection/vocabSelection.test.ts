@@ -215,3 +215,25 @@ describe("专有名词", () => {
     expect(res2.vocabulary).toHaveLength(1);
   });
 });
+
+describe("长文分段", () => {
+  it("按段落切分、不超过上限、最多 N 段", async () => {
+    const { splitArticleForAnalysis } = await import("@/lib/articleAnalysis/splitArticleForAnalysis");
+    const para = "Ein Satz über die Regierung. ".repeat(40) + "\n\n";
+    const text = para.repeat(20);
+    const r = splitArticleForAnalysis(text, 5000, 3);
+    expect(r.chunks).toHaveLength(3);
+    expect(r.truncated).toBe(true);
+    expect(r.chunks.every((c) => c.length <= 5000)).toBe(true);
+    const short = splitArticleForAnalysis("kurz", 5000, 3);
+    expect(short).toEqual({ chunks: ["kurz"], truncated: false, analyzedChars: 4 });
+  });
+
+  it("合并多段词汇按词典形去重", async () => {
+    const { mergeVocabularyLists } = await import("./selectVocabulary");
+    const a = item({ lemma: "die Hürde", surface_form: "Hürde" });
+    const b = item({ lemma: "Hürde", surface_form: "Hürden" });
+    const c = item({ lemma: "einräumen", surface_form: "räumte ein" });
+    expect(mergeVocabularyLists([[a], [b, c]]).map((v) => v.lemma)).toEqual(["die Hürde", "einräumen"]);
+  });
+});

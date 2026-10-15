@@ -864,6 +864,7 @@ AI 自动分析的目标**不是**罗列文中所有生词，而是：
   - **手动添加 = 回到学习中**：用户在阅读页框选或表单添加一个已掌握 / 暂忽略的词时，状态改回**学习中**，之后可再次推荐，直到用户再次标为已掌握。AI 预览保存**不改**用户已标状态。
   - **不设条数上限**，按对读懂本文的重要程度排序，最关键的在前。
   - 整文分析模型默认 **`gpt-5-mini`**，可用 **`OPENAI_ANALYSIS_MODEL`** 覆盖。
+  - **长文分段（2026-10-15）**：超过约 1 万字符时按段落切成多段（最多 4 段）并行分析，词汇合并去重；阅读问题取第一段；单段失败只提示不影响整体。
 - **实现侧（2026-05-19 默认）**：**`POST /api/analyze-article`** **单次** OpenAI；**`SYSTEM_PROMPT_VOCAB_FIRST`**（极简 B 词汇 + 3 条阅读问题）；**`json_schema`** 仅 **`vocabulary` + `reading_questions`**。整文**不再**默认输出 grammar / 摘要。**`ENABLE_AUTO_GRAMMAR_ANALYSIS=true`** 时恢复旧 **`SYSTEM_PROMPT_LEGACY`**（Grammar v2 + Reset v1 词汇段 + 摘要）。按需语法：**`POST /api/explain-grammar-selection`**（选区 + 短上下文，不入库总库）。全文中文翻译：**复制 Prompt** 至外部 AI，**不**调用本 App API。
 
 ---
