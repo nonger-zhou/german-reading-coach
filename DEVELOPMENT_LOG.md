@@ -5,6 +5,23 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-10-15 — AI 词形对不上原文时自动修正（德语 / 英语，分支 `feat/auto-enrich`）
+
+**原因**：维护者测试德语长文时出现「das Verbrechen、die Tradition、die Rüstungsindustrie 未在原文精确匹配」——AI 给名词多加了冠词，原文是 Verbrechen / der Tradition 等；上一次的大小写回退覆盖不到。
+**本次完成**：新增 `src/lib/articleAnalysis/repairSurfaceForms.ts`，在 `/api/analyze-article` 拿到 AI 结果后（含长文其余各段）对**原文里找不到**的词条修正 `surface_form`：先去掉开头冠词 / to / the / a 再找；再原样找（单词整词匹配、短语子串，均先精确后不区分大小写）；最后单词允许原文词尾多 0–3 个字母（Tradition → Traditionen、concede → conceded），整词匹配，不会匹配进长词内部（Traditionsverein）。仍找不到才保留原样并提示。能精确匹配的词条完全不变。测试 5 条；`docs/USER_MANUAL.md` §9.2 说明。
+**验证**：`npm test` / `npm run build` 通过。
+
+### 2026-10-15 — 手动添加词汇 / 语法后自动生成 AI 解释（PR #5，已上线）
+
+**原因**：维护者反馈：添加单词后还要再点「补充 AI 解释」很麻烦。
+**本次完成**
+- `InteractiveArticleReader.tsx`：手动添加（拖选浮层、右侧表单，词汇与语法共 5 处保存点）保存成功后，把条目放入自动补充队列；队列一次只跑一个，复用原有 `handleEnrichVocabForItem` / `handleEnrichGrammarForItem`（其内部判断已保证只对缺解释的手动条目调用，已有完整解释的跳过）。失败时与原来一样显示错误与「补充 AI 解释」按钮。只有自动触发的生成，在「AI 解释生成中…」后显示「（添加后自动生成，可在设置中关闭）」。
+- 新增 `src/lib/settings/autoEnrich.ts`：开关读写（默认开，localStorage，读写失败按开处理）与去重入队；`autoEnrich.test.ts` 4 条测试。
+- 设置页新增「添加后自动生成 AI 解释」开关。
+- 规则更新：PRD §1.4.1 Phase 3.14、§13.6；`/help`；`docs/USER_MANUAL.md` §6.2。
+**影响面**：只在手动添加保存成功后多一次补充解释调用；刷新、切换 Tab、重新打开文章仍不会自动调用 AI；拖选 / 点词 / 高亮逻辑未改。
+**验证**：`npm test`（136）/ `npm run build` 通过。
+
 ### 2026-10-15 — 新用户注册邮件通知（PR #4，已上线）
 
 - **完成**：有人注册时自动发邮件给站长。Supabase 触发器（pg_net，异步）→ `POST /api/hooks/new-user`（校验 `x-webhook-secret`）→ Resend 发信（收件人、密钥均为环境变量）。邮件含注册邮箱、瑞士时间、注册方式、用户 ID 与 Supabase 用户页链接。

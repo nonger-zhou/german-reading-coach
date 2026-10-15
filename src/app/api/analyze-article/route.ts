@@ -31,6 +31,7 @@ import { fetchVocabularyProfileRowsForArticleAnalysis } from "@/lib/supabase/voc
 import { buildUserVocabProfile } from "@/lib/vocabSelection/userVocabProfile";
 import { loadLexicon } from "@/lib/vocabSelection/lexicons";
 import { SYSTEM_PROMPT_VOCAB_FIRST_EN } from "@/lib/articleAnalysis/englishPrompts";
+import { repairVocabularySurfaceForms } from "@/lib/articleAnalysis/repairSurfaceForms";
 import {
   applyVocabularySelection,
   mergeVocabularyLists,
@@ -351,6 +352,11 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
     let analysis: ArticleAnalysisResult = legacy
       ? normalizeOpenAIArticleAnalysis(parsed)
       : normalizeOpenAIVocabFirstArticleAnalysis(parsed);
+    /** AI 写的词形在原文找不到时（如德语名词多加冠词）改成原文实际写法，保证能高亮 */
+    analysis = {
+      ...analysis,
+      vocabulary: repairVocabularySurfaceForms(analysis.vocabulary, textForModel),
+    };
 
     if (legacy) {
       const {
@@ -401,7 +407,12 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
         warnings.push(`第 ${r.index} 段分析失败，已跳过。`);
         continue;
       }
-      const sel = applyVocabularySelection(r.vocab, r.plan, vocabProfile, r.chunkText);
+      const sel = applyVocabularySelection(
+        repairVocabularySurfaceForms(r.vocab, r.chunkText),
+        r.plan,
+        vocabProfile,
+        r.chunkText,
+      );
       extraDroppedKnown += sel.droppedKnown.length;
       extraLists.push(sel.vocabulary);
     }

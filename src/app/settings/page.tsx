@@ -6,6 +6,7 @@ import type { Session } from "@supabase/supabase-js";
 import { GermanLevelSelect } from "@/components/GermanLevelSelect";
 import { EnglishLevelSelect } from "@/components/EnglishLevelSelect";
 import { useLearningLanguage } from "@/lib/language/useLearningLanguage";
+import { readAutoEnrichOnAdd, writeAutoEnrichOnAdd } from "@/lib/settings/autoEnrich";
 import { PronunciationButton } from "@/components/PronunciationButton";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -34,6 +35,8 @@ export default function SettingsPage() {
   const [defaultLevelError, setDefaultLevelError] = useState<string | null>(null);
   const [defaultLevelNotice, setDefaultLevelNotice] = useState<string | null>(null);
   const [autoPlayOnClick, setAutoPlayOnClick] = useState(false);
+  /** 添加词汇 / 语法后自动生成 AI 解释（默认开，存本机） */
+  const [autoEnrichOnAdd, setAutoEnrichOnAdd] = useState(true);
   const [directSpeakFeedback, setDirectSpeakFeedback] = useState<string | null>(
     null,
   );
@@ -105,6 +108,15 @@ export default function SettingsPage() {
       setAutoPlayOnClick(false);
     }
   }, []);
+
+  useEffect(() => {
+    setAutoEnrichOnAdd(readAutoEnrichOnAdd());
+  }, []);
+
+  function onToggleAutoEnrich(checked: boolean) {
+    setAutoEnrichOnAdd(checked);
+    writeAutoEnrichOnAdd(checked);
+  }
 
   function onToggleAutoPlay(checked: boolean) {
     setAutoPlayOnClick(checked);
@@ -329,6 +341,31 @@ export default function SettingsPage() {
               />
               <span className="text-sm text-zinc-700 dark:text-zinc-300">
                 {autoPlayOnClick ? "已开启" : "已关闭"}
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <div className="border-t border-zinc-100 pt-4 dark:border-zinc-800">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <CardTitle className="text-base">添加后自动生成 AI 解释</CardTitle>
+              <CardDescription>
+                在阅读页手动添加词汇或语法后，自动生成一次解释，不用再点「补充 AI 解释」。
+              </CardDescription>
+              <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                默认开启。每个新条目只生成一次；已有解释的不会重复调用。关闭后改为手动点按钮。此设置保存在当前浏览器。
+              </p>
+            </div>
+            <label className="flex shrink-0 cursor-pointer items-center gap-2">
+              <input
+                type="checkbox"
+                checked={autoEnrichOnAdd}
+                onChange={(e) => onToggleAutoEnrich(e.target.checked)}
+                className="h-4 w-4 rounded border-zinc-300 accent-emerald-600 dark:border-zinc-600"
+              />
+              <span className="text-sm text-zinc-700 dark:text-zinc-300">
+                {autoEnrichOnAdd ? "已开启" : "已关闭"}
               </span>
             </label>
           </div>
