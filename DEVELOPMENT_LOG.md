@@ -5,6 +5,13 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-10-15 — 英语空间不再显示德语占位句（PR #7，已上线）
+
+- **完成**：英语词条 / 语法还没补充简明解释时，总词库、语法库显示「（英文释义待补充）/（英文解释待补充）」，复习卡背面不显示占位句（阅读页原本已这样处理）。只改显示，数据库内容不变；德语空间照旧显示 "Wird später ergänzt."。
+- **主要文件**：`src/components/articleReader/learningItemHelpers.tsx`（`simpleExplanationForDisplay`，+ 测试）、`src/app/vocabulary/page.tsx`、`src/app/grammar/page.tsx`、`src/app/review/page.tsx`。
+- **状态**：待 Preview 验证后合并。
+- **已知问题**：无。
+- **下一步**：截图导入。
 ### 2026-10-15 — 复习进度存入数据库（PR #6，已上线）
 
 - **完成**：复习排期从浏览器 localStorage 改存新表 `vocabulary_review_progress`（迁移 `supabase/fixes/012_review_progress.sql`），换设备也能接着复习。未执行 012 时自动退回本地存储，行为与之前完全一样；执行后首次打开复习页，把本浏览器已有排期（德语、英语各自）自动搬入数据库并清掉本机副本。每次「记住了 / 还不熟」只写一行；「已掌握」删除该行。

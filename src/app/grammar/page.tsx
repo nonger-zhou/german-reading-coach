@@ -1,5 +1,6 @@
 "use client";
 
+import { simpleExplanationForDisplay } from "@/components/articleReader/learningItemHelpers";
 import Link from "next/link";
 import { selectInChunks } from "@/lib/supabase/inChunks";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
@@ -608,7 +609,7 @@ function GrammarPageContent() {
               {g.levelEstimate !== "—" ? <Badge tone="warning">{g.levelEstimate}</Badge> : null}
             </div>
             <p className="text-sm text-zinc-700 dark:text-zinc-300">{g.explanationZh}</p>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">{g.explanationDeSimple}</p>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">{simpleExplanationForDisplay(g.explanationDeSimple, language, "grammar")}</p>
             <p className="text-sm text-zinc-700 dark:text-zinc-300">
               <span className="text-xs text-zinc-500">片段 / 例句 · </span>
               {g.snippet}
