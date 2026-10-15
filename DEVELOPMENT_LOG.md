@@ -5,7 +5,7 @@
 
 ## 更新记录（按任务追加）
 
-### 2026-10-15 — 英语空间不再显示德语占位句（分支 `fix/en-placeholder`）
+### 2026-10-15 — 英语空间不再显示德语占位句（PR #7，已上线）
 
 - **完成**：英语词条 / 语法还没补充简明解释时，总词库、语法库显示「（英文释义待补充）/（英文解释待补充）」，复习卡背面不显示占位句（阅读页原本已这样处理）。只改显示，数据库内容不变；德语空间照旧显示 "Wird später ergänzt."。
 - **主要文件**：`src/components/articleReader/learningItemHelpers.tsx`（`simpleExplanationForDisplay`，+ 测试）、`src/app/vocabulary/page.tsx`、`src/app/grammar/page.tsx`、`src/app/review/page.tsx`。
