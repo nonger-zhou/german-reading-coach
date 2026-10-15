@@ -29,6 +29,7 @@ import { resolveArticleLanguage } from "@/lib/supabase/articles";
 import { fetchGrammarMasteredIgnoredKeysForArticleAnalysis } from "@/lib/supabase/grammar";
 import { fetchVocabularyProfileRowsForArticleAnalysis } from "@/lib/supabase/vocabulary";
 import { buildUserVocabProfile } from "@/lib/vocabSelection/userVocabProfile";
+import { loadLexicon } from "@/lib/vocabSelection/lexicons";
 import {
   applyVocabularySelection,
   mergeVocabularyLists,
@@ -215,7 +216,9 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
     grammarBlockedSet = formatted.blockedSet;
   }
 
-  const vocabProfile = buildUserVocabProfile(userLevel, vocabRes.rows);
+  /** 选词用该语言的词频表与词形规则（德语与以前完全相同；英语按需加载） */
+  const lexicon = await loadLexicon(language);
+  const vocabProfile = buildUserVocabProfile(userLevel, vocabRes.rows, lexicon);
   const { blockLines: vocabLibraryBlockLines } =
     formatVocabLibraryBlockPromptFromRows(
       vocabRes.rows.filter(
@@ -397,7 +400,7 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
     }
     analysis = {
       ...analysis,
-      vocabulary: mergeVocabularyLists([selection.vocabulary, ...extraLists]),
+      vocabulary: mergeVocabularyLists([selection.vocabulary, ...extraLists], lexicon),
     };
     console.info(
       `[analyze-article] vocab v2 model=${ANALYSIS_MODEL} level=${userLevel} cutoff=${vocabProfile.cutoff} (${vocabProfile.cutoffNote}) candidates=${vocabPlan.candidates.length} learningInText=${vocabPlan.learningInArticle.length} kept=${selection.vocabulary.length} droppedKnown=${selection.droppedKnown.length} droppedTooCommon=${selection.droppedTooCommon.length} droppedProperNames=${selection.droppedProperNames.length} addedLearning=${selection.addedLearning.length} chunks=${chunks.length} total=${analysis.vocabulary.length}`,

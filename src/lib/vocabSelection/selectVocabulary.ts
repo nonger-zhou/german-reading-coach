@@ -1,7 +1,9 @@
 import type { AnalyzedVocabularyItem } from "@/lib/articleAnalysis/types";
 import type { CefrLevel } from "@/lib/types";
 import { parseGrammaticalGender } from "@/lib/vocabulary/grammaticalGender";
-import { isSingleWord, rankOfWord, vocabMatchKey } from "./frequency";
+import { isSingleWord } from "./frequency";
+import { germanLexicon } from "./germanLexicon";
+import type { VocabLexicon } from "./lexicon";
 import {
   extractCandidateWords,
   findLearningWordsInArticle,
@@ -29,13 +31,14 @@ export function planVocabularySelection(
   text: string,
   profile: UserVocabProfile,
 ): VocabSelectionPlan {
+  const lex = profile.lexicon ?? germanLexicon;
   let candidates = extractCandidateWords(text, profile);
   if (candidates.length > MAX_CANDIDATES_IN_PROMPT) {
     candidates = [...candidates]
       .sort((a, b) => (b.rank ?? Infinity) - (a.rank ?? Infinity))
       .slice(0, MAX_CANDIDATES_IN_PROMPT);
   }
-  const learningInArticle = findLearningWordsInArticle(text, profile.learningWords);
+  const learningInArticle = findLearningWordsInArticle(text, profile.learningWords, lex);
 
   const lines: string[] = [];
   lines.push("【用户词汇画像（程序计算，优先于你对 userLevel 的主观判断）】");
@@ -45,12 +48,8 @@ export function planVocabularySelection(
   lines.push(
     "- 单个词的推荐**只能**从下方【候选生词】中选（可还原为词典形输出 lemma）；候选里的人名、地名、机构名、媒体名跳过，其余凡是影响读懂文章的都要输出。",
   );
-  lines.push(
-    "- 动词、形容词、副词、连接词与名词**同等重要**，不要只挑名词；例如 allerdings、einräumen、erheblich 这类词对理解往往比主题名词更关键。",
-  );
-  lines.push(
-    "- 多词表达（可分动词的句中形式、固定搭配、习语）：只要整体意思不能从单词直接推出，就可以推荐，即使其中每个单词都很常用。",
-  );
+  lines.push(lex.prompt.partsOfSpeechLine);
+  lines.push(lex.prompt.multiWordLine);
   lines.push(
     "- **不设条数上限**：确实不认识的都推荐。vocabulary 数组按「对读懂这篇文章的重要程度」从高到低排列，最关键的放最前面。",
   );
@@ -66,9 +65,7 @@ export function planVocabularySelection(
   }
 
   lines.push("");
-  lines.push(
-    "【候选生词】每行：文中词形\t词频排名（「罕见」= 不在常用 8 万词内）；标「疑似专名」的多为人名、地名、机构、政党、品牌，确认是专名就跳过，只有本身是普通词汇（如 Eidgenossenschaft）才推荐",
-  );
+  lines.push(lex.prompt.candidatesHeader);
   if (candidates.length) {
     for (const c of candidates) {
       lines.push(
@@ -90,23 +87,23 @@ export type VocabSelectionResult = {
   addedLearning: string[];
 };
 
-function itemKeys(item: AnalyzedVocabularyItem): string[] {
+function itemKeys(item: AnalyzedVocabularyItem, lex: VocabLexicon): string[] {
   const keys = new Set<string>();
   for (const raw of [item.lemma, item.normalized_key, item.surface_form]) {
-    const k = vocabMatchKey(raw);
+    const k = lex.matchKey(raw);
     if (k) keys.add(k);
   }
   return [...keys];
 }
 
 /** 单词条目的最常用排名（lemma / surface 取较常用者）；多词表达返回 undefined */
-function itemRank(item: AnalyzedVocabularyItem): number | undefined {
-  const lemmaKey = vocabMatchKey(item.lemma);
+function itemRank(item: AnalyzedVocabularyItem, lex: VocabLexicon): number | undefined {
+  const lemmaKey = lex.matchKey(item.lemma);
   if (!isSingleWord(lemmaKey)) return undefined;
-  let best = rankOfWord(lemmaKey);
-  const surfKey = vocabMatchKey(item.surface_form);
+  let best = lex.rankOfWord(lemmaKey);
+  const surfKey = lex.matchKey(item.surface_form);
   if (isSingleWord(surfKey)) {
-    const r = rankOfWord(surfKey);
+    const r = lex.rankOfWord(surfKey);
     if (r !== undefined && (best === undefined || r < best)) best = r;
   }
   return best;
@@ -116,8 +113,11 @@ function itemRank(item: AnalyzedVocabularyItem): number | undefined {
 const PROPER_NAME_GLOSS =
   /(人名|姓氏|地名|城市名|国名|国家名|地区名|政党|党派名|公司名|企业名|品牌|机构名|组织名|媒体名|报纸名|专有名词|专名|缩写.{0,6}(公司|组织|机构))/;
 
-export function itemLooksLikeProperName(item: AnalyzedVocabularyItem): boolean {
-  const lemma = vocabMatchKey(item.lemma);
+export function itemLooksLikeProperName(
+  item: AnalyzedVocabularyItem,
+  lex: VocabLexicon = germanLexicon,
+): boolean {
+  const lemma = lex.matchKey(item.lemma);
   if (!lemma || /\s/.test(lemma.replace(/^(der|die|das)\s+/, ""))) return false;
   const gloss = `${item.zh_meaning ?? ""} ${item.reason_for_selection ?? ""}`;
   if (PROPER_NAME_GLOSS.test(gloss)) return true;
@@ -166,9 +166,10 @@ export function applyVocabularySelection(
   const droppedTooCommon: string[] = [];
   const droppedProperNames: string[] = [];
   const keptKeys = new Set<string>();
+  const lex = profile.lexicon ?? germanLexicon;
 
   for (const item of vocabulary) {
-    const keys = itemKeys(item);
+    const keys = itemKeys(item, lex);
     if (keys.some((k) => keptKeys.has(k))) continue;
     const isLearning = keys.some((k) => profile.learningKeys.has(k));
     if (!isLearning) {
@@ -176,11 +177,11 @@ export function applyVocabularySelection(
         droppedKnown.push(item.lemma || item.surface_form);
         continue;
       }
-      if (itemLooksLikeProperName(item)) {
+      if (itemLooksLikeProperName(item, lex)) {
         droppedProperNames.push(item.lemma || item.surface_form);
         continue;
       }
-      const r = itemRank(item);
+      const r = itemRank(item, lex);
       if (r !== undefined && r <= profile.cutoff) {
         droppedTooCommon.push(item.lemma || item.surface_form);
         continue;
@@ -194,8 +195,8 @@ export function applyVocabularySelection(
   for (const lw of plan.learningInArticle) {
     const covered =
       keptKeys.has(lw.key) ||
-      keptKeys.has(vocabMatchKey(lw.surfaceInText)) ||
-      keptKeys.has(vocabMatchKey(lw.row.display_word));
+      keptKeys.has(lex.matchKey(lw.surfaceInText)) ||
+      keptKeys.has(lex.matchKey(lw.row.display_word));
     if (covered) continue;
     kept.push(learningItemFromRow(lw, text, profile.level));
     keptKeys.add(lw.key);
@@ -214,12 +215,13 @@ export function applyVocabularySelection(
 /** 合并多段分析的词汇：按比对键去重，保留先出现的（前文优先） */
 export function mergeVocabularyLists(
   lists: ReadonlyArray<ReadonlyArray<AnalyzedVocabularyItem>>,
+  lex: VocabLexicon = germanLexicon,
 ): AnalyzedVocabularyItem[] {
   const out: AnalyzedVocabularyItem[] = [];
   const seen = new Set<string>();
   for (const list of lists) {
     for (const item of list) {
-      const keys = itemKeys(item);
+      const keys = itemKeys(item, lex);
       if (keys.some((k) => seen.has(k))) continue;
       out.push(item);
       keys.forEach((k) => seen.add(k));

@@ -1,18 +1,10 @@
 import type { CefrLevel } from "@/lib/types";
-import { isSingleWord, rankOfWord, vocabMatchKey } from "./frequency";
+import { isSingleWord } from "./frequency";
+import { GERMAN_LEVEL_FREQUENCY_CUTOFF, germanLexicon } from "./germanLexicon";
+import type { VocabLexicon } from "./lexicon";
 
-/**
- * 各等级默认「已认识」分界线（词频排名）：排名 ≤ 分界线的单词默认视为用户已认识。
- * 依据合并词频表实测校准，例如 Regierung≈656、Krise≈7100、Maßnahme≈10400、Umfrage≈20600。
- */
-export const LEVEL_FREQUENCY_CUTOFF: Record<CefrLevel, number> = {
-  A1: 2_000,
-  A2: 4_000,
-  B1: 8_000,
-  B2: 14_000,
-  C1: 22_000,
-  C2: 32_000,
-};
+/** 德语各等级默认分界线（兼容旧引用；定义见 germanLexicon.ts，英语见 englishLexicon.ts） */
+export const LEVEL_FREQUENCY_CUTOFF: Record<CefrLevel, number> = GERMAN_LEVEL_FREQUENCY_CUTOFF;
 
 /** 自适应分界线需要的最少样本数（太少不调整，避免被个别词带偏） */
 export const MIN_SAMPLES_TO_LOWER = 10;
@@ -38,6 +30,8 @@ export type LearningWord = {
 
 export type UserVocabProfile = {
   level: CefrLevel;
+  /** 本画像所属语言的语言知识（分词、词频、词形还原）；缺省德语 */
+  lexicon?: VocabLexicon;
   /** 等级默认分界线 */
   levelCutoff: number;
   /** 结合用户标记自动校准后的分界线 */
@@ -55,20 +49,20 @@ function isMasteredOrIgnored(status: string | null | undefined): boolean {
   return status === "mastered" || status === "ignored";
 }
 
-function rowKeys(row: UserVocabRow): string[] {
+function rowKeys(row: UserVocabRow, lex: VocabLexicon): string[] {
   const keys = new Set<string>();
   for (const raw of [row.lemma, row.normalized_key, row.display_word]) {
-    const k = vocabMatchKey(raw);
+    const k = lex.matchKey(raw);
     if (k) keys.add(k);
   }
   return [...keys];
 }
 
-function rowRank(row: UserVocabRow): number | undefined {
+function rowRank(row: UserVocabRow, lex: VocabLexicon): number | undefined {
   let best: number | undefined;
-  for (const k of rowKeys(row)) {
+  for (const k of rowKeys(row, lex)) {
     if (!isSingleWord(k)) continue;
-    const r = rankOfWord(k);
+    const r = lex.rankOfWord(k);
     if (r !== undefined && (best === undefined || r < best)) best = r;
   }
   return best;
@@ -89,6 +83,7 @@ function quantile(sorted: number[], q: number): number {
 export function computeAdaptiveCutoff(
   levelCutoff: number,
   rows: ReadonlyArray<UserVocabRow>,
+  lex: VocabLexicon = germanLexicon,
 ): { cutoff: number; note: string } {
   const minCut = Math.round(levelCutoff * 0.5);
   const maxCut = Math.round(levelCutoff * 2);
@@ -96,7 +91,7 @@ export function computeAdaptiveCutoff(
   const manualLearningRanks: number[] = [];
   const masteredRanks: number[] = [];
   for (const row of rows) {
-    const r = rowRank(row);
+    const r = rowRank(row, lex);
     if (r === undefined) continue;
     if (isMasteredOrIgnored(row.mastery_status)) {
       if (row.mastery_status === "mastered") masteredRanks.push(r);
@@ -138,21 +133,23 @@ export function computeAdaptiveCutoff(
 export function buildUserVocabProfile(
   level: CefrLevel,
   rows: ReadonlyArray<UserVocabRow>,
+  /** 语言知识；缺省德语（rows 须已按该语言过滤，见 fetchVocabularyProfileRowsForArticleAnalysis） */
+  lex: VocabLexicon = germanLexicon,
 ): UserVocabProfile {
-  const levelCutoff = LEVEL_FREQUENCY_CUTOFF[level];
-  const { cutoff, note } = computeAdaptiveCutoff(levelCutoff, rows);
+  const levelCutoff = lex.levelCutoff[level];
+  const { cutoff, note } = computeAdaptiveCutoff(levelCutoff, rows, lex);
 
   const learningKeys = new Set<string>();
   const learningWords: LearningWord[] = [];
   const masteredKeys = new Set<string>();
 
   for (const row of rows) {
-    const keys = rowKeys(row);
+    const keys = rowKeys(row, lex);
     if (!keys.length) continue;
     if (isMasteredOrIgnored(row.mastery_status)) {
       keys.forEach((k) => masteredKeys.add(k));
     } else {
-      const main = vocabMatchKey(row.lemma) || keys[0];
+      const main = lex.matchKey(row.lemma) || keys[0];
       if (!learningKeys.has(main)) learningWords.push({ key: main, row });
       keys.forEach((k) => learningKeys.add(k));
     }
@@ -163,6 +160,7 @@ export function buildUserVocabProfile(
 
   return {
     level,
+    lexicon: lex,
     levelCutoff,
     cutoff,
     cutoffNote: note,

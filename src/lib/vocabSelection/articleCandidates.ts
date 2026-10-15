@@ -1,25 +1,10 @@
-import { rankOfWord, vocabMatchKey } from "./frequency";
+import { germanLexicon } from "./germanLexicon";
+import type { VocabLexicon } from "./lexicon";
 import type { LearningWord, UserVocabProfile } from "./userVocabProfile";
 
-const WORD_RE = /[A-Za-zÄÖÜäöüß]+(?:-[A-Za-zÄÖÜäöüß]+)*/g;
-
-/** 词形匹配时允许的屈折词尾（学习中词在文中以变形出现时也能认出来） */
-const MATCH_SUFFIXES = ["", "e", "en", "n", "s", "es", "er", "em", "ern", "st", "t", "et", "te", "ten"];
-
-export type ArticleToken = {
-  surface: string;
-  start: number;
-  end: number;
-};
-
-export function tokenizeGerman(text: string): ArticleToken[] {
-  const out: ArticleToken[] = [];
-  for (const m of text.matchAll(WORD_RE)) {
-    const start = m.index ?? 0;
-    out.push({ surface: m[0], start, end: start + m[0].length });
-  }
-  return out;
-}
+/** 兼容旧引用：德语分词与专名判断现位于 germanLexicon.ts */
+export { tokenizeGerman, looksLikeProperNameToken } from "./germanLexicon";
+export type { ArticleToken } from "./lexicon";
 
 export type CandidateWord = {
   /** 文中第一次出现的写法 */
@@ -32,85 +17,57 @@ export type CandidateWord = {
 };
 
 /**
- * 复合词判断：能拆成 2–3 段都认识的词（允许连接成分 s / es / n / en / e），
- * 如 Untersuchungs|haft、Kanonen|boot|politik。人名如 Gianluigi 拆不出来。
- */
-const FUGEN = ["", "s", "es", "n", "en", "e"];
-
-function isKnownPart(part: string): boolean {
-  return part.length >= 3 && rankOfWord(part) !== undefined;
-}
-
-function looksLikeCompoundOfKnownWords(lower: string, depth = 0): boolean {
-  if (depth > 2) return false;
-  for (let i = 3; i <= lower.length - 3; i++) {
-    const head = lower.slice(0, i);
-    const tail = lower.slice(i);
-    const tailOk =
-      isKnownPart(tail) || (depth < 2 && looksLikeCompoundOfKnownWords(tail, depth + 1));
-    if (!tailOk) continue;
-    for (const f of FUGEN) {
-      if (f && !head.endsWith(f)) continue;
-      const stem = f ? head.slice(0, -f.length) : head;
-      if (isKnownPart(stem)) return true;
-    }
-  }
-  return false;
-}
-
-export function looksLikeProperNameToken(surface: string): boolean {
-  if (surface.length >= 2 && surface === surface.toUpperCase() && /[A-ZÄÖÜ]/.test(surface)) {
-    return true;
-  }
-  if (!/^[A-ZÄÖÜ]/.test(surface)) return false;
-  const lower = surface.toLocaleLowerCase("de-DE");
-  if (rankOfWord(lower) !== undefined) return false;
-  return !looksLikeCompoundOfKnownWords(lower);
-}
-
-function tokenMatchesKey(tokenLower: string, key: string): boolean {
-  if (!tokenLower.startsWith(key)) return false;
-  return MATCH_SUFFIXES.includes(tokenLower.slice(key.length));
-}
-
-function isKnownToken(tokenLower: string, knownKeys: Set<string>): boolean {
-  if (knownKeys.has(tokenLower)) return true;
-  for (const suf of MATCH_SUFFIXES) {
-    if (suf && tokenLower.endsWith(suf) && knownKeys.has(tokenLower.slice(0, -suf.length))) {
-      return true;
-    }
-  }
-  return false;
-}
-
-/**
  * 从正文提取「比用户分界线更少见」的候选生词（按首次出现顺序）。
  * 已掌握 / 暂忽略的词（含常见屈折变形）不进候选。
  */
 export function extractCandidateWords(
   text: string,
-  profile: Pick<UserVocabProfile, "cutoff" | "knownKeys">,
+  profile: Pick<UserVocabProfile, "cutoff" | "knownKeys"> & { lexicon?: VocabLexicon },
 ): CandidateWord[] {
+  const lex = profile.lexicon ?? germanLexicon;
+  const tokens = lex.tokenize(text);
+  /** 全文大小写信号（英语判断专名用；德语忽略）：小写出现过的词形、句中大写出现过的词形 */
+  const lowercaseForms = new Set<string>();
+  const midSentenceCapitalized = new Set<string>();
+  for (const t of tokens) {
+    const lower = t.surface.toLocaleLowerCase(lex.locale);
+    if (t.surface === lower) lowercaseForms.add(lower);
+    else if (!isSentenceStart(text, t.start)) midSentenceCapitalized.add(lower);
+  }
   const byLower = new Map<string, CandidateWord>();
-  for (const t of tokenizeGerman(text)) {
-    const lower = t.surface.toLocaleLowerCase("de-DE");
+  for (const t of tokens) {
+    const lower = t.surface.toLocaleLowerCase(lex.locale);
     if (lower.length < 3) continue;
     const seen = byLower.get(lower);
     if (seen) {
       seen.count += 1;
       continue;
     }
-    if (isKnownToken(lower, profile.knownKeys)) continue;
-    const rank = rankOfWord(lower);
+    if (lex.isKnownToken(lower, profile.knownKeys)) continue;
+    const rank = lex.rankOfWord(lower);
     if (rank !== undefined && rank <= profile.cutoff) continue;
     byLower.set(lower, {
       surface: t.surface,
       rank,
       count: 1,
-      maybeProperName: looksLikeProperNameToken(t.surface),
+      maybeProperName: lex.looksLikeProperNameToken(t.surface, {
+        appearsLowercaseInText: lowercaseForms.has(lower),
+        capitalizedMidSentence: midSentenceCapitalized.has(lower),
+      }),
     });
   }
   return [...byLower.values()];
+}
+
+/** 位置 start 前（跳过空白、引号、括号）是否为文首 / 换行 / 句末标点 */
+function isSentenceStart(text: string, start: number): boolean {
+  for (let i = start - 1; i >= 0; i--) {
+    const c = text[i];
+    if (c === "\n") return true;
+    if (/[\s"'“”‘’«»„()[\]\-–—]/.test(c)) continue;
+    return /[.!?:;…]/.test(c);
+  }
+  return true;
 }
 
 export type LearningWordInArticle = LearningWord & {
@@ -127,14 +84,15 @@ export type LearningWordInArticle = LearningWord & {
 export function findLearningWordsInArticle(
   text: string,
   learningWords: ReadonlyArray<LearningWord>,
+  lex: VocabLexicon = germanLexicon,
 ): LearningWordInArticle[] {
-  const tokens = tokenizeGerman(text);
-  const lowerText = text.toLocaleLowerCase("de-DE");
+  const tokens = lex.tokenize(text);
+  const lowerText = text.toLocaleLowerCase(lex.locale);
   const out: LearningWordInArticle[] = [];
 
   for (const lw of learningWords) {
     const keys = new Set(
-      [lw.key, vocabMatchKey(lw.row.display_word), vocabMatchKey(lw.row.normalized_key)].filter(Boolean),
+      [lw.key, lex.matchKey(lw.row.display_word), lex.matchKey(lw.row.normalized_key)].filter(Boolean),
     );
     let hit: { start: number; end: number } | null = null;
 
@@ -147,7 +105,7 @@ export function findLearningWordsInArticle(
         }
         continue;
       }
-      const tok = tokens.find((t) => tokenMatchesKey(t.surface.toLocaleLowerCase("de-DE"), key));
+      const tok = tokens.find((t) => lex.tokenMatchesKey(t.surface.toLocaleLowerCase(lex.locale), key));
       if (tok) {
         hit = { start: tok.start, end: tok.end };
         break;

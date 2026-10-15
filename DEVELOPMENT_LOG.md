@@ -5,6 +5,29 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-10-15 — 英语扩展 · 第 2 步：语言配置层与英语选词引擎（分支 `feat/english-language`）
+
+**本次完成**
+- **德语回归护栏（先做）**：`germanRegression.test.ts` 用**改动前**的选词代码对 5 篇德语样文 × A2/B1/B2/C1 生成快照（候选词、分界线、提示词附录、过滤结果），单独提交；之后的重构跑完快照**逐字节一致**。
+- **语言配置层** `src/lib/vocabSelection/lexicon.ts`：选词规则不变，按语言区分的只有分词、词频、词形还原、专名判断、提示词示例与等级分界线。
+  - `germanLexicon.ts`：德语实现**原样**从 `articleCandidates.ts` 移来（未改一行），分界线常量移入并由 `userVocabProfile.ts` 再导出。
+  - `articleCandidates.ts` / `userVocabProfile.ts` / `selectVocabulary.ts` 改为通过画像上的 `lexicon` 调用，缺省德语。
+- **英语** `englishLexicon.ts`：
+  - 词频表 `englishFrequencyData.ts`（8 万词形，OpenSubtitles + 英文维基，与德语同法；脚本 `scripts/build-english-frequency.py`），只在分析英语文章时按需加载（`lexicons.ts`），不进浏览器包、德语请求不加载。
+  - 词形还原：-s/-es/-ies/-ves、-ed/-ied、不规则表（went、children、better…）、英美拼写（colour、organise、centre、travelled）、所有格 's；-ing / -er / -est 只有在词表里有「兄弟形式」（borrowing↔borrowed、bigger↔biggest）时才还原，避免 herring→herr、banner→ban、lager→lag。
+  - 连字符复合词（long-term）按最少见部分计，各部分都认识就不算生词。
+  - 专名：全大写缩写；或首字母大写、文中从未小写出现，且在句中大写出现过或不在词表里（Starmer）。句首大写但别处小写的普通词不算。
+  - 分界线（按 PRD §1.5.3 词汇量、用代表词实测标定）：A1 2 500、A2 5 000、B1 8 000、B2 13 000、C1 25 000、C2 40 000。
+  - 比对键：去掉 to / the / a / an 与 sth / sb 占位（"to carry out" = "carry out"）。
+- **整文分析**按文章语言加载对应 lexicon（`loadLexicon`），分段合并去重也按该语言。
+- **测试**：`englishSelection.test.ts`（13 条）+ 德语快照（1 条）；共 120 条通过。
+
+**主要文件**：`src/lib/vocabSelection/{lexicon,germanLexicon,englishLexicon,englishFrequencyData,lexicons,articleCandidates,userVocabProfile,selectVocabulary}.ts`、`scripts/build-english-frequency.py`、`scripts/fixtures/en-news-article.txt`（自写英语样文）、`src/app/api/analyze-article/route.ts`。
+**影响面**：德语选词结果由快照证明不变。
+**已知问题**：英语文章目前仍使用德语提示词与 JSON 结构（第 3 步改）；英语分界线为初始标定，需真实使用后观察。
+**下一步**：第 3 步 —— 英语提示词（整文分析、补充解释、按需语法）与「中文 + 简明英文」释义。
+**验证**：`npm test`（120）/ `npm run build` 通过。
+
 ### 2026-10-15 — 英语扩展 · 第 1 步：语言字段与数据隔离（分支 `feat/english-language`，界面无变化）
 
 **背景**：按 PRD §1.5 增加英语学习，德语、英语为两个独立学习空间（顶栏切换，文章库 / 词库 / 语法库 / 复习 / AI 推荐 / 水平设置都只针对当前语言），德语现有功能与数据不受影响。整体方案分 6 步，本条为第 1 步。
