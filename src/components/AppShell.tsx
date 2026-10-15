@@ -9,6 +9,7 @@ const nav = [
   { href: "/articles", label: "文章库" },
   { href: "/import", label: "导入" },
   { href: "/vocabulary", label: "词库" },
+  { href: "/review", label: "复习" },
   { href: "/grammar", label: "语法" },
   { href: "/settings", label: "设置" },
 ];
