@@ -28,6 +28,10 @@ import {
   Tabs,
 } from "@/components/ui/Tabs";
 import {
+  DEFAULT_LEARNING_LANGUAGE,
+  type LearningLanguage,
+} from "@/lib/language/learningLanguage";
+import {
   speakGerman,
 } from "@/lib/speech";
 import type {
@@ -155,6 +159,8 @@ export type InteractiveArticleReaderProps = {
   /** 登录用户保存手动词汇/语法到 Supabase（真实文章页） */
   persistArticleId?: string;
   persistUserId?: string;
+  /** 文章语言：手动/AI 词条按此语言写入总库。缺省德语。 */
+  persistLanguage?: LearningLanguage;
   onPersistError?: (message: string) => void;
   /** 文章页顶栏：如「AI 分析本文」入口 */
   analysisToolbar?: ReactNode;
@@ -181,6 +187,7 @@ export function InteractiveArticleReader({
   selectionLabels,
   persistArticleId,
   persistUserId,
+  persistLanguage = DEFAULT_LEARNING_LANGUAGE,
   onPersistError,
   analysisToolbar,
   readingHelpExtra,
@@ -1894,6 +1901,7 @@ export function InteractiveArticleReader({
         userId: persistUserId,
         articleId: persistArticleId,
         articlePlain,
+        language: persistLanguage,
         item: targetMerged,
         reactivateIfMastered: true,
       });
@@ -1968,6 +1976,7 @@ export function InteractiveArticleReader({
         userId: persistUserId,
         articleId: persistArticleId,
         articlePlain,
+        language: persistLanguage,
         item: targetMerged,
       });
       if (error) {
@@ -2124,6 +2133,7 @@ export function InteractiveArticleReader({
           userId: persistUserId,
           articleId: persistArticleId,
           articlePlain,
+          language: persistLanguage,
           item: targetMerged,
         });
         if (error) {
@@ -3851,6 +3861,7 @@ export function InteractiveArticleReader({
                         userId: persistUserId,
                         articleId: persistArticleId,
                         articlePlain,
+                        language: persistLanguage,
                         item: targetMerged,
                         reactivateIfMastered: true,
                       });
@@ -3956,6 +3967,7 @@ export function InteractiveArticleReader({
                         userId: persistUserId,
                         articleId: persistArticleId,
                         articlePlain,
+                        language: persistLanguage,
                         item: targetMerged,
                       });
                     if (error) {

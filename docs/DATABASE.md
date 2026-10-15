@@ -249,14 +249,24 @@ Supabase 会收紧 **PostgREST / Data API** 对 **`public` schema** 内表的默
 
 可择机 **`ALTER TABLE`** 增加：**`articles.read_status`**、**`articles.finished_at`**、**`vocabulary_items.mastered_at`**、**`vocabulary_items.ignored_at`**、**`grammar_items.mastered_at`**、**`grammar_items.ignored_at`**（类型建议 **`text` 或枚举 + `timestamptz`**，与 PRD 一致）。
 
-### 10.7 多语言与 `language` / `target_language` 字段（规划，未改 schema）
+### 10.7 多语言 `language` 字段（2026-10-15 起，迁移 `010_multilanguage.sql`）
 
-与 [`PRD.md`](./PRD.md) **§1.5** 对齐：未来产品可扩展为**多语言 Reading Coach**，需在数据中区分**学习内容语言**与**用户目标语言**。
+与 [`PRD.md`](./PRD.md) **§1.5** 对齐：德语与英语为**两个独立学习空间**。
 
-**当前阶段：请勿修改 `supabase/schema.sql`。** 以下为后续迭代时可考虑的字段方向（实施时需配套迁移、默认值、索引与 RLS 评估）：
+| 字段 | 说明 |
+|------|------|
+| **`articles.language`** | 文章语言，`'de'` / `'en'`，默认 `'de'`。 |
+| **`vocabulary_items.language`** | 词条语言，默认 `'de'`；唯一键改为 **`(user_id, language, normalized_key, part_of_speech)`**。 |
+| **`grammar_items.language`** | 语法项语言，默认 `'de'`；唯一键改为 **`(user_id, language, grammar_key, normalized_key)`**。 |
+| **`profiles.target_language`** | 当前学习语言（顶栏切换），默认 `'de'`。 |
+| **`profiles.self_selected_level_en`** | 英语阅读水平；**`self_selected_level`** 继续表示德语水平。 |
 
-| 规划字段 | 说明 |
-|----------|------|
+- `vocabulary_senses` / `*_occurrences` 通过 item / article 关联，不加列。
+- 迁移只新增列、放宽唯一键：执行时已有的所有行（所有账号）都成为 `'de'`；旧版前端不写 `language` 也照常可用。
+- **执行顺序**：先执行 `010`，再部署读写 `language` 的前端（新代码查询该列，迁移前会报错）。
+- 应用层规则：整文分析的词库画像、语法过滤、保存时查重、列表与复习都只取当前语言（见 `src/lib/language/languageIsolation.test.ts`）。
+
+----------|------|
 | **`articles.language`** | 文章正文语言（如 `de`、`en`）。 |
 | **`vocabulary_items.language`** | 词条所属语言。 |
 | **`grammar_items.language`** | 语法项所属语言。 |

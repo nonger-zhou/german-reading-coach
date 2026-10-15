@@ -11,6 +11,11 @@ import {
 } from "@/lib/articleReadingModel";
 import type { MasteryStatus } from "@/lib/types";
 import { formatSupabaseOrUnknownError } from "@/lib/supabase/errors";
+import {
+  DEFAULT_LEARNING_LANGUAGE,
+  normalizeLearningLanguage,
+  type LearningLanguage,
+} from "@/lib/language/learningLanguage";
 
 const DB_SOURCE_MANUAL = "manual";
 const DB_SOURCE_AI_MOCK = "ai_mock";
@@ -99,6 +104,8 @@ const GRAMMAR_MASTERED_IGNORED_PAGE = 1000;
 export async function fetchGrammarMasteredIgnoredKeysForArticleAnalysis(
   supabase: SupabaseClient,
   userId: string,
+  /** 只读当前学习语言的语法项 */
+  language: LearningLanguage = DEFAULT_LEARNING_LANGUAGE,
 ): Promise<{
   rows: Array<{ grammar_key: string | null; normalized_key: string | null }>;
   error: string | null;
@@ -113,6 +120,7 @@ export async function fetchGrammarMasteredIgnoredKeysForArticleAnalysis(
       .from("grammar_items")
       .select("grammar_key, normalized_key")
       .eq("user_id", userId)
+      .eq("language", language)
       .in("mastery_status", ["mastered", "ignored"])
       .order("id", { ascending: true })
       .range(from, from + GRAMMAR_MASTERED_IGNORED_PAGE - 1);
@@ -251,9 +259,12 @@ export async function persistManualGrammarItem(
     articleId: string;
     articlePlain: string;
     item: ArticleGrammarItem;
+    /** 文章语言；语法项按 (语言, key) 归档。缺省德语。 */
+    language?: LearningLanguage;
   },
 ): Promise<{ item: ArticleGrammarItem | null; error: string | null }> {
   const { userId, articleId, articlePlain, item } = params;
+  const language = normalizeLearningLanguage(params.language);
   const nk = normalizeGrammarSurfaceKey(
     item.normalized_key ||
       item.occurrences[0]?.surface_form ||
@@ -275,6 +286,7 @@ export async function persistManualGrammarItem(
       .from("grammar_items")
       .select("id,mastery_status")
       .eq("user_id", userId)
+      .eq("language", language)
       .eq("grammar_key", gkey)
       .eq("normalized_key", nk)
       .maybeSingle();
@@ -312,6 +324,7 @@ export async function persistManualGrammarItem(
         .from("grammar_items")
         .insert({
           user_id: userId,
+          language,
           grammar_key: gkey,
           normalized_key: nk,
           name_de: item.name_de,

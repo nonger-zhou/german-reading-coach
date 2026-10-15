@@ -10,6 +10,7 @@ import { useAuthEntryHrefs } from "@/lib/auth/use-auth-entry-hrefs";
 import type { ArticleRow } from "@/lib/supabase/articles";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { formatSupabaseOrUnknownError } from "@/lib/supabase/errors";
+import { useLearningLanguage } from "@/lib/language/useLearningLanguage";
 
 const PAGE_SIZE = 10;
 
@@ -70,6 +71,8 @@ function paginationItems(currentPage: number, totalPages: number): PaginationIte
 
 function ArticlesPageContent() {
   const { loginHref } = useAuthEntryHrefs();
+  /** 只列当前学习语言的文章 */
+  const { language, ready: languageReady } = useLearningLanguage();
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentPage = parsePage(searchParams.get("page"));
@@ -110,6 +113,7 @@ function ArticlesPageContent() {
           count: "exact",
         })
         .eq("user_id", userId)
+        .eq("language", language)
         .order("created_at", { ascending: false })
         .range(from, to);
 
@@ -126,7 +130,7 @@ function ArticlesPageContent() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [language]);
 
   const handleDeleteArticle = useCallback(
     async (articleId: string) => {
@@ -201,7 +205,7 @@ function ArticlesPageContent() {
   }, [refreshSession]);
 
   useEffect(() => {
-    if (session === undefined) {
+    if (session === undefined || !languageReady) {
       return;
     }
     if (!session?.user?.id) {
@@ -212,7 +216,7 @@ function ArticlesPageContent() {
       return;
     }
     void loadArticles(session.user.id, currentPage);
-  }, [currentPage, loadArticles, session]);
+  }, [currentPage, languageReady, loadArticles, session]);
 
   useEffect(() => {
     if (!loading && totalCount > 0 && currentPage > totalPages) {

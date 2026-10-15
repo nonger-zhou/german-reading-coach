@@ -49,6 +49,7 @@ import { loginPageHref } from "@/lib/auth/post-auth-redirect";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { formatSupabaseOrUnknownError } from "@/lib/supabase/errors";
 import { FullArticleTranslationExternal } from "@/components/FullArticleTranslationExternal";
+import { normalizeLearningLanguage } from "@/lib/language/learningLanguage";
 
 const IS_DEV = process.env.NODE_ENV === "development";
 
@@ -254,7 +255,7 @@ function ArticleDetailPageContent() {
         const { data, error } = await supabase
           .from("articles")
           .select(
-            "id,user_id,title,url,source_name,original_text,summary_zh,summary_de_simple,reading_questions,user_level_at_analysis,detected_article_level,topic,created_at,updated_at",
+            "id,user_id,title,url,source_name,original_text,summary_zh,summary_de_simple,reading_questions,user_level_at_analysis,detected_article_level,topic,language,created_at,updated_at",
           )
           .eq("id", id)
           .maybeSingle();
@@ -535,6 +536,7 @@ function ArticleDetailPageContent() {
           title: article.title ?? "",
           originalText: article.original_text ?? "",
           userLevel: level,
+          language: normalizeLearningLanguage(article.language),
         }),
       });
       const data: unknown = await res.json().catch(() => null);
@@ -734,6 +736,7 @@ function ArticleDetailPageContent() {
             userId: session.user.id,
             articleId: article.id,
             articlePlain,
+            language: normalizeLearningLanguage(article.language),
             item,
           });
           if (error) {
@@ -1111,6 +1114,7 @@ function ArticleDetailPageContent() {
           }}
           persistArticleId={article.id}
           persistUserId={session.user.id}
+          persistLanguage={normalizeLearningLanguage(article.language)}
           onPersistError={(msg) => setPersistMessage(msg)}
           enrichUserLevel={articleAnalysisLevel(article.user_level_at_analysis)}
           initialFocus={initialReaderFocus}

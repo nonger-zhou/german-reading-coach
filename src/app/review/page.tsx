@@ -8,6 +8,7 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import { PronunciationButton } from "@/components/PronunciationButton";
 import { useAuthEntryHrefs } from "@/lib/auth/use-auth-entry-hrefs";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useLearningLanguage } from "@/lib/language/useLearningLanguage";
 import { formatSupabaseOrUnknownError } from "@/lib/supabase/errors";
 import { selectInChunks } from "@/lib/supabase/inChunks";
 import { updateVocabularyItemMastery } from "@/lib/supabase/vocabulary";
@@ -65,6 +66,8 @@ function highlightSentence(sentence: string, surface: string | null) {
 
 function ReviewPageContent() {
   const { loginHref } = useAuthEntryHrefs();
+  /** 只复习当前学习语言的词；排期按语言分开存 */
+  const { language, ready: languageReady } = useLearningLanguage();
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [items, setItems] = useState<ReviewItem[]>([]);
   const [occByItem, setOccByItem] = useState<Map<string, OccurrenceRow>>(new Map());
@@ -96,13 +99,14 @@ function ReviewPageContent() {
   }, [refreshSession]);
 
   useEffect(() => {
-    if (session === undefined) return;
+    if (session === undefined || !languageReady) return;
     const userId = session?.user?.id;
     if (!userId) {
       setLoading(false);
       return;
     }
     let cancelled = false;
+    setQueue(null);
     setLoading(true);
     setError(null);
     (async () => {
@@ -116,6 +120,7 @@ function ReviewPageContent() {
               "id,lemma,display_word,zh_meaning,simple_de_explanation,gender,part_of_speech,last_seen_at",
             )
             .eq("user_id", userId)
+            .eq("language", language)
             .in("mastery_status", [...LEARNING_STATUSES])
             .order("id", { ascending: true })
             .range(from, from + PAGE - 1);
@@ -126,8 +131,8 @@ function ReviewPageContent() {
         }
         if (cancelled) return;
         const learningIds = new Set(rows.map((r) => r.id));
-        const state = pruneReviewState(loadReviewState(userId), learningIds);
-        saveReviewState(userId, state);
+        const state = pruneReviewState(loadReviewState(userId, language), learningIds);
+        saveReviewState(userId, state, language);
         setItems(rows);
         setReviewState(state);
       } catch (e) {
@@ -139,7 +144,7 @@ function ReviewPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [session]);
+  }, [session, language, languageReady]);
 
   const itemById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const candidates = useMemo(
@@ -185,7 +190,7 @@ function ReviewPageContent() {
 
   function persist(next: ReviewState) {
     const userId = session?.user?.id;
-    if (userId) saveReviewState(userId, next);
+    if (userId) saveReviewState(userId, next, language);
     setReviewState(next);
   }
 

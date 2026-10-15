@@ -9,6 +9,7 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import type { CefrLevel, MasteryStatus } from "@/lib/types";
 import { useAuthEntryHrefs } from "@/lib/auth/use-auth-entry-hrefs";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useLearningLanguage } from "@/lib/language/useLearningLanguage";
 import { formatSupabaseOrUnknownError } from "@/lib/supabase/errors";
 import { updateVocabularyItemMastery } from "@/lib/supabase/vocabulary";
 import { normalizeDeepNoteMarkdown } from "@/lib/text/normalizeDeepNoteMarkdown";
@@ -214,6 +215,8 @@ function isMissingDeepNoteColumn(error: unknown): boolean {
 }
 
 function VocabularyPageContent() {
+  /** 只显示当前学习语言的词条（统计数字也随之分开） */
+  const { language, ready: languageReady } = useLearningLanguage();
   const { loginHref } = useAuthEntryHrefs();
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [items, setItems] = useState<VocabularyListItem[]>([]);
@@ -249,7 +252,7 @@ function VocabularyPageContent() {
   }, [refreshSession]);
 
   useEffect(() => {
-    if (session === undefined) return;
+    if (session === undefined || !languageReady) return;
     if (!session?.user?.id) {
       setItems([]);
       setLoading(false);
@@ -280,6 +283,7 @@ function VocabularyPageContent() {
               .from("vocabulary_items")
               .select(columns)
               .eq("user_id", session.user.id)
+              .eq("language", language)
               .order("created_at", { ascending: false })
               .order("id", { ascending: true })
               .range(from, from + PAGE - 1);
@@ -424,7 +428,7 @@ function VocabularyPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [session?.user?.id, session]);
+  }, [session?.user?.id, session, language, languageReady]);
 
   const filteredItems = useMemo(() => {
     const weekStart = startOfCurrentWeek();

@@ -5,6 +5,26 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-10-15 — 英语扩展 · 第 1 步：语言字段与数据隔离（分支 `feat/english-language`，界面无变化）
+
+**背景**：按 PRD §1.5 增加英语学习，德语、英语为两个独立学习空间（顶栏切换，文章库 / 词库 / 语法库 / 复习 / AI 推荐 / 水平设置都只针对当前语言），德语现有功能与数据不受影响。整体方案分 6 步，本条为第 1 步。
+
+**本次完成**
+- **迁移 `supabase/fixes/010_multilanguage.sql`**（须在 Supabase SQL Editor 执行，**先迁移、再部署**）：`articles` / `vocabulary_items` / `grammar_items` 增加 `language`（`de`/`en`，默认 `de`，已有数据全部为德语）；词库、语法库唯一键加入 `language`（德语 "die" 与英语 "die" 为两条词条）；`profiles` 增加 `target_language`（默认 `de`）与 `self_selected_level_en`。只加列、放宽唯一键，可重复执行。`schema.sql` 同步。
+- **`src/lib/language/learningLanguage.ts`**：语言类型、默认德语、标签与 locale。**`useLearningLanguage.ts`**：当前学习语言（真相源 `profiles.target_language`，本机缓存首屏），尚无切换入口，所有人仍为德语。
+- **读写全部带语言**：整文分析读取词库画像（已掌握 / 学习中 / 自适应分界线）与语法过滤**只读文章语言**（语言以数据库中的文章为准）；保存词汇 / 语法时按 (语言, 词) 查重与插入；补充解释时的词性冲突检查限定同语言；新文章写入 `language`（默认德语）。
+- **列表按语言过滤**：仪表盘（最近文章与三项统计）、文章库、词库、语法库、复习。
+- **复习排期按语言分开存**：德语沿用原 key `grc.review.v1.<userId>`（已有进度不丢）；英语用 `grc.review.v1.en.<userId>`。必须分开：复习时会清掉不在本次词表里的记录，共用 key 会导致英语复习清空德语进度。
+- **测试 `src/lib/language/languageIsolation.test.ts`（10 条）**：默认德语；画像 / 已掌握键 / 语法过滤按语言查询；文章语言以库为准；英语 "die" 不并入德语词条；不传语言时保存路径仍为德语；复习 key 德语不变、英语复习不影响德语进度。
+
+**主要文件**：`supabase/fixes/010_multilanguage.sql`、`supabase/schema.sql`、`src/lib/language/*`、`src/lib/supabase/{vocabulary,grammar,articles}.ts`、`src/lib/review/reviewQueue.ts`、`src/app/api/analyze-article/route.ts`、`src/app/{dashboard,articles,vocabulary,grammar,review}/page.tsx`、`src/app/articles/[id]/page.tsx`、`src/components/InteractiveArticleReader.tsx`（仅新增 `persistLanguage` 属性并传给保存函数）。
+
+**影响面 / 德语回归**：德语路径只多了 `language = 'de'` 过滤与写入，选词、提示词、阅读交互未改；原有 96 条测试全部通过。
+**当前状态**：未合并到 `main`；**迁移执行前，本分支代码不能上线**（查询 `language` 列会失败）。
+**已知问题**：沙箱无法访问 Google Fonts，本地 build 时临时去掉字体加载验证（未提交）；Vercel 构建不受影响。
+**下一步**：第 2 步 —— 语言配置层、英语词频表与英语选词引擎。
+**验证**：`npm test`（106）/ `npm run build` 通过。
+
 ### 2026-10-15 — 阅读水平怎么选（对照表）
 
 **本次完成**

@@ -25,6 +25,7 @@ import {
 } from "@/lib/articleAnalysis/openaiArticleAnalysis";
 import type { ArticleAnalysisResult } from "@/lib/articleAnalysis/types";
 import { getSupabaseUserFromBearer } from "@/lib/supabase/routeFromBearer";
+import { resolveArticleLanguage } from "@/lib/supabase/articles";
 import { fetchGrammarMasteredIgnoredKeysForArticleAnalysis } from "@/lib/supabase/grammar";
 import { fetchVocabularyProfileRowsForArticleAnalysis } from "@/lib/supabase/vocabulary";
 import { buildUserVocabProfile } from "@/lib/vocabSelection/userVocabProfile";
@@ -159,9 +160,21 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
 
   const legacy = isLegacyAutoGrammarAnalysisEnabled();
 
+  /**
+   * 文章语言以数据库为准（不信任请求体）；读不到时（如 mock 文章）用请求体，最后回落德语。
+   * 词库画像、语法过滤都只取该语言，德语 / 英语互不影响。
+   */
+  const language = await resolveArticleLanguage(
+    auth.supabase,
+    auth.user.id,
+    articleId,
+    b.language,
+  );
+
   const vocabRes = await fetchVocabularyProfileRowsForArticleAnalysis(
     auth.supabase,
     auth.user.id,
+    language,
   );
   if (vocabRes.error) {
     return NextResponse.json(
@@ -183,6 +196,7 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
     const grammarRes = await fetchGrammarMasteredIgnoredKeysForArticleAnalysis(
       auth.supabase,
       auth.user.id,
+      language,
     );
     if (grammarRes.error) {
       return NextResponse.json(
