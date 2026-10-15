@@ -5,7 +5,7 @@
 
 ## 更新记录（按任务追加）
 
-### 2026-10-15 — AI 词形对不上原文时自动修正（德语 / 英语，分支 `feat/auto-enrich`）
+### 2026-10-15 — AI 词形对不上原文时自动修正（德语 / 英语，PR #5，已上线）
 
 **原因**：维护者测试德语长文时出现「das Verbrechen、die Tradition、die Rüstungsindustrie 未在原文精确匹配」——AI 给名词多加了冠词，原文是 Verbrechen / der Tradition 等；上一次的大小写回退覆盖不到。
 **本次完成**：新增 `src/lib/articleAnalysis/repairSurfaceForms.ts`，在 `/api/analyze-article` 拿到 AI 结果后（含长文其余各段）对**原文里找不到**的词条修正 `surface_form`：先去掉开头冠词 / to / the / a 再找；再原样找（单词整词匹配、短语子串，均先精确后不区分大小写）；最后单词允许原文词尾多 0–3 个字母（Tradition → Traditionen、concede → conceded），整词匹配，不会匹配进长词内部（Traditionsverein）。仍找不到才保留原样并提示。能精确匹配的词条完全不变。测试 5 条；`docs/USER_MANUAL.md` §9.2 说明。
