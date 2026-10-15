@@ -5,7 +5,7 @@
 
 ## 更新记录（按任务追加）
 
-### 2026-10-15 — 复习进度存入数据库（分支 `feat/review-db`）
+### 2026-10-15 — 复习进度存入数据库（PR #6，已上线）
 
 - **完成**：复习排期从浏览器 localStorage 改存新表 `vocabulary_review_progress`（迁移 `supabase/fixes/012_review_progress.sql`），换设备也能接着复习。未执行 012 时自动退回本地存储，行为与之前完全一样；执行后首次打开复习页，把本浏览器已有排期（德语、英语各自）自动搬入数据库并清掉本机副本。每次「记住了 / 还不熟」只写一行；「已掌握」删除该行。
 - **主要文件**：`supabase/fixes/012_review_progress.sql`、`supabase/schema.sql`、`src/lib/supabase/reviewProgress.ts`（+ 测试）、`src/lib/review/reviewQueue.ts`（`clearReviewState`）、`src/app/review/page.tsx`、`/help`、`docs/USER_MANUAL.md`、`docs/PRD.md` §5.0、`docs/DATABASE.md` §10.9、`README.md`。
