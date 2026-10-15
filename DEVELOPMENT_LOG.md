@@ -9,21 +9,21 @@
 
 - **完成**：导入页新增第三种方式「截图 / 拍照」：一次最多 10 张（手机可直接拍照），浏览器先压缩（宽 ≤1280 px；长截图按 2000 px 切块并重叠），再由 `POST /api/import-image` 调 OpenAI 视觉模型逐字转写正文（去掉昵称、互动数、按钮、广告、他人评论；多图去重叠；不翻译不改写）。结果填入「正文」，标题 / 来源平台为空时自动填，语言为德 / 英时自动切换；用户核对后照常保存。原图不保存、不写日志。
 - **主要文件**：`src/lib/import/imageImport.ts`（常量、提示词、schema、校验、切块规划，+ 测试）、`src/lib/import/compressImageForImport.ts`、`src/app/api/import-image/route.ts`、`src/app/import/page.tsx`、`/help`、`docs/USER_MANUAL.md` §1.4、`docs/PRD.md` §1.4.3、`README.md`、`.env.example`。
-- **状态**：代码完成，单元测试 / build 通过；读图效果需在 Preview 用真实截图验证后合并。不影响现有粘贴 / 链接 / 插件导入。
+- **状态**：代码完成，单元测试 / build 通过；维护者已用真实截图在 Preview 验证，已上线（PR #8）。不影响现有粘贴 / 链接 / 插件导入。
 - **已知问题**：§1.4.3 第 7 条（短内容只推词、不生成阅读问题）未做；读图实际效果（串帖、评论区识别）尚未用真实截图验证。
 - **下一步**：维护者用 X / Facebook 截图与报纸照片在 Preview 测试；之后再做短内容规则、插件识别 X / Facebook / YouTube 文稿（§1.4.3 C/D）。
 ### 2026-10-15 — 英语空间不再显示德语占位句（PR #7，已上线）
 
 - **完成**：英语词条 / 语法还没补充简明解释时，总词库、语法库显示「（英文释义待补充）/（英文解释待补充）」，复习卡背面不显示占位句（阅读页原本已这样处理）。只改显示，数据库内容不变；德语空间照旧显示 "Wird später ergänzt."。
 - **主要文件**：`src/components/articleReader/learningItemHelpers.tsx`（`simpleExplanationForDisplay`，+ 测试）、`src/app/vocabulary/page.tsx`、`src/app/grammar/page.tsx`、`src/app/review/page.tsx`。
-- **状态**：待 Preview 验证后合并。
+- **状态**：已上线（PR #7）。
 - **已知问题**：无。
 - **下一步**：截图导入。
 ### 2026-10-15 — 复习进度存入数据库（PR #6，已上线）
 
 - **完成**：复习排期从浏览器 localStorage 改存新表 `vocabulary_review_progress`（迁移 `supabase/fixes/012_review_progress.sql`），换设备也能接着复习。未执行 012 时自动退回本地存储，行为与之前完全一样；执行后首次打开复习页，把本浏览器已有排期（德语、英语各自）自动搬入数据库并清掉本机副本。每次「记住了 / 还不熟」只写一行；「已掌握」删除该行。
 - **主要文件**：`supabase/fixes/012_review_progress.sql`、`supabase/schema.sql`、`src/lib/supabase/reviewProgress.ts`（+ 测试）、`src/lib/review/reviewQueue.ts`（`clearReviewState`）、`src/app/review/page.tsx`、`/help`、`docs/USER_MANUAL.md`、`docs/PRD.md` §5.0、`docs/DATABASE.md` §10.9、`README.md`。
-- **状态**：代码完成，待维护者在 Supabase 执行 012 并在 Preview 验证后合并。未改其他页面；单独建表，不碰 `vocabulary_items`（避免 updated_at 变动影响词库时间分组）。
+- **状态**：已上线（PR #6）；须在 Supabase 执行 012 才会改存数据库，未执行时照旧存浏览器。未改其他页面；单独建表，不碰 `vocabulary_items`（避免 updated_at 变动影响词库时间分组）。
 - **已知问题**：本机排期搬入时若同一个词在数据库里已有记录，以数据库为准。
 - **下一步**：英语词库占位句；截图导入。
 
