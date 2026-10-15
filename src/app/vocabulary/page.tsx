@@ -13,6 +13,8 @@ import { formatSupabaseOrUnknownError } from "@/lib/supabase/errors";
 import { updateVocabularyItemMastery } from "@/lib/supabase/vocabulary";
 import { normalizeDeepNoteMarkdown } from "@/lib/text/normalizeDeepNoteMarkdown";
 
+const VOCAB_PAGE_SIZE = 50;
+
 type VocabularyItemRow = {
   id: string;
   lemma: string | null;
@@ -221,6 +223,8 @@ function VocabularyPageContent() {
   const [statusFilter, setStatusFilter] = useState<"all" | UiStatus>("all");
   const [levelFilter, setLevelFilter] = useState<"all" | CefrLevel>("all");
   const [timeTab, setTimeTab] = useState<TimeTab>("all");
+  /** 分页：一次只渲染 VOCAB_PAGE_SIZE 条，避免词库很大时页面卡死 */
+  const [page, setPage] = useState(0);
   const [statusSavingItemId, setStatusSavingItemId] = useState<string | null>(null);
   const [statusActionError, setStatusActionError] = useState<string | null>(null);
 
@@ -451,6 +455,61 @@ function VocabularyPageContent() {
       );
     });
   }, [items, levelFilter, query, statusFilter, timeTab]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [query, statusFilter, levelFilter, timeTab]);
+
+  const pageCount = Math.max(1, Math.ceil(filteredItems.length / VOCAB_PAGE_SIZE));
+  const safePage = Math.min(page, pageCount - 1);
+  const pagedItems = useMemo(
+    () =>
+      filteredItems.slice(
+        safePage * VOCAB_PAGE_SIZE,
+        (safePage + 1) * VOCAB_PAGE_SIZE,
+      ),
+    [filteredItems, safePage],
+  );
+
+  const goToPage = (next: number) => {
+    setPage(Math.max(0, Math.min(next, pageCount - 1)));
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const pager =
+    filteredItems.length > VOCAB_PAGE_SIZE ? (
+      <nav
+        aria-label="词库分页"
+        className="flex flex-wrap items-center justify-between gap-2 text-sm text-zinc-600 dark:text-zinc-400"
+      >
+        <span>
+          第 {safePage * VOCAB_PAGE_SIZE + 1}–
+          {Math.min((safePage + 1) * VOCAB_PAGE_SIZE, filteredItems.length)} 条，共{" "}
+          {filteredItems.length} 条
+        </span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => goToPage(safePage - 1)}
+            disabled={safePage === 0}
+            className="h-8 rounded-md border border-zinc-300 px-3 disabled:opacity-40 dark:border-zinc-700"
+          >
+            上一页
+          </button>
+          <span className="tabular-nums">
+            {safePage + 1} / {pageCount}
+          </span>
+          <button
+            type="button"
+            onClick={() => goToPage(safePage + 1)}
+            disabled={safePage >= pageCount - 1}
+            className="h-8 rounded-md border border-zinc-300 px-3 disabled:opacity-40 dark:border-zinc-700"
+          >
+            下一页
+          </button>
+        </div>
+      </nav>
+    ) : null;
 
   const timeTabCounts = useMemo(() => {
     let all = 0;
@@ -699,8 +758,10 @@ function VocabularyPageContent() {
         </Card>
       ) : null}
 
+      {pager}
+
       <div className="space-y-3">
-        {filteredItems.map((v) => (
+        {pagedItems.map((v) => (
           <Card key={v.id} className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               <CardTitle className="text-lg">{v.lemma || v.displayWord}</CardTitle>
@@ -788,6 +849,8 @@ function VocabularyPageContent() {
           </Card>
         ))}
       </div>
+
+      {pager}
     </div>
   );
 }

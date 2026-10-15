@@ -545,6 +545,12 @@ npx vitest run --config vitest.live.config.ts src/lib/articleAnalysis/vocabulary
 
 ## 更新记录（按任务追加）
 
+### 2026-10-15 — 总词库分页
+
+**原因**：词库约 700 条时一次性渲染全部卡片，浏览器明显卡顿。
+**本次完成**：`src/app/vocabulary/page.tsx` 每页 50 条，列表上下各一个分页栏（上一页 / 下一页 / 第 x–y 条）；切换搜索、状态、等级、时间分组时回到第 1 页；统计卡与各 Tab 计数仍按全部词条计算。
+**验证**：`npm test` / `npm run build` 通过。
+
 ### 2026-10-15 — 修复：总词库「读取词库失败 Bad Request」
 
 **原因**：`/vocabulary` 用 `.in("vocabulary_item_id", 全部 ID)` 一次查释义与出处；词库约 700 条时 URL 超长，Supabase 返回 400。数据本身完好（核对：698 词、1487 出处、62 篇文章、27 条语法）。与选词 v2 无关，词条数增长到一定量即触发。
