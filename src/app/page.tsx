@@ -21,7 +21,7 @@ export default function Home() {
           German Reading Coach
         </h1>
         <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">
-          用真实德语文章学词：导入文章 → AI 只推你不认识的词 → 读前过一遍、读时随手标 → 定期复习。
+          用真实德语 / 英语文章学词：导入文章 → AI 只推你不认识的词 → 读前过一遍、读时随手标 → 定期复习。
           <Link href="/help" className="ml-1 font-medium text-emerald-700 hover:underline dark:text-emerald-400">
             使用说明 →
           </Link>

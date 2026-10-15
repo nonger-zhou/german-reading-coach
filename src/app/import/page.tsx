@@ -5,6 +5,14 @@ import { useRouter } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { GermanLevelSelect } from "@/components/GermanLevelSelect";
+import { EnglishLevelSelect } from "@/components/EnglishLevelSelect";
+import {
+  LEARNING_LANGUAGES,
+  LEARNING_LANGUAGE_LABEL_ZH,
+  type LearningLanguage,
+} from "@/lib/language/learningLanguage";
+import { setLearningLanguage, useLearningLanguage } from "@/lib/language/useLearningLanguage";
+import { detectArticleLanguage } from "@/lib/language/detectArticleLanguage";
 import { Button } from "@/components/ui/Button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import {
@@ -30,6 +38,8 @@ type ExternalImportDraftPayload = {
   published_at_text?: unknown;
   rawText?: unknown;
   text?: unknown;
+  /** 插件 0.1.6 起：网页 <html lang>，用作文章语言的提示 */
+  pageLanguage?: unknown;
 };
 
 const IMPORT_DRAFT_MESSAGE_TYPE = "german-reading-coach:import-draft";
@@ -68,6 +78,21 @@ function ImportPageContent() {
   const [cleanedText, setCleanedText] = useState("");
   const [mode, setMode] = useState<ImportMode>("url");
   const [level, setLevel] = useState<CefrLevel>("B1");
+  /** 文章语言：默认跟随顶栏当前学习语言；正文明显是另一种语言时自动切换，用户可手动改 */
+  const { language: currentLanguage, ready: languageReady } = useLearningLanguage();
+  const [articleLanguage, setArticleLanguage] = useState<LearningLanguage>("de");
+  const [languageTouched, setLanguageTouched] = useState(false);
+  const languageTouchedRef = useRef(false);
+  useEffect(() => {
+    languageTouchedRef.current = languageTouched;
+  }, [languageTouched]);
+  const [languageAutoNote, setLanguageAutoNote] = useState<string | null>(null);
+  /** 设置页里每种语言的默认阅读水平 */
+  const defaultLevelsRef = useRef<Record<LearningLanguage, CefrLevel>>({ de: "B1", en: "B1" });
+  const articleLanguageRef = useRef<LearningLanguage>("de");
+  useEffect(() => {
+    articleLanguageRef.current = articleLanguage;
+  }, [articleLanguage]);
   const [saving, setSaving] = useState(false);
   const [fetchingUrl, setFetchingUrl] = useState(false);
   const [readingClipboard, setReadingClipboard] = useState(false);
@@ -120,7 +145,11 @@ function ImportPageContent() {
       try {
         const { profile } = await ensureUserProfile(session.user);
         if (cancelled) return;
-        setLevel(normalizeCefrLevel(profile.self_selected_level));
+        defaultLevelsRef.current = {
+          de: normalizeCefrLevel(profile.self_selected_level),
+          en: normalizeCefrLevel(profile.self_selected_level_en),
+        };
+        setLevel(defaultLevelsRef.current[articleLanguageRef.current]);
       } catch {
         if (cancelled) return;
         setLevel("B1");
@@ -131,6 +160,35 @@ function ImportPageContent() {
       cancelled = true;
     };
   }, [session]);
+
+  const applyArticleLanguage = useCallback((lang: LearningLanguage) => {
+    articleLanguageRef.current = lang;
+    setArticleLanguage(lang);
+    setLevel(defaultLevelsRef.current[lang]);
+  }, []);
+
+  /** 首次拿到顶栏语言时作为默认值 */
+  const languageInitializedRef = useRef(false);
+  useEffect(() => {
+    if (!languageReady || languageInitializedRef.current) return;
+    languageInitializedRef.current = true;
+    if (!languageTouched) applyArticleLanguage(currentLanguage);
+  }, [applyArticleLanguage, currentLanguage, languageReady, languageTouched]);
+
+  /** 正文变化后自动识别语言（用户手动选过就不再自动改） */
+  useEffect(() => {
+    if (languageTouched) return;
+    const timer = setTimeout(() => {
+      const { language: detected } = detectArticleLanguage(cleanedText);
+      if (detected && detected !== articleLanguageRef.current) {
+        applyArticleLanguage(detected);
+        setLanguageAutoNote(
+          `看起来是${LEARNING_LANGUAGE_LABEL_ZH[detected]}文章，已自动切换为${LEARNING_LANGUAGE_LABEL_ZH[detected]}；如不对可手动改。`,
+        );
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [applyArticleLanguage, cleanedText, languageTouched]);
 
   const runParse = useCallback((raw: string) => {
     const trimmed = raw.trim();
@@ -155,6 +213,13 @@ function ImportPageContent() {
         draftString(payload.publishedAtText) ||
         draftString(payload.published_at_text);
       const nextRawText = draftString(payload.rawText) || draftString(payload.text);
+      const pageLanguage = draftString(payload.pageLanguage).toLowerCase();
+
+      /** 网页声明的语言作为提示；随后按正文自动识别，识别得出时以正文为准 */
+      if (!languageTouchedRef.current) {
+        if (pageLanguage.startsWith("en")) applyArticleLanguage("en");
+        else if (pageLanguage.startsWith("de")) applyArticleLanguage("de");
+      }
 
       setValidationError(null);
       setSaveError(null);
@@ -186,7 +251,7 @@ function ImportPageContent() {
           : "已从浏览器插件带入文章信息。",
       });
     },
-    [],
+    [applyArticleLanguage],
   );
 
   useEffect(() => {
@@ -398,6 +463,7 @@ function ImportPageContent() {
         source_name: emptyToNull(sourceName),
         original_text: bodyTrim,
         user_level_at_analysis: level,
+        language: articleLanguage,
       });
 
       const { data, error } = await supabase
@@ -413,6 +479,10 @@ function ImportPageContent() {
         throw new Error("保存成功但未返回文章 id");
       }
 
+      /** 导入了另一种语言的文章：顶栏随之切换，回到列表时能看到它 */
+      if (articleLanguage !== currentLanguage) {
+        void setLearningLanguage(articleLanguage);
+      }
       router.push(`/articles/${data.id}`);
     } catch (e) {
       setSaveError(formatSupabaseOrUnknownError(e));
@@ -711,8 +781,44 @@ function ImportPageContent() {
         <CardDescription>
           已自动带入设置页的默认阅读水平；这里只影响当前这篇文章。
         </CardDescription>
+        <div className="mt-4 space-y-1">
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <span className="font-medium text-zinc-800 dark:text-zinc-200">文章语言</span>
+            {LEARNING_LANGUAGES.map((lang) => (
+              <label key={lang} className="inline-flex cursor-pointer items-center gap-1.5">
+                <input
+                  type="radio"
+                  name="import-article-language"
+                  value={lang}
+                  checked={articleLanguage === lang}
+                  onChange={() => {
+                    setLanguageTouched(true);
+                    setLanguageAutoNote(null);
+                    applyArticleLanguage(lang);
+                  }}
+                  className="h-4 w-4 accent-emerald-600"
+                />
+                {LEARNING_LANGUAGE_LABEL_ZH[lang]}
+              </label>
+            ))}
+          </div>
+          {languageAutoNote ? (
+            <p className="text-xs text-emerald-700 dark:text-emerald-400" role="status">
+              {languageAutoNote}
+            </p>
+          ) : null}
+          {articleLanguage !== currentLanguage ? (
+            <p className="text-xs text-zinc-500">
+              保存后顶栏会切换到{LEARNING_LANGUAGE_LABEL_ZH[articleLanguage]}，文章库、词库将显示{LEARNING_LANGUAGE_LABEL_ZH[articleLanguage]}内容。
+            </p>
+          ) : null}
+        </div>
         <div className="mt-4">
-          <GermanLevelSelect value={level} onChange={setLevel} name="import-level" />
+          {articleLanguage === "en" ? (
+            <EnglishLevelSelect value={level} onChange={setLevel} name="import-level-en" />
+          ) : (
+            <GermanLevelSelect value={level} onChange={setLevel} name="import-level" />
+          )}
         </div>
       </Card>
 

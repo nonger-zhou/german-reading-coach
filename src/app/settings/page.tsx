@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { GermanLevelSelect } from "@/components/GermanLevelSelect";
+import { EnglishLevelSelect } from "@/components/EnglishLevelSelect";
+import { useLearningLanguage } from "@/lib/language/useLearningLanguage";
 import { PronunciationButton } from "@/components/PronunciationButton";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -24,6 +26,9 @@ function normalizeCefrLevel(value: string | null | undefined): CefrLevel {
 export default function SettingsPage() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [defaultLevel, setDefaultLevel] = useState<CefrLevel>("B1");
+  /** 阅读水平按语言分别保存：德语 = self_selected_level（原字段），英语 = self_selected_level_en */
+  const [defaultLevelEn, setDefaultLevelEn] = useState<CefrLevel>("B1");
+  const { language } = useLearningLanguage();
   const [defaultLevelLoading, setDefaultLevelLoading] = useState(true);
   const [defaultLevelSaving, setDefaultLevelSaving] = useState(false);
   const [defaultLevelError, setDefaultLevelError] = useState<string | null>(null);
@@ -76,6 +81,7 @@ export default function SettingsPage() {
         const { profile } = await ensureUserProfile(session.user);
         if (cancelled) return;
         setDefaultLevel(normalizeCefrLevel(profile.self_selected_level));
+        setDefaultLevelEn(normalizeCefrLevel(profile.self_selected_level_en));
       } catch (e) {
         if (cancelled) return;
         setDefaultLevelError(formatSupabaseOrUnknownError(e));
@@ -111,7 +117,9 @@ export default function SettingsPage() {
 
   async function onChangeDefaultLevel(nextLevel: CefrLevel) {
     if (!session?.user || defaultLevelSaving) return;
-    setDefaultLevel(nextLevel);
+    const isEnglish = language === "en";
+    if (isEnglish) setDefaultLevelEn(nextLevel);
+    else setDefaultLevel(nextLevel);
     setDefaultLevelSaving(true);
     setDefaultLevelError(null);
     setDefaultLevelNotice(null);
@@ -119,12 +127,14 @@ export default function SettingsPage() {
       const supabase = getSupabaseBrowserClient();
       const { error } = await supabase
         .from("profiles")
-        .update({ self_selected_level: nextLevel })
+        .update(isEnglish ? { self_selected_level_en: nextLevel } : { self_selected_level: nextLevel })
         .eq("id", session.user.id);
       if (error) {
         throw error;
       }
-      setDefaultLevelNotice(`默认阅读水平已保存为 ${nextLevel}`);
+      setDefaultLevelNotice(
+        isEnglish ? `默认英语阅读水平已保存为 ${nextLevel}` : `默认阅读水平已保存为 ${nextLevel}`,
+      );
     } catch (e) {
       setDefaultLevelError(formatSupabaseOrUnknownError(e));
     } finally {
@@ -183,9 +193,14 @@ export default function SettingsPage() {
       <Card className="space-y-5">
         <div className="space-y-3">
           <div>
-            <CardTitle className="text-base">默认阅读水平</CardTitle>
+            <CardTitle className="text-base">
+              {language === "en" ? "默认英语阅读水平" : "默认阅读水平"}
+            </CardTitle>
             <CardDescription>
               导入文章时会自动带入这个水平；每篇文章保存前仍可临时修改。
+              {language === "en"
+                ? "德语与英语分别保存，顶栏切到德语可设置德语水平。"
+                : null}
             </CardDescription>
           </div>
           <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
@@ -200,6 +215,12 @@ export default function SettingsPage() {
                 去登录
               </Link>
             </p>
+          ) : language === "en" ? (
+            <EnglishLevelSelect
+              value={defaultLevelEn}
+              onChange={(v) => void onChangeDefaultLevel(v)}
+              name="settings-default-level-en"
+            />
           ) : (
             <GermanLevelSelect
               value={defaultLevel}
@@ -258,6 +279,9 @@ export default function SettingsPage() {
             </CardDescription>
             <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start">
               <PronunciationButton text="Guten Tag" label="测试德语发音" />
+              {language === "en" ? (
+                <PronunciationButton text="Good morning" lang="en-US" label="测试英语发音" />
+              ) : null}
               <div className="flex flex-col gap-2">
                 <Button
                   type="button"

@@ -1,3 +1,8 @@
+import {
+  DEFAULT_LEARNING_LANGUAGE,
+  type LearningLanguage,
+} from "@/lib/language/learningLanguage";
+
 /**
  * 复习调度（简化 Leitner 盒子法）。
  *
@@ -115,9 +120,25 @@ export function pruneReviewState(
 
 const STORAGE_PREFIX = "grc.review.v1.";
 
-export function loadReviewState(userId: string): ReviewState {
+/**
+ * 复习排期的本机存储 key，按语言分开：
+ * - 德语沿用**原来的** key（`grc.review.v1.<userId>`），已有的德语复习进度不受影响；
+ * - 英语用新 key（`grc.review.v1.en.<userId>`）。
+ * 必须分开：`pruneReviewState` 会删掉不在本次词表里的记录，共用一个 key 时英语复习会清掉德语进度。
+ */
+export function reviewStorageKey(
+  userId: string,
+  language: LearningLanguage = DEFAULT_LEARNING_LANGUAGE,
+): string {
+  return language === "de" ? STORAGE_PREFIX + userId : `${STORAGE_PREFIX}${language}.${userId}`;
+}
+
+export function loadReviewState(
+  userId: string,
+  language: LearningLanguage = DEFAULT_LEARNING_LANGUAGE,
+): ReviewState {
   try {
-    const raw = window.localStorage.getItem(STORAGE_PREFIX + userId);
+    const raw = window.localStorage.getItem(reviewStorageKey(userId, language));
     if (!raw) return {};
     const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object") return {};
@@ -134,9 +155,13 @@ export function loadReviewState(userId: string): ReviewState {
   }
 }
 
-export function saveReviewState(userId: string, state: ReviewState): void {
+export function saveReviewState(
+  userId: string,
+  state: ReviewState,
+  language: LearningLanguage = DEFAULT_LEARNING_LANGUAGE,
+): void {
   try {
-    window.localStorage.setItem(STORAGE_PREFIX + userId, JSON.stringify(state));
+    window.localStorage.setItem(reviewStorageKey(userId, language), JSON.stringify(state));
   } catch {
     /* 隐私模式等情况下无法保存，只影响排期，不影响复习本身 */
   }

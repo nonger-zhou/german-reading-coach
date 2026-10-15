@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "German Reading Coach Importer",
-  "version": "0.1.5",
-  "description": "Import the currently visible article into German Reading Coach.",
+  "version": "0.1.6",
+  "description": "Import the currently visible German or English article into German Reading Coach.",
   "permissions": ["activeTab", "contextMenus", "scripting", "storage"],
   "host_permissions": ["http://*/*", "https://*/*"],
   "background": {

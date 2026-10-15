@@ -8,6 +8,8 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import { PronunciationButton } from "@/components/PronunciationButton";
 import { useAuthEntryHrefs } from "@/lib/auth/use-auth-entry-hrefs";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useLearningLanguage } from "@/lib/language/useLearningLanguage";
+import { ContentLanguageProvider } from "@/lib/language/ContentLanguageContext";
 import { formatSupabaseOrUnknownError } from "@/lib/supabase/errors";
 import { selectInChunks } from "@/lib/supabase/inChunks";
 import { updateVocabularyItemMastery } from "@/lib/supabase/vocabulary";
@@ -65,6 +67,8 @@ function highlightSentence(sentence: string, surface: string | null) {
 
 function ReviewPageContent() {
   const { loginHref } = useAuthEntryHrefs();
+  /** 只复习当前学习语言的词；排期按语言分开存 */
+  const { language, ready: languageReady } = useLearningLanguage();
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [items, setItems] = useState<ReviewItem[]>([]);
   const [occByItem, setOccByItem] = useState<Map<string, OccurrenceRow>>(new Map());
@@ -96,13 +100,14 @@ function ReviewPageContent() {
   }, [refreshSession]);
 
   useEffect(() => {
-    if (session === undefined) return;
+    if (session === undefined || !languageReady) return;
     const userId = session?.user?.id;
     if (!userId) {
       setLoading(false);
       return;
     }
     let cancelled = false;
+    setQueue(null);
     setLoading(true);
     setError(null);
     (async () => {
@@ -116,6 +121,7 @@ function ReviewPageContent() {
               "id,lemma,display_word,zh_meaning,simple_de_explanation,gender,part_of_speech,last_seen_at",
             )
             .eq("user_id", userId)
+            .eq("language", language)
             .in("mastery_status", [...LEARNING_STATUSES])
             .order("id", { ascending: true })
             .range(from, from + PAGE - 1);
@@ -126,8 +132,8 @@ function ReviewPageContent() {
         }
         if (cancelled) return;
         const learningIds = new Set(rows.map((r) => r.id));
-        const state = pruneReviewState(loadReviewState(userId), learningIds);
-        saveReviewState(userId, state);
+        const state = pruneReviewState(loadReviewState(userId, language), learningIds);
+        saveReviewState(userId, state, language);
         setItems(rows);
         setReviewState(state);
       } catch (e) {
@@ -139,7 +145,7 @@ function ReviewPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [session]);
+  }, [session, language, languageReady]);
 
   const itemById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const candidates = useMemo(
@@ -185,7 +191,7 @@ function ReviewPageContent() {
 
   function persist(next: ReviewState) {
     const userId = session?.user?.id;
-    if (userId) saveReviewState(userId, next);
+    if (userId) saveReviewState(userId, next, language);
     setReviewState(next);
   }
 
@@ -250,11 +256,14 @@ function ReviewPageContent() {
   const occ = current ? occByItem.get(current.id) : undefined;
 
   return (
+    <ContentLanguageProvider language={language}>
     <div className="mx-auto w-full max-w-2xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">复习</h1>
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+          {language === "en" ? "复习 · 英语" : "复习"}
+        </h1>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          复习总词库里「学习中」的词：先看德语和例句回想意思，再翻面核对。「已掌握」会写入总词库，以后不再推荐。
+          复习总词库里「学习中」的词：先看{language === "en" ? "英语" : "德语"}和例句回想意思，再翻面核对。「已掌握」会写入总词库，以后不再推荐。
         </p>
       </div>
 
@@ -403,9 +412,10 @@ function ReviewPageContent() {
       ) : null}
 
       <p className="text-xs text-zinc-500">
-        复习排期保存在当前浏览器；换设备会重新开始排期，但「已掌握」写入总词库，所有设备一致。
+        复习排期保存在当前浏览器（德语、英语各自一份）；换设备会重新开始排期，但「已掌握」写入总词库，所有设备一致。
       </p>
     </div>
+    </ContentLanguageProvider>
   );
 }
 

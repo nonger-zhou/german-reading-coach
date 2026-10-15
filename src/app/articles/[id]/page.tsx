@@ -49,6 +49,7 @@ import { loginPageHref } from "@/lib/auth/post-auth-redirect";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { formatSupabaseOrUnknownError } from "@/lib/supabase/errors";
 import { FullArticleTranslationExternal } from "@/components/FullArticleTranslationExternal";
+import { normalizeLearningLanguage } from "@/lib/language/learningLanguage";
 
 const IS_DEV = process.env.NODE_ENV === "development";
 
@@ -254,7 +255,7 @@ function ArticleDetailPageContent() {
         const { data, error } = await supabase
           .from("articles")
           .select(
-            "id,user_id,title,url,source_name,original_text,summary_zh,summary_de_simple,reading_questions,user_level_at_analysis,detected_article_level,topic,created_at,updated_at",
+            "id,user_id,title,url,source_name,original_text,summary_zh,summary_de_simple,reading_questions,user_level_at_analysis,detected_article_level,topic,language,created_at,updated_at",
           )
           .eq("id", id)
           .maybeSingle();
@@ -535,6 +536,7 @@ function ArticleDetailPageContent() {
           title: article.title ?? "",
           originalText: article.original_text ?? "",
           userLevel: level,
+          language: normalizeLearningLanguage(article.language),
         }),
       });
       const data: unknown = await res.json().catch(() => null);
@@ -734,6 +736,7 @@ function ArticleDetailPageContent() {
             userId: session.user.id,
             articleId: article.id,
             articlePlain,
+            language: normalizeLearningLanguage(article.language),
             item,
           });
           if (error) {
@@ -1039,6 +1042,12 @@ function ArticleDetailPageContent() {
                 </dd>
               </div>
             ) : null}
+            {normalizeLearningLanguage(article.language) === "en" ? (
+              <div>
+                <dt className="text-zinc-500">语言</dt>
+                <dd className="text-zinc-900 dark:text-zinc-100">英语</dd>
+              </div>
+            ) : null}
             <div>
               <dt className="text-zinc-500">阅读水平</dt>
               <dd className="text-zinc-900 dark:text-zinc-100">
@@ -1111,6 +1120,7 @@ function ArticleDetailPageContent() {
           }}
           persistArticleId={article.id}
           persistUserId={session.user.id}
+          persistLanguage={normalizeLearningLanguage(article.language)}
           onPersistError={(msg) => setPersistMessage(msg)}
           enrichUserLevel={articleAnalysisLevel(article.user_level_at_analysis)}
           initialFocus={initialReaderFocus}
@@ -1165,6 +1175,7 @@ function ArticleDetailPageContent() {
                     articlePlain={articlePlain}
                     title={article?.title ?? undefined}
                     disabled={!articlePlain.trim()}
+                    language={normalizeLearningLanguage(article?.language)}
                   />
                 </div>
                 {IS_DEV ? (
@@ -1331,7 +1342,8 @@ function ArticleDetailPageContent() {
                                 {v.lemma.trim() || "—"}
                               </span>
                             </p>
-                            {shouldShowGrammaticalGenderSubtitle(
+                            {normalizeLearningLanguage(article?.language) === "de" &&
+                            shouldShowGrammaticalGenderSubtitle(
                               v.part_of_speech,
                               v.lemma,
                               v.grammatical_gender,

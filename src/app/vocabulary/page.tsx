@@ -9,6 +9,7 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import type { CefrLevel, MasteryStatus } from "@/lib/types";
 import { useAuthEntryHrefs } from "@/lib/auth/use-auth-entry-hrefs";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useLearningLanguage } from "@/lib/language/useLearningLanguage";
 import { formatSupabaseOrUnknownError } from "@/lib/supabase/errors";
 import { updateVocabularyItemMastery } from "@/lib/supabase/vocabulary";
 import { normalizeDeepNoteMarkdown } from "@/lib/text/normalizeDeepNoteMarkdown";
@@ -214,6 +215,8 @@ function isMissingDeepNoteColumn(error: unknown): boolean {
 }
 
 function VocabularyPageContent() {
+  /** 只显示当前学习语言的词条（统计数字也随之分开） */
+  const { language, ready: languageReady } = useLearningLanguage();
   const { loginHref } = useAuthEntryHrefs();
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [items, setItems] = useState<VocabularyListItem[]>([]);
@@ -249,7 +252,7 @@ function VocabularyPageContent() {
   }, [refreshSession]);
 
   useEffect(() => {
-    if (session === undefined) return;
+    if (session === undefined || !languageReady) return;
     if (!session?.user?.id) {
       setItems([]);
       setLoading(false);
@@ -280,6 +283,7 @@ function VocabularyPageContent() {
               .from("vocabulary_items")
               .select(columns)
               .eq("user_id", session.user.id)
+              .eq("language", language)
               .order("created_at", { ascending: false })
               .order("id", { ascending: true })
               .range(from, from + PAGE - 1);
@@ -424,7 +428,7 @@ function VocabularyPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [session?.user?.id, session]);
+  }, [session?.user?.id, session, language, languageReady]);
 
   const filteredItems = useMemo(() => {
     const weekStart = startOfCurrentWeek();
@@ -607,7 +611,9 @@ function VocabularyPageContent() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">总词库</h1>
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+          总词库{language === "en" ? " · 英语" : ""}
+        </h1>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
           汇总当前账号在所有文章中保存的词汇。「学习中」的词以后出现就会推荐、并进入
           <Link href="/review" className="mx-0.5 text-emerald-700 hover:underline dark:text-emerald-400">复习</Link>

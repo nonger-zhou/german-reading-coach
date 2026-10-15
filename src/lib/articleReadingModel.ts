@@ -252,6 +252,16 @@ export function findBestTextOccurrence(
     candidates.push(idx);
     from = idx + 1;
   }
+  /**
+   * 完全匹配失败时再按「不区分大小写」找一次（2026-10-15）：AI 常把句首 / 引号开头 / 标题里大写的词写成小写
+   * （如原文 “Swarms of AI agents”、AI 写 swarms）。只在原来找不到时才生效，原来能匹配的位置不变；
+   * 返回的是原文中的实际位置，高亮显示原文写法。大小写转换会改变长度的少见字符不做此回退。
+   */
+  if (candidates.length === 0) {
+    for (const r of findAllCaseInsensitiveSubstringRanges(articlePlain, needle)) {
+      candidates.push(r.start);
+    }
+  }
   if (candidates.length === 0) return null;
   let best = candidates[0]!;
   let bestDist = Math.abs(best - hintStart);

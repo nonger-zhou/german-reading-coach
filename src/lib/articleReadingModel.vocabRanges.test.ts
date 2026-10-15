@@ -280,3 +280,20 @@ describe("sortArticleVocabItemsByReadingOrder", () => {
     ).toBeGreaterThan(0);
   });
 });
+
+describe("findBestTextOccurrence — case-insensitive fallback", () => {
+  it("finds a capitalised sentence-initial word when the AI wrote it in lowercase", async () => {
+    const { findBestTextOccurrence } = await import("./articleReadingModel");
+    const text = "Experts expect more incidents. “Swarms of AI agents could target infrastructure.”";
+    const hit = findBestTextOccurrence(text, "swarms", 0);
+    expect(hit).not.toBeNull();
+    expect(text.slice(hit!.start, hit!.end)).toBe("Swarms");
+  });
+
+  it("still prefers an exact-case match when one exists", async () => {
+    const { findBestTextOccurrence } = await import("./articleReadingModel");
+    const text = "Die Regierung plant. Später sagte die regierung nichts.";
+    const hit = findBestTextOccurrence(text, "regierung", 0);
+    expect(text.slice(hit!.start, hit!.end)).toBe("regierung");
+  });
+});

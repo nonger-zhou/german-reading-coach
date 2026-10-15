@@ -12,6 +12,8 @@ import {
 import { GRAMMAR_EXPLAIN_SELECTION_SYSTEM_PROMPT } from "@/lib/articleAnalysis/grammarExplainSelectionPrompt";
 import { resolveGrammarSelectionContext } from "@/lib/articleAnalysis/resolveGrammarSelectionContext";
 import { getSupabaseUserFromBearer } from "@/lib/supabase/routeFromBearer";
+import { resolveArticleLanguage } from "@/lib/supabase/articles";
+import { GRAMMAR_EXPLAIN_SELECTION_SYSTEM_PROMPT_EN } from "@/lib/articleAnalysis/englishPrompts";
 
 export const maxDuration = 120;
 
@@ -104,6 +106,9 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
     );
   }
 
+  /** 英语文章用英语句子解析提示词；德语不变 */
+  const language = await resolveArticleLanguage(auth.supabase, auth.user.id, articleId);
+
   const openai = createServerOpenAIClient({
     apiKey,
     timeout: 120_000,
@@ -115,7 +120,13 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
       model: "gpt-4o-mini",
       temperature: 0.35,
       messages: [
-        { role: "system", content: GRAMMAR_EXPLAIN_SELECTION_SYSTEM_PROMPT },
+        {
+          role: "system",
+          content:
+            language === "en"
+              ? GRAMMAR_EXPLAIN_SELECTION_SYSTEM_PROMPT_EN
+              : GRAMMAR_EXPLAIN_SELECTION_SYSTEM_PROMPT,
+        },
         {
           role: "user",
           content: buildGrammarExplainSelectionUserContent({

@@ -10,6 +10,7 @@ import { validateGrammarLabel } from "@/lib/grammar/labelValidation";
 import type { CefrLevel, MasteryStatus } from "@/lib/types";
 import { useAuthEntryHrefs } from "@/lib/auth/use-auth-entry-hrefs";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useLearningLanguage } from "@/lib/language/useLearningLanguage";
 import { formatSupabaseOrUnknownError } from "@/lib/supabase/errors";
 import { updateGrammarItemMastery } from "@/lib/supabase/grammar";
 import { normalizeDeepNoteMarkdown } from "@/lib/text/normalizeDeepNoteMarkdown";
@@ -131,6 +132,8 @@ function isMissingDeepNoteColumn(error: unknown): boolean {
 }
 
 function GrammarPageContent() {
+  /** 只显示当前学习语言的语法项 */
+  const { language, ready: languageReady } = useLearningLanguage();
   const { loginHref } = useAuthEntryHrefs();
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [items, setItems] = useState<GrammarListItem[]>([]);
@@ -164,7 +167,7 @@ function GrammarPageContent() {
   }, [refreshSession]);
 
   useEffect(() => {
-    if (session === undefined) return;
+    if (session === undefined || !languageReady) return;
     if (!session?.user?.id) {
       setItems([]);
       setLoading(false);
@@ -188,6 +191,7 @@ function GrammarPageContent() {
           .from("grammar_items")
           .select(itemSelectWithDeepNote)
           .eq("user_id", session.user.id)
+          .eq("language", language)
           .order("created_at", { ascending: false });
         let itemRows: unknown[] | null = initialItemsResult.data;
         let itemErr: unknown = initialItemsResult.error;
@@ -196,6 +200,7 @@ function GrammarPageContent() {
             .from("grammar_items")
             .select(itemSelectBase)
             .eq("user_id", session.user.id)
+            .eq("language", language)
             .order("created_at", { ascending: false });
           itemRows = fallback.data;
           itemErr = fallback.error;
@@ -306,7 +311,7 @@ function GrammarPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [session?.user?.id, session]);
+  }, [session?.user?.id, session, language, languageReady]);
 
   const filteredItems = useMemo(() => {
     const weekStart = startOfCurrentWeek();
@@ -428,7 +433,9 @@ function GrammarPageContent() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">总语法库</h1>
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+          总语法库{language === "en" ? " · 英语" : ""}
+        </h1>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
           汇总当前账号在所有文章中保存的语法项，可调整学习状态（学习中 / 已掌握 / 暂忽略）。
         </p>

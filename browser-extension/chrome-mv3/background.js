@@ -46,6 +46,9 @@ async function importCurrentTab(tab) {
 }
 
 function collectVisibleArticle() {
+  /** 网页声明的语言（0.1.6 起传给 Web App 作文章语言提示；英语网站的额外噪音过滤只在 en 页面启用） */
+  const pageLanguage = (document.documentElement.getAttribute("lang") || "").trim().toLowerCase();
+  const isEnglishPage = pageLanguage.startsWith("en");
   const textOf = (selector) =>
     document.querySelector(selector)?.getAttribute("content")?.trim() || "";
   const selectedText = window.getSelection?.().toString().trim() || "";
@@ -96,6 +99,7 @@ function collectVisibleArticle() {
     sourceName,
     publishedAtText,
     rawText,
+    pageLanguage,
   };
 
   function chooseArticleElement(words, headline) {
@@ -350,13 +354,15 @@ function collectVisibleArticle() {
     const seen = new Set();
     let collectedChars = 0;
 
-    for (const node of root.querySelectorAll("p")) {
+    /** 英语页面也看 h2 / h3：遇到 Related / Read more 等小标题即停止（德语页面仍只看 p，与以前一致） */
+    for (const node of root.querySelectorAll(isEnglishPage ? "p, h2, h3" : "p")) {
       if (!isVisible(node)) continue;
       if (hasUnwantedAncestor(node, root)) continue;
 
       const text = normalizeInlineText(node.innerText || "");
       if (!text) continue;
       if (isRelatedSectionHeading(text)) break;
+      if (isEnglishPage && /^H[23]$/.test(node.tagName)) continue;
       if (shouldStopAtText(text, collectedChars)) break;
       if (looksLikeUiText(text)) continue;
       if (looksLikeAuthorNameLine(text)) continue;
@@ -381,10 +387,14 @@ function collectVisibleArticle() {
     const seen = new Set();
     let collectedChars = 0;
 
-    for (const node of root.querySelectorAll("p")) {
+    for (const node of root.querySelectorAll(isEnglishPage ? "p, h2, h3" : "p")) {
       if (!isVisible(node)) continue;
       if (hasUnwantedAncestor(node, root)) continue;
       const text = normalizeInlineText(node.innerText || "");
+      if (isEnglishPage && /^H[23]$/.test(node.tagName)) {
+        if (isRelatedSectionHeading(text)) break;
+        continue;
+      }
       if (!text || looksLikeUiText(text) || looksLikeAuthorNameLine(text)) continue;
       if (!looksLikeArticleParagraph(text)) continue;
       if (isRelatedSectionHeading(text)) break;
@@ -485,6 +495,14 @@ function collectVisibleArticle() {
     const n = normalizeText(text);
     if (!n) return false;
     if (n.includes("auch interessieren")) return true;
+    if (
+      isEnglishPage &&
+      /^(related|read more|more from|more on this|more stories|recommended|you may also like|you might also like|most read|most popular|top stories|what to read next|read next)\b/.test(
+        n,
+      )
+    ) {
+      return true;
+    }
     return /^(das konnte sie auch interessieren|das konnte ihnen auch interessieren|konnte sie auch interessieren|mehr zum thema|auch interessant|weitere artikel|lesen sie auch|empfohlene artikel)/.test(
       n,
     );
@@ -494,6 +512,7 @@ function collectVisibleArticle() {
     const s = normalizeInlineText(text);
     if (s.length < 4 || s.length > 90) return false;
     if (/^von\s+/i.test(s)) return true;
+    if (isEnglishPage && /^by\s+[A-Z]/.test(s) && !/[.!?;]$/.test(s)) return true;
     if (
       /^[A-ZÄÖÜ][a-zäöüß]+(?:\s+[A-ZÄÖÜ][a-zäöüß.-]+){0,4}$/.test(s) &&
       !/[.!?;:«»‹›]/.test(s)
@@ -506,6 +525,12 @@ function collectVisibleArticle() {
   function shouldStopAtText(text, collectedChars) {
     if (isRelatedSectionHeading(text)) return true;
     if (collectedChars < 800) return false;
+    if (
+      isEnglishPage &&
+      /^(sign up|subscribe|newsletter|share this|comments?|\d+\s+comments?|join the conversation|get our)\b/i.test(text)
+    ) {
+      return true;
+    }
     return /^(fehler gefunden|jetzt melden|mehr zum thema|auch interessant|weitere artikel|weitere newsletter|newsletter|der morgen|\d+\s+kommentare?)/i.test(
       text,
     );
@@ -528,6 +553,14 @@ function collectVisibleArticle() {
       return true;
     }
     if (/^(abo|einloggen|registrieren|teilen|drucken|speichern|newsletter|weitere newsletter)$/i.test(text)) {
+      return true;
+    }
+    if (
+      isEnglishPage &&
+      /^(advertisement|sponsored|sign up|sign in|log in|subscribe|share|share this article|save|print|follow|listen|read more|skip advertisement)$/i.test(
+        text,
+      )
+    ) {
       return true;
     }
     if (/^\d+\s*$/.test(text)) {

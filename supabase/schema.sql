@@ -17,6 +17,9 @@ CREATE TABLE public.profiles (
   explanation_intensity text,
   explanation_language text,
   auto_play_pronunciation_on_click boolean NOT NULL DEFAULT false,
+  -- 010：当前学习语言（顶栏切换）与英语阅读水平；self_selected_level 表示德语水平
+  target_language text NOT NULL DEFAULT 'de' CHECK (target_language IN ('de', 'en')),
+  self_selected_level_en text,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
@@ -34,6 +37,8 @@ CREATE TABLE public.articles (
   user_level_at_analysis text,
   detected_article_level text,
   topic text,
+  -- 010：文章语言
+  language text NOT NULL DEFAULT 'de' CHECK (language IN ('de', 'en')),
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
@@ -60,7 +65,8 @@ CREATE TABLE public.vocabulary_items (
   last_seen_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT vocabulary_items_user_norm_pos_unique UNIQUE (user_id, normalized_key, part_of_speech)
+  language text NOT NULL DEFAULT 'de' CHECK (language IN ('de', 'en')),
+  CONSTRAINT vocabulary_items_user_lang_norm_pos_unique UNIQUE (user_id, language, normalized_key, part_of_speech)
 );
 
 CREATE TABLE public.vocabulary_senses (
@@ -112,7 +118,8 @@ CREATE TABLE public.grammar_items (
   last_seen_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT grammar_items_user_key_norm_unique UNIQUE (user_id, grammar_key, normalized_key)
+  language text NOT NULL DEFAULT 'de' CHECK (language IN ('de', 'en')),
+  CONSTRAINT grammar_items_user_lang_key_norm_unique UNIQUE (user_id, language, grammar_key, normalized_key)
 );
 
 CREATE TABLE public.grammar_occurrences (

@@ -5,12 +5,123 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-10-15 — 高亮大小写回退 + 网页按钮行自动清理（德语 / 英语，分支 `feat/english-language`）
+
+**原因**：Preview 测试英语文章时，AI 推荐的 swarms 没有高亮（原文为引号开头的 “Swarms”，大小写不一致）；手动粘贴的 swissinfo 英文页带入 Listen to the article、Save、Share、发布时间、阅读时长等按钮行。
+**本次完成**
+- `findBestTextOccurrence`（`src/lib/articleReadingModel.ts`）：完全匹配失败时再按不区分大小写匹配（复用已有 `findAllCaseInsensitiveSubstringRanges`，长度会变的字符不回退）。只在原来返回「找不到」时生效，原来能匹配的结果不变；德语、英语都受益（AI 预览定位、未定位提示、保存时 occurrence 定位、拖选映射兜底）。
+- `cleanArticleText`：整行完全是网页按钮 / 元信息时删除——英语（Listen to the article、Toggle language selector、Save、Share、Print、Read more、Advertisement、This content was published on…、「9 minutes」）与德语（Artikel anhören、Vorlesen、Speichern、Merken、Drucken、Link kopieren、Lesezeit / 「4 Minuten」、Dieser Inhalt wurde am …）。整行锚定匹配，正文中含 bemerken / drucken / speichern 的句子不受影响（有测试）。
+- 测试：+4 条（共 132），德语选词快照不变。
+- `docs/USER_MANUAL.md` §1.4、§9.2 补充说明。
+**影响面**：德语导入清理多删上述按钮行；德语高亮可能比以前多（以前因大小写不一致而「暂无高亮」的词）。
+**验证**：`npm test`（132）/ `npm run build` 通过。
+
 ### 2026-10-15 — PRD：社交媒体与手机导入（文档，待开发）
 
 **本次完成**：`docs/PRD.md` 新增 **§1.4.3**（讨论确定的需求，尚未开发）：截图 / 拍照导入（AI 读图、去界面与评论、多图拼接、用户核对、不存原图、张数上限、短内容不出阅读问题）；费用说明（API 每张不到 1 美分，订阅额度不能被第三方软件调用，零费用手动路径）；手机分享菜单（安卓 PWA；iPhone 为系统限制，用快捷指令）；X / Facebook（截图 + 插件平台规则）；YouTube 文稿（插件读已展开文稿面板，不做服务端抓字幕）；过渡办法与开发顺序。§1.4.2「后期（手机端）」与 P3 处加指引。
 **主要文件**：`docs/PRD.md`。
 **当前状态**：仅文档；英语功能仍在 PR #3 等待迁移与验收。
 **下一步**：英语合并后另开分支，先做截图 / 拍照导入。
+### 2026-10-15 — 英语扩展 · 第 6 步：文档（分支 `feat/english-language`）
+
+**本次完成**
+- **`docs/PRD.md`**：§1.0 目标用户含英语；§1.5 标为已实现，新增 **§1.5.7 英语版实现规则**（两个独立学习空间、已有数据归德语、导入识别、阅读页按文章语言、推荐与复习按语言隔离、中文 + 简明英文释义、水平分开保存）；§1.5.4 数据库已实现；§9 页面表加顶栏切换与设置页按语言保存；§13.6 英语选词与分界线。
+- **软件内 `/help`**：新增「德语与英语」一节；「阅读水平怎么选」加英语对照表；推荐、复习说明按语言更新。
+- **`docs/USER_MANUAL.md`**：新增 §0 德语与英语；§4.4 英语对照表标为可用；§9.2 英语选词规则与分界线；§10.5 复习按语言。
+- **`README.md`**、**`PROJECT_STATUS.md`**、`browser-extension/chrome-mv3/README.md`、`docs/DATABASE.md` §10.7（第 1 步已更新）。
+
+**当前状态**：英语功能 6 步全部完成于分支 `feat/english-language`，未合并。
+**合并前步骤**：① Supabase SQL Editor 执行 `supabase/fixes/010_multilanguage.sql` 并运行文件末尾的检查语句；② Vercel 给 Preview 配好 `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`（`OPENAI_API_KEY` 已启用 Preview）；③ 在 PR 的 Preview 链接上验收德语与英语；④ 合并到 `main`；⑤ Chrome 重新加载插件。
+**已知问题**：英语分界线为初始标定；总词库列表里未补充解释的英语手动词条仍显示德语占位句；产品名暂不改。
+**验证**：`npm test` / `npm run build` 通过。
+
+### 2026-10-15 — 英语扩展 · 第 5 步：Chrome 插件 0.1.6（分支 `feat/english-language`）
+
+**本次完成**
+- 插件读取网页 `<html lang>` 并作为 `pageLanguage` 传给导入页；导入页把它当作文章语言提示（随后按正文自动识别，识别得出时以正文为准；用户手动选过则不改）。
+- 仅在 `lang` 以 `en` 开头的页面启用：跳过 Advertisement / Sign up / Share / Read more 等按钮文字与 `By …` 署名行；遇到 Related / Read more / Most read / You may also like 等（含 h2 / h3 小标题）停止；累计 800 字后遇到 Sign up / Subscribe / Comments 停止。
+- 版本 0.1.5 → 0.1.6，描述改为支持德语或英语文章。
+- **回归验证**：用 Playwright 在同一德语测试页（`src/lib/import/fixtures/nationalmuseum-like.html`）分别运行旧版与新版提取函数，结果逐字段相同（仅多出 `pageLanguage`）；英语测试页新版不再带入 Related 之后的推荐段。
+
+**主要文件**：`browser-extension/chrome-mv3/{background.js,manifest.json,README.md}`、`src/app/import/page.tsx`。
+**注意**：需在 `chrome://extensions/` 重新加载插件才生效。
+**下一步**：第 6 步 —— PRD / 使用说明 / `/help` / README / DATABASE 文档。
+
+### 2026-10-15 — 英语扩展 · 第 4 步：界面（分支 `feat/english-language`）
+
+**本次完成**
+- **顶栏「德语 / 英语」切换**（`LearningLanguageSwitch.tsx`，挂在 `AppShell` 标题旁）：写入 `profiles.target_language`，本机缓存首屏；文章库、仪表盘、词库、语法库、复习只显示当前语言，英语时页面标题加「· 英语」。默认德语，德语用户除多出切换外无变化。
+- **导入页**：新增「文章语言」单选，默认跟随顶栏；正文明显是另一种语言时自动切换并提示（`detectArticleLanguage.ts`，按两种语言独有的高频虚词计数，太短 / 难分时不动）；用户手动选过就不再自动改。英语显示 **`EnglishLevelSelect`**（含国内考试对照表，PRD §1.5.3 要求）；保存时写入 `articles.language`，若与顶栏不同则顶栏随之切换。
+- **设置页**：阅读水平按顶栏语言分别保存（德语 = 原 `self_selected_level`，英语 = `self_selected_level_en`）；英语时多一个「测试英语发音」。
+- **阅读页**（按文章语言，不受顶栏影响）：发音用 en-US（`ContentLanguageProvider` + `PronunciationButton` 缺省读上下文语言，无 Provider 时仍为德语）；英语文章不显示「名词性」；外部深入解释与全文翻译 Prompt 用英语版（`englishExternalPrompts.ts`）；语法表单占位符、文章信息里标「语言：英语」；英语未补充时不显示德语占位句 "Wird später ergänzt."。
+- **复习页**：英语时用英语发音与文案。
+- **发音**：`pickVoiceForLang` 按语言选 voice，德语（de-DE）选择逻辑与以前逐条相同。
+- 词性标签补充 phrasal_verb / idiom / preposition_pattern（德语不产出这些词性）。
+- 首页 / 页脚文案改为「德语 / 英语」。
+- **测试**：`detectArticleLanguage.test.ts`（5 篇德语样文全部识别为德语，英语样文识别为英语）。
+
+**主要文件**：`src/components/{LearningLanguageSwitch,EnglishLevelSelect,AppShell,PronunciationButton,InteractiveArticleReader,FullArticleTranslationExternal}.tsx`、`src/lib/language/{ContentLanguageContext.tsx,detectArticleLanguage.ts,englishExternalPrompts.ts}`、`src/lib/speech.ts`、`src/app/{import,settings,review,vocabulary,grammar,articles,dashboard}/page.tsx`、`src/app/articles/[id]/page.tsx`、`src/app/page.tsx`。
+**已知问题**：总词库 / 语法库列表里，未补充解释的英语手动词条仍显示德语占位句；产品名仍为 German Reading Coach（按约定暂不改）。
+**下一步**：第 5 步 —— Chrome 插件（传页面语言、英语网站噪音过滤）；第 6 步 —— PRD / 手册 / `/help` / README。
+**验证**：`npm test`（128）/ `npm run build` 通过；本地 `next start` + Playwright 截图确认顶栏切换在桌面与手机宽度正常。
+
+### 2026-10-15 — 英语扩展 · 第 3 步：英语提示词（分支 `feat/english-language`）
+
+**本次完成**（`src/lib/articleAnalysis/englishPrompts.ts`，德语提示词文件未改，仅给一个共用段落加了 `export`）
+- **整文分析**：英语文章用 `SYSTEM_PROMPT_VOCAB_FIRST_EN`：中文释义 + **简明英文释义**（learner's dictionary 风格，存入原 `simple_de_explanation` 字段），名词性恒为 `na`；覆盖单词、phrasal verbs、搭配、习语、介词搭配、学术 / 新闻词与语体；仍然 3 条中文阅读问题、用户词汇画像优先。英语不走旧版整文语法分析（`ENABLE_AUTO_GRAMMAR_ANALYSIS` 只对德语生效）。
+- **补充 AI 解释（词汇）**：`VOCAB_ENRICH_SYSTEM_PROMPT_EN`（原形、短语动词完整形式、中文 + 简明英文）。
+- **补充 AI 解释（语法）**：英语语法类型枚举（时与体、被动、条件句、关系从句、间接引语、情态、动名词 / 不定式、分词短语、倒装、强调句、虚拟、短语动词句型、介词搭配等）与同字段结构的 `GRAMMAR_ENRICHMENT_JSON_SCHEMA_EN`；`name_de` 存英文术语、`explanation_de_simple` 存简明英文。
+- **拖选「解释语法」**：`GRAMMAR_EXPLAIN_SELECTION_SYSTEM_PROMPT_EN`（结构、时态语态语气、搭配、难点、理解顺序）。
+- 三个 API 都用 `resolveArticleLanguage` 从数据库取文章语言（读不到时回落德语，德语路径与以前一致）。
+- **测试** `englishPrompts.test.ts`：英语提示词要点、英语语法 schema 与德语字段一致；**德语提示词快照**（与 `main` 上原文逐字一致）。
+
+**主要文件**：`src/lib/articleAnalysis/englishPrompts.ts`、`src/app/api/{analyze-article,enrich-vocabulary,enrich-grammar,explain-grammar-selection}/route.ts`。
+**已知问题**：界面上的字段名（「简单德语解释」等）、外部深入解释与全文翻译 Prompt 仍是德语措辞（第 4 步按文章语言切换）。
+**下一步**：第 4 步 —— 顶栏语言切换、导入页语言识别、英语水平选择（含对照表）、阅读页 / 词库 / 复习的英语文案与英语发音。
+**验证**：`npm test`（125）/ `npm run build` 通过。
+
+### 2026-10-15 — 英语扩展 · 第 2 步：语言配置层与英语选词引擎（分支 `feat/english-language`）
+
+**本次完成**
+- **德语回归护栏（先做）**：`germanRegression.test.ts` 用**改动前**的选词代码对 5 篇德语样文 × A2/B1/B2/C1 生成快照（候选词、分界线、提示词附录、过滤结果），单独提交；之后的重构跑完快照**逐字节一致**。
+- **语言配置层** `src/lib/vocabSelection/lexicon.ts`：选词规则不变，按语言区分的只有分词、词频、词形还原、专名判断、提示词示例与等级分界线。
+  - `germanLexicon.ts`：德语实现**原样**从 `articleCandidates.ts` 移来（未改一行），分界线常量移入并由 `userVocabProfile.ts` 再导出。
+  - `articleCandidates.ts` / `userVocabProfile.ts` / `selectVocabulary.ts` 改为通过画像上的 `lexicon` 调用，缺省德语。
+- **英语** `englishLexicon.ts`：
+  - 词频表 `englishFrequencyData.ts`（8 万词形，OpenSubtitles + 英文维基，与德语同法；脚本 `scripts/build-english-frequency.py`），只在分析英语文章时按需加载（`lexicons.ts`），不进浏览器包、德语请求不加载。
+  - 词形还原：-s/-es/-ies/-ves、-ed/-ied、不规则表（went、children、better…）、英美拼写（colour、organise、centre、travelled）、所有格 's；-ing / -er / -est 只有在词表里有「兄弟形式」（borrowing↔borrowed、bigger↔biggest）时才还原，避免 herring→herr、banner→ban、lager→lag。
+  - 连字符复合词（long-term）按最少见部分计，各部分都认识就不算生词。
+  - 专名：全大写缩写；或首字母大写、文中从未小写出现，且在句中大写出现过或不在词表里（Starmer）。句首大写但别处小写的普通词不算。
+  - 分界线（按 PRD §1.5.3 词汇量、用代表词实测标定）：A1 2 500、A2 5 000、B1 8 000、B2 13 000、C1 25 000、C2 40 000。
+  - 比对键：去掉 to / the / a / an 与 sth / sb 占位（"to carry out" = "carry out"）。
+- **整文分析**按文章语言加载对应 lexicon（`loadLexicon`），分段合并去重也按该语言。
+- **测试**：`englishSelection.test.ts`（13 条）+ 德语快照（1 条）；共 120 条通过。
+
+**主要文件**：`src/lib/vocabSelection/{lexicon,germanLexicon,englishLexicon,englishFrequencyData,lexicons,articleCandidates,userVocabProfile,selectVocabulary}.ts`、`scripts/build-english-frequency.py`、`scripts/fixtures/en-news-article.txt`（自写英语样文）、`src/app/api/analyze-article/route.ts`。
+**影响面**：德语选词结果由快照证明不变。
+**已知问题**：英语文章目前仍使用德语提示词与 JSON 结构（第 3 步改）；英语分界线为初始标定，需真实使用后观察。
+**下一步**：第 3 步 —— 英语提示词（整文分析、补充解释、按需语法）与「中文 + 简明英文」释义。
+**验证**：`npm test`（120）/ `npm run build` 通过。
+
+### 2026-10-15 — 英语扩展 · 第 1 步：语言字段与数据隔离（分支 `feat/english-language`，界面无变化）
+
+**背景**：按 PRD §1.5 增加英语学习，德语、英语为两个独立学习空间（顶栏切换，文章库 / 词库 / 语法库 / 复习 / AI 推荐 / 水平设置都只针对当前语言），德语现有功能与数据不受影响。整体方案分 6 步，本条为第 1 步。
+
+**本次完成**
+- **迁移 `supabase/fixes/010_multilanguage.sql`**（须在 Supabase SQL Editor 执行，**先迁移、再部署**）：`articles` / `vocabulary_items` / `grammar_items` 增加 `language`（`de`/`en`，默认 `de`，已有数据全部为德语）；词库、语法库唯一键加入 `language`（德语 "die" 与英语 "die" 为两条词条）；`profiles` 增加 `target_language`（默认 `de`）与 `self_selected_level_en`。只加列、放宽唯一键，可重复执行。`schema.sql` 同步。
+- **`src/lib/language/learningLanguage.ts`**：语言类型、默认德语、标签与 locale。**`useLearningLanguage.ts`**：当前学习语言（真相源 `profiles.target_language`，本机缓存首屏），尚无切换入口，所有人仍为德语。
+- **读写全部带语言**：整文分析读取词库画像（已掌握 / 学习中 / 自适应分界线）与语法过滤**只读文章语言**（语言以数据库中的文章为准）；保存词汇 / 语法时按 (语言, 词) 查重与插入；补充解释时的词性冲突检查限定同语言；新文章写入 `language`（默认德语）。
+- **列表按语言过滤**：仪表盘（最近文章与三项统计）、文章库、词库、语法库、复习。
+- **复习排期按语言分开存**：德语沿用原 key `grc.review.v1.<userId>`（已有进度不丢）；英语用 `grc.review.v1.en.<userId>`。必须分开：复习时会清掉不在本次词表里的记录，共用 key 会导致英语复习清空德语进度。
+- **测试 `src/lib/language/languageIsolation.test.ts`（10 条）**：默认德语；画像 / 已掌握键 / 语法过滤按语言查询；文章语言以库为准；英语 "die" 不并入德语词条；不传语言时保存路径仍为德语；复习 key 德语不变、英语复习不影响德语进度。
+
+**主要文件**：`supabase/fixes/010_multilanguage.sql`、`supabase/schema.sql`、`src/lib/language/*`、`src/lib/supabase/{vocabulary,grammar,articles}.ts`、`src/lib/review/reviewQueue.ts`、`src/app/api/analyze-article/route.ts`、`src/app/{dashboard,articles,vocabulary,grammar,review}/page.tsx`、`src/app/articles/[id]/page.tsx`、`src/components/InteractiveArticleReader.tsx`（仅新增 `persistLanguage` 属性并传给保存函数）。
+
+**影响面 / 德语回归**：德语路径只多了 `language = 'de'` 过滤与写入，选词、提示词、阅读交互未改；原有 96 条测试全部通过。
+**当前状态**：未合并到 `main`；**迁移执行前，本分支代码不能上线**（查询 `language` 列会失败）。
+**已知问题**：沙箱无法访问 Google Fonts，本地 build 时临时去掉字体加载验证（未提交）；Vercel 构建不受影响。
+**下一步**：第 2 步 —— 语言配置层、英语词频表与英语选词引擎。
+**验证**：`npm test`（106）/ `npm run build` 通过。
 
 ### 2026-10-15 — 阅读水平怎么选（对照表）
 

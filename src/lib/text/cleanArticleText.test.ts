@@ -55,3 +55,47 @@ Der eigentliche Absatz der Geschichte geht hier weiter.
     expect(result.cleanedText).not.toContain("ergänzenden externen Inhalt");
   });
 });
+
+describe("cleanArticleText — standalone web UI lines (EN + DE)", () => {
+  it("removes English button / meta lines copied from news sites", () => {
+    const raw = [
+      "Listen to the article",
+      "Toggle language selector",
+      "",
+      "Save",
+      "",
+      "Share",
+      "This content was published onOctober 15, 2026 - 09:32",
+      "9 minutes",
+      "",
+      "Sara Ibrahim",
+      "",
+      "Swarms of AI agents could target critical infrastructure such as schools and hospitals.",
+    ].join("\n");
+    const { cleanedText } = cleanArticleText(raw);
+    for (const gone of ["Listen to the article", "Toggle language selector", "Save", "Share", "published on", "9 minutes"]) {
+      expect(cleanedText).not.toContain(gone);
+    }
+    expect(cleanedText).toContain("Sara Ibrahim");
+    expect(cleanedText).toContain("Swarms of AI agents");
+  });
+
+  it("removes German equivalents but keeps prose that merely contains those words", () => {
+    const raw = [
+      "Artikel anhören",
+      "Speichern",
+      "Lesezeit: 4 Minuten",
+      "Dieser Inhalt wurde am 15. Oktober 2026 veröffentlicht",
+      "",
+      "Man kann bemerken, dass die Regierung das Gesetz drucken lassen will und die Daten speichern möchte.",
+      "Wir sollten uns das merken.",
+    ].join("\n");
+    const { cleanedText } = cleanArticleText(raw);
+    for (const gone of ["Artikel anhören", "Lesezeit", "Dieser Inhalt wurde am"]) {
+      expect(cleanedText).not.toContain(gone);
+    }
+    expect(cleanedText).not.toMatch(/^Speichern$/m);
+    expect(cleanedText).toContain("bemerken, dass die Regierung das Gesetz drucken lassen will");
+    expect(cleanedText).toContain("Wir sollten uns das merken.");
+  });
+});

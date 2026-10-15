@@ -1,4 +1,9 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CefrLevel } from "@/lib/types";
+import {
+  normalizeLearningLanguage,
+  type LearningLanguage,
+} from "@/lib/language/learningLanguage";
 
 /** 与 public.articles 对齐（客户端 select 常用字段） */
 export type ArticleRow = {
@@ -15,6 +20,8 @@ export type ArticleRow = {
   user_level_at_analysis: string | null;
   detected_article_level: string | null;
   topic: string | null;
+  /** 文章语言（010 迁移起）；未选列或旧数据按德语处理 */
+  language?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -47,6 +54,8 @@ export type NewArticlePayload = {
   source_name: string | null;
   original_text: string;
   user_level_at_analysis: CefrLevel;
+  /** 文章语言；缺省德语 */
+  language?: LearningLanguage;
 };
 
 /** 插入时显式置空的分析字段（DB 列可为 null） */
@@ -58,9 +67,34 @@ export function buildArticleInsertRow(payload: NewArticlePayload) {
     source_name: payload.source_name,
     original_text: payload.original_text,
     user_level_at_analysis: payload.user_level_at_analysis,
+    language: normalizeLearningLanguage(payload.language),
     topic: null,
     summary_zh: null,
     summary_de_simple: null,
     detected_article_level: null,
   };
+}
+
+/**
+ * 服务端：读取文章语言（以数据库为准）。
+ * 查不到（mock 文章、列尚未迁移、无权限）时用 `fallback`，再回落德语。
+ */
+export async function resolveArticleLanguage(
+  supabase: SupabaseClient,
+  userId: string,
+  articleId: string,
+  fallback?: unknown,
+): Promise<LearningLanguage> {
+  if (isValidArticleId(articleId)) {
+    const { data, error } = await supabase
+      .from("articles")
+      .select("language")
+      .eq("id", articleId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!error && data && typeof data.language === "string") {
+      return normalizeLearningLanguage(data.language);
+    }
+  }
+  return normalizeLearningLanguage(fallback);
 }

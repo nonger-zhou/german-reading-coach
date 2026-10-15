@@ -9,6 +9,7 @@ import { useAuthEntryHrefs } from "@/lib/auth/use-auth-entry-hrefs";
 import type { ArticleRow } from "@/lib/supabase/articles";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { formatSupabaseOrUnknownError } from "@/lib/supabase/errors";
+import { useLearningLanguage } from "@/lib/language/useLearningLanguage";
 
 type ArticleListItem = Pick<
   ArticleRow,
@@ -32,6 +33,8 @@ function startOfLocalWeekIso(now = new Date()): string {
 
 function DashboardPageContent() {
   const { loginHref } = useAuthEntryHrefs();
+  /** 只显示当前学习语言的文章与统计 */
+  const { language, ready: languageReady } = useLearningLanguage();
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [articles, setArticles] = useState<ArticleListItem[] | null>(null);
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -61,6 +64,7 @@ function DashboardPageContent() {
         .from("articles")
         .select("id,title,created_at,user_level_at_analysis")
         .eq("user_id", userId)
+        .eq("language", language)
         .order("created_at", { ascending: false })
         .limit(10);
 
@@ -74,7 +78,7 @@ function DashboardPageContent() {
     } finally {
       setListLoading(false);
     }
-  }, []);
+  }, [language]);
 
   const loadStats = useCallback(async (userId: string) => {
     setStatsLoading(true);
@@ -88,16 +92,19 @@ function DashboardPageContent() {
             .from("articles")
             .select("*", { count: "exact", head: true })
             .eq("user_id", userId)
+            .eq("language", language)
             .gte("created_at", weekStartIso),
           supabase
             .from("vocabulary_items")
             .select("*", { count: "exact", head: true })
             .eq("user_id", userId)
+            .eq("language", language)
             .in("mastery_status", ["new", "learning", "familiar"]),
           supabase
             .from("grammar_items")
             .select("*", { count: "exact", head: true })
-            .eq("user_id", userId),
+            .eq("user_id", userId)
+            .eq("language", language),
         ]);
 
       if (articleCountResult.error) throw articleCountResult.error;
@@ -115,7 +122,7 @@ function DashboardPageContent() {
     } finally {
       setStatsLoading(false);
     }
-  }, []);
+  }, [language]);
 
   const handleDeleteArticle = useCallback(
     async (articleId: string) => {
@@ -191,7 +198,7 @@ function DashboardPageContent() {
   }, [refreshSession]);
 
   useEffect(() => {
-    if (session === undefined) {
+    if (session === undefined || !languageReady) {
       return;
     }
     if (!session?.user) {
@@ -203,13 +210,13 @@ function DashboardPageContent() {
     }
     void loadArticles(session.user.id);
     void loadStats(session.user.id);
-  }, [session, loadArticles, loadStats]);
+  }, [session, languageReady, loadArticles, loadStats]);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-          仪表盘
+          仪表盘{language === "en" ? " · 英语" : ""}
         </h1>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
           查看最近保存的文章和学习记录。

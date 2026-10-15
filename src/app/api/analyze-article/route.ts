@@ -25,9 +25,12 @@ import {
 } from "@/lib/articleAnalysis/openaiArticleAnalysis";
 import type { ArticleAnalysisResult } from "@/lib/articleAnalysis/types";
 import { getSupabaseUserFromBearer } from "@/lib/supabase/routeFromBearer";
+import { resolveArticleLanguage } from "@/lib/supabase/articles";
 import { fetchGrammarMasteredIgnoredKeysForArticleAnalysis } from "@/lib/supabase/grammar";
 import { fetchVocabularyProfileRowsForArticleAnalysis } from "@/lib/supabase/vocabulary";
 import { buildUserVocabProfile } from "@/lib/vocabSelection/userVocabProfile";
+import { loadLexicon } from "@/lib/vocabSelection/lexicons";
+import { SYSTEM_PROMPT_VOCAB_FIRST_EN } from "@/lib/articleAnalysis/englishPrompts";
 import {
   applyVocabularySelection,
   mergeVocabularyLists,
@@ -157,11 +160,24 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
     );
   }
 
-  const legacy = isLegacyAutoGrammarAnalysisEnabled();
+  /**
+   * 文章语言以数据库为准（不信任请求体）；读不到时（如 mock 文章）用请求体，最后回落德语。
+   * 词库画像、语法过滤都只取该语言，德语 / 英语互不影响。
+   */
+  const language = await resolveArticleLanguage(
+    auth.supabase,
+    auth.user.id,
+    articleId,
+    b.language,
+  );
+
+  /** 旧版整文语法分析只有德语提示词；英语始终走词汇优先流程 */
+  const legacy = language === "de" && isLegacyAutoGrammarAnalysisEnabled();
 
   const vocabRes = await fetchVocabularyProfileRowsForArticleAnalysis(
     auth.supabase,
     auth.user.id,
+    language,
   );
   if (vocabRes.error) {
     return NextResponse.json(
@@ -183,6 +199,7 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
     const grammarRes = await fetchGrammarMasteredIgnoredKeysForArticleAnalysis(
       auth.supabase,
       auth.user.id,
+      language,
     );
     if (grammarRes.error) {
       return NextResponse.json(
@@ -201,7 +218,9 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
     grammarBlockedSet = formatted.blockedSet;
   }
 
-  const vocabProfile = buildUserVocabProfile(userLevel, vocabRes.rows);
+  /** 选词用该语言的词频表与词形规则（德语与以前完全相同；英语按需加载） */
+  const lexicon = await loadLexicon(language);
+  const vocabProfile = buildUserVocabProfile(userLevel, vocabRes.rows, lexicon);
   const { blockLines: vocabLibraryBlockLines } =
     formatVocabLibraryBlockPromptFromRows(
       vocabRes.rows.filter(
@@ -242,7 +261,12 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
     maxRetries: 1,
   });
 
-  const systemPrompt = legacy ? SYSTEM_PROMPT_LEGACY : SYSTEM_PROMPT_VOCAB_FIRST;
+  const systemPrompt =
+    language === "en"
+      ? SYSTEM_PROMPT_VOCAB_FIRST_EN
+      : legacy
+        ? SYSTEM_PROMPT_LEGACY
+        : SYSTEM_PROMPT_VOCAB_FIRST;
   const jsonSchema = legacy
     ? ARTICLE_ANALYSIS_JSON_SCHEMA_LEGACY
     : ARTICLE_VOCAB_FIRST_JSON_SCHEMA;
@@ -383,7 +407,7 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
     }
     analysis = {
       ...analysis,
-      vocabulary: mergeVocabularyLists([selection.vocabulary, ...extraLists]),
+      vocabulary: mergeVocabularyLists([selection.vocabulary, ...extraLists], lexicon),
     };
     console.info(
       `[analyze-article] vocab v2 model=${ANALYSIS_MODEL} level=${userLevel} cutoff=${vocabProfile.cutoff} (${vocabProfile.cutoffNote}) candidates=${vocabPlan.candidates.length} learningInText=${vocabPlan.learningInArticle.length} kept=${selection.vocabulary.length} droppedKnown=${selection.droppedKnown.length} droppedTooCommon=${selection.droppedTooCommon.length} droppedProperNames=${selection.droppedProperNames.length} addedLearning=${selection.addedLearning.length} chunks=${chunks.length} total=${analysis.vocabulary.length}`,

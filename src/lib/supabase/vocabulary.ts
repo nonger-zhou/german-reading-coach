@@ -15,6 +15,11 @@ import { mergeLemmaForVocabularyPersist } from "@/lib/supabase/vocabularyLemmaMe
 import { parseGrammaticalGender } from "@/lib/vocabulary/grammaticalGender";
 import { vocabPartOfSpeechForDb } from "./vocabPartOfSpeechForDb";
 import type { UserVocabRow } from "@/lib/vocabSelection/userVocabProfile";
+import {
+  DEFAULT_LEARNING_LANGUAGE,
+  normalizeLearningLanguage,
+  type LearningLanguage,
+} from "@/lib/language/learningLanguage";
 
 const DB_SOURCE_MANUAL = "manual";
 const DB_SOURCE_AI_MOCK = "ai_mock";
@@ -116,6 +121,8 @@ const VOCAB_MASTERED_IGNORED_PAGE = 1000;
 export async function fetchVocabularyProfileRowsForArticleAnalysis(
   supabase: SupabaseClient,
   userId: string,
+  /** 只读当前学习语言的词条：英语分析不得把德语词库当参照（反之亦然） */
+  language: LearningLanguage = DEFAULT_LEARNING_LANGUAGE,
 ): Promise<{ rows: UserVocabRow[]; error: string | null }> {
   const rows: UserVocabRow[] = [];
   let from = 0;
@@ -126,6 +133,7 @@ export async function fetchVocabularyProfileRowsForArticleAnalysis(
         "lemma, display_word, normalized_key, part_of_speech, mastery_status, source, zh_meaning, simple_de_explanation, gender, level_estimate",
       )
       .eq("user_id", userId)
+      .eq("language", language)
       .order("id", { ascending: true })
       .range(from, from + VOCAB_MASTERED_IGNORED_PAGE - 1);
     if (error) {
@@ -146,6 +154,7 @@ export async function fetchVocabularyProfileRowsForArticleAnalysis(
 export async function fetchVocabularyMasteredIgnoredKeysForArticleAnalysis(
   supabase: SupabaseClient,
   userId: string,
+  language: LearningLanguage = DEFAULT_LEARNING_LANGUAGE,
 ): Promise<{
   rows: Array<{ normalized_key: string | null; part_of_speech: string | null }>;
   error: string | null;
@@ -160,6 +169,7 @@ export async function fetchVocabularyMasteredIgnoredKeysForArticleAnalysis(
       .from("vocabulary_items")
       .select("normalized_key, part_of_speech")
       .eq("user_id", userId)
+      .eq("language", language)
       .in("mastery_status", ["mastered", "ignored"])
       .order("id", { ascending: true })
       .range(from, from + VOCAB_MASTERED_IGNORED_PAGE - 1);
@@ -372,9 +382,12 @@ export async function persistManualVocabularyItem(
      * AI 预览保存不传（不得改动用户已标的状态）。
      */
     reactivateIfMastered?: boolean;
+    /** 文章语言；词条按 (语言, 词) 归档，德语 "die" 与英语 "die" 互不合并。缺省德语。 */
+    language?: LearningLanguage;
   },
 ): Promise<{ item: ArticleVocabItem | null; error: string | null }> {
   const { userId, articleId, articlePlain, reactivateIfMastered } = params;
+  const language = normalizeLearningLanguage(params.language);
   const item: ArticleVocabItem =
     reactivateIfMastered && isMasteredOrIgnored(params.item.mastery_status)
       ? { ...params.item, mastery_status: "learning" }
@@ -401,6 +414,7 @@ export async function persistManualVocabularyItem(
         "id,mastery_status,lemma,display_word,normalized_key,part_of_speech",
       )
       .eq("user_id", userId)
+      .eq("language", language)
       .eq("normalized_key", item.normalized_key);
 
     if (findErr) throw findErr;
@@ -450,6 +464,7 @@ export async function persistManualVocabularyItem(
         .from("vocabulary_items")
         .insert({
           user_id: userId,
+          language,
           lemma: lemmaForStorage,
           display_word: item.display_word,
           normalized_key: item.normalized_key,
@@ -473,6 +488,7 @@ export async function persistManualVocabularyItem(
             "id,mastery_status,lemma,display_word,normalized_key,part_of_speech",
           )
           .eq("user_id", userId)
+          .eq("language", language)
           .eq("normalized_key", item.normalized_key)
           .limit(1)
           .maybeSingle();
@@ -764,7 +780,7 @@ export async function applyVocabularyAiEnrichment(
 
     const { data: selfItem, error: selfItemErr } = await supabase
       .from("vocabulary_items")
-      .select("normalized_key, part_of_speech")
+      .select("normalized_key, part_of_speech, language")
       .eq("id", vocabularyItemId)
       .eq("user_id", userId)
       .maybeSingle();
@@ -785,6 +801,7 @@ export async function applyVocabularyAiEnrichment(
         .from("vocabulary_items")
         .select("id")
         .eq("user_id", userId)
+        .eq("language", normalizeLearningLanguage(selfItem.language))
         .eq("normalized_key", selfItem.normalized_key)
         .eq("part_of_speech", pos)
         .neq("id", vocabularyItemId)
