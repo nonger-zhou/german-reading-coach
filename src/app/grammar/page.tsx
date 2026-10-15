@@ -430,7 +430,7 @@ function GrammarPageContent() {
       <div>
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">总语法库</h1>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          汇总当前账号在所有文章中保存的语法项，可调整学习状态。后续可扩展复习、批量状态管理与编辑。
+          汇总当前账号在所有文章中保存的语法项，可调整学习状态（学习中 / 已掌握 / 暂忽略）。
         </p>
       </div>
 

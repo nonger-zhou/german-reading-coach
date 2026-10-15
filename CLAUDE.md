@@ -12,6 +12,8 @@
 1. **`DEVELOPMENT_LOG.md`**（在「更新记录」最上方追加；旧记录在 `docs/archive/`，不必读）
 2. **`PROJECT_STATUS.md`**
 
+若改动**用户能感知的规则**（推荐、状态、复习、长文、导入等），还须更新软件内使用说明 **`src/app/help/page.tsx`** 与 **`docs/USER_MANUAL.md`**。
+
 若任务涉及 **安装依赖、运行方式、页面、API、数据库、部署、环境变量**，还须更新 **`README.md`**。
 
 ## 每次文档更新须写清

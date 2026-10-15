@@ -51,7 +51,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         {children}
       </main>
       <footer className="border-t border-zinc-200 py-4 text-center text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-500">
-        German Reading Coach · 从真实德语文章中积累词汇与语法
+        German Reading Coach · 从真实德语文章中积累词汇与语法 ·{" "}
+        <Link href="/help" className="hover:underline">
+          使用说明
+        </Link>
       </footer>
     </div>
   );

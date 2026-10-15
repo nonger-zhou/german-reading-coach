@@ -6,6 +6,9 @@
 
 ---
 
+
+> **软件内的使用说明**：面向使用者的简明版在应用内 **`/help`**（首页、页脚、阅读页「阅读帮助」、词库页均有入口）。本手册更详细；两者口径须保持一致——修改推荐、状态、复习、长文等规则时，**同时更新 `/help`（`src/app/help/page.tsx`）**。
+
 ## 协作约定（维护者 Julia）
 
 - **素材入口**：用户向说明优先记在本文件，并与 **`docs/READING_HIGHLIGHTS_AND_OVERLAPS.md`**（高亮/选区/重叠）、**`docs/PERSONAL_USE_CHECKLIST.md`**（自检流程）、**`docs/PRD.md`**（需求原文）交叉引用。

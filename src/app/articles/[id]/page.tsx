@@ -1119,6 +1119,12 @@ function ArticleDetailPageContent() {
               <p>
                 阅读水平 {analysisLevel}：整文分析生成词汇与阅读问题；语法请拖选后标记。保存后写入本篇。
               </p>
+              <p>
+                AI 只推你多半不认识的词：词库里「学习中」的必推，「已掌握 / 暂忽略」不推，其余按词频与水平判断；没推但不会的词，拖选「添加为词汇」即可。
+                <Link href="/help#recommend" className="ml-1 text-emerald-700 hover:underline dark:text-emerald-400">
+                  完整说明 →
+                </Link>
+              </p>
               {hasSavedArticleAiBaseline ? (
                 <p className="text-amber-800 dark:text-amber-200/90">
                   「重新分析」会再次调用 AI，确认后执行。

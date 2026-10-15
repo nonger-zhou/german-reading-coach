@@ -32,6 +32,10 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - **部署**（Vercel、Docker、CI）
 - **环境变量**（`.env.example`、密钥说明、配置项）
 
+## 面向使用者的说明
+
+- 改动**用户能感知的规则**（推荐逻辑、学习状态含义、复习、长文、导入方式等）时，除开发文档外，**必须同步更新软件内的使用说明 `src/app/help/page.tsx`** 和 `docs/USER_MANUAL.md`，以及相关页面上的提示文案。
+
 ## 每次文档更新须包含
 
 - **本次完成了什么**（可验收的摘要）
