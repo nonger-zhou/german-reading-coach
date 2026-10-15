@@ -16,7 +16,15 @@ German Reading Coach
 - **数据库**：**`articles`** 使用 **RLS（`user_id = auth.uid()`）** + **`GRANT … TO authenticated`**（**`schema.sql`** / **`003_articles_grants_fix.sql`**）；策略异常可跑 **`004_articles_rls_fix.sql`**。**不向 anon 授予 articles**。
 - **应用**：**`/vocabulary`** 与 **`/grammar`** 已接入真实 Supabase 数据（当前登录用户维度）；词库与语法库均支持 **全部/今日/昨日/近三日/本周** 时间分组 Tab 与本周复盘小卡（点击联动筛选）。总词库/总语法库均支持通过状态下拉菜单切换 **学习中 / 已掌握 / 暂忽略**；暂不做总库删除。**`/articles/[id]`** 手动添加与真实 AI 保存的词汇/语法持续持久化至 **`vocabulary_*` / `grammar_*`**（登录、GRANT 已执行前提下），学习项卡片同样用状态下拉菜单修改状态，删除仍为独立操作；深度笔记需 **`008`** 字段。
 - **产品方向**：**Web App** 为主体，**Chrome 插件**为桌面导入入口（MVP 见 **`browser-extension/chrome-mv3`**），**Supabase** 统一库（详见 **`docs/PRD.md` §1.1–§1.4**）。**愿景**：底层可扩展为**多语言 Reading Coach**，**英语**为优先扩展语言（详见 **`docs/PRD.md` §1.5**）；**母语/解释语言/目标语言**三维度见 **§1.5.6**。**AI 推荐**以「读前抓主旨与关键细节、控制数量、过滤无学习价值专名」为核心，水平侧重见 **§13**；**Phase 3.1+** 接真实 OpenAI 时以此为准。**当前主线仍为德语 MVP**，排期不变。
-- **Grammar v2 Phase 1 补充（2026-05-17 调整）**：整文分析在 normalize 后**仅剔除**非法 **`grammar.selected_text`**；**vocabulary 不剔除**。vocabulary Prompt **已局部回退至 05-15 口径**，并实施 **方案 A（极简名词/性别段）**（见 **`DEVELOPMENT_LOG.md`**）；Grammar v2 Prompt **未回退**。
+- **词汇优先整文分析 v1（2026-05-19）**：默认 **`/api/analyze-article`** 单次输出 **vocabulary（极简 B）+ 3 条阅读问题**；**不**默认 grammar/摘要；**`ENABLE_AUTO_GRAMMAR_ANALYSIS`** 可回退旧整文；**`/api/explain-grammar-selection`** + 阅读器 **「解释语法」**；全文翻译 **复制 Prompt**。见 **`DEVELOPMENT_LOG.md`**、**`docs/DESIGN_VOCAB_FIRST_GRAMMAR_ON_DEMAND.md`**。
+- **阅读页 UI 清爽 MVP（2026-05-19）**：`/articles/[id]` 与阅读器右侧词汇区减噪（一行词数、折叠 AI 预览详情/外部深入解释、用户向错误文案）；顶栏已去掉「演示课文」链接（首页仍可进 Mock）。**P2**：文章信息折叠、阅读帮助合并、Badge **AI/手动**；**不再展示「入选说明」**，详情以本文含义 + 简单德语用法解释为主。
+- **阅读定位框（2026-05-19）**：点击词汇或手动添加后，正文词上应出现 **内嵌金黄定位框**（非外圈 ring，避免被滚动区裁切）；选中时左侧自动滚到该词。
+- **Chrome 插件 / 链接导入（2026-05-19）**：除 `<p>` 外，`<p>` 过短时会采 `article` 内叶子 **section**（如 **blog.nationalmuseum.ch** 的 `snm-text`）；过滤推荐区、Cookie 占位、发布日期与 Newsletter。插件改后须重新加载。
+- **用户语法高亮（2026-05-19）**：手动保存的语法在正文中应显示**紫色**；匹配逻辑已加强（标点/情态动词/引号与 BOM 差异）。若仍无色，请硬刷新后重开文章，或删除重复语法项后重新拖选保存。
+- **Vocabulary Prompt Reset v1（2026-05-17）**：legacy 整文路径仍使用 `vocabularySelectionPrompt.ts`；默认生产已切极简 B（`vocabularyMinimalBPrompt.ts`）。
+- **vocabulary-only vs 整文实验（2026-05-18）**：非生产 live（`VOCAB_ONLY_VS_PROD_LIVE`），报告 **`scripts/vocabulary-only-vs-production-experiment-report.json`**；可选 `scripts/fixtures/meghan-article.txt`。
+- **vocabulary 第二次调用实验（2026-05-19）**：非生产 live（`VOCAB_SECOND_CALL_LIVE`），对比生产单次 vs core+vocabulary 并行拆分（Reset v1 / 极简 B）；报告 **`scripts/vocabulary-second-call-experiment-report.json`**。短文/MSC/Meghan 拆分更易出动词；Gaullismus 长文拆分仍可能全名词。**未接生产 route**。
+- **本篇词汇统计（2026-05-18）**：阅读页以**词条卡片**为主统计（可高亮 / 暂无高亮）；未定位的 AI 词汇仍保存为本篇；**PRD §6** 已更新。见 **`DEVELOPMENT_LOG.md`**。
 - **下一步（建议）**：短期目标切回 **个人可完整使用版**：按 **`docs/PERSONAL_USE_CHECKLIST.md`** 跑通导入 → AI 分析 → 保存 → 阅读 → 深度笔记 → 总词库/总语法 → 状态修改；再迭代 OpenAI 提示与验收（**PRD §13**）。**Vercel Production** 已部署到 [`https://german-reading-coach.vercel.app`](https://german-reading-coach.vercel.app)，后续需完成 Supabase 生产回调 URL 自检；项目级 `npm.cmd run lint` 仍有既有 cleanup 项（`scripts/*.cjs` 的 `require()` 规则、文章库/仪表盘删除回调依赖提示、`/import` 未使用变量）；Chrome 插件后续可做打包发布，**PWA/手机分享**、支付与公开用户体系仍后置。合规边界：不绕过付费墙、登录墙或订阅限制。
 - **需求 / 库设计**：**Mock** 与 **`/articles/[id]`** 见 **`docs/PRD.md` §2.1**；时间字段与 **read_status** 见 **§12**；**`docs/DATABASE.md`** Mock 节、**§10**、统一云端节；**read_status / finished_at / mastered_at / ignored_at** 等为后续 **schema** 增量，当前不强制迁移。
 - **选区与「添加为词汇」**：长选区点词汇 = **词汇/表达层面（广义 lexical item）**，不等于整句当普通词、也不自动当语法；与 **「添加为语法」** 分工见 **`docs/PRD.md` §8.1.1**。**AI 主动推荐**亦应覆盖表达型词汇（短语、搭配、可分动词、新闻表达等），**统一进词汇 Tab**；**`item_type` / `surface_form` / `lemma` / `occurrence_sentence` / `explanation`** 等预留，**当前不改 schema/UI/prompt**。
@@ -51,7 +59,8 @@ German Reading Coach
 
 ## 下一阶段目标
 
-- **总词库 / 总语法** 下一步扩展为复习、编辑与批量状态管理；导入体验后续可做 Chrome 插件打包发布与更多站点适配；Production 已部署，短期优先做 Supabase 回调 URL 与线上完整流程自检；**PWA / 手机分享** 排在更后（见 **PRD §1.4.2**）；**多语言 / 英语版**见 **PRD §1.5**（后续评估）。
+- **导入（当前优先 P0–P1）**：先用好现有 **链接导入 / Chrome 插件 / 粘贴** 处理 **HTML 正文**（如 [L-GAV 十个常见问题](https://l-gav.ch/fragen-antworten/die-10-haeufigsten-fragen-antworten) — **原文排版阅读**，非 PDF/OCR）；**暂不** 启动 Moodle **SCORM 测验**、**SCREEN PDF** 全文自动导入大项。分类、三条链接用法与 P2–P4 排期见 **[`docs/IMPORT_SOURCES_AND_ROADMAP.md`](docs/IMPORT_SOURCES_AND_ROADMAP.md)**。
+- **总词库 / 总语法** 下一步扩展为复习、编辑与批量状态管理；Chrome 插件打包发布与更多 **HTML** 站点适配；Production 已部署，短期优先 Supabase 回调 URL 与线上完整流程自检；**PWA / 手机分享** 排在更后（见 **PRD §1.4.2**）；**多语言 / 英语版**见 **PRD §1.5**（后续评估）。
 
 ## 待开发 / 产品 Backlog（非承诺排期）
 
@@ -59,11 +68,14 @@ German Reading Coach
 
 | 方向 | 说明 |
 |------|------|
+| **导入来源路线图（P1–P4）** | **P1**：`/import` 与插件上说明 HTML / PDF / SCORM 适用性。**P2**：网页内可读 PDF 文字层。**P3**：SCREEN/扫描 PDF + OCR。**P4**：SCORM 按屏 OCR（须合规）。详见 **`docs/IMPORT_SOURCES_AND_ROADMAP.md`**。 |
 | **整文 AI：超长正文分块分析** | 当前单次分析仅送正文**前 1 万字符**；后半段无 AI 推荐。后续做分块调用并合并 vocabulary/grammar，或提高上限并评估费用/超时。 |
 | **总词库搜索：同 `normalized_key` 分组展示** | 当同一归一化键因 **`part_of_speech`** 不同存在**多条 `vocabulary_items`** 时，搜索命中后在列表中**收拢为一组**：组头展示词形（如 `lemma` / `display_word`），组内列出各条**词汇记录**（标明词性/类型 + 状态徽标），子行点击进入对应卡片详情。对用户统一称**「两条词汇记录」**（不说「学习档」）。**无分组实现前**：保持当前「并列多条」即可。 |
 
 ## 最近更新
 
+- **2026-05-19（数据清理 + 阅读 UI 精简）**：删除全部系统来源 `grammar_items`、清空 `articles` 摘要字段（脚本/SQL **`009`**）；阅读页无摘要 Tab、折叠三色高亮说明；仅加载 `manual` 语法。**`npm test`** / **`npm run build`** 已通过；Production 已部署。**须在 Supabase 执行 009 后**线上库才干净。
+- **2026-05-19（阅读页：恢复词汇原有 UI）**：词汇高亮仍为 **`<button>`**（绿/琥珀）；详情在右侧列表项下展开（非 Tab 顶 sticky）；点词后列表 **居中** 滚动；语法按需高亮/拖选 passthrough **保留**。**`npm test`**（69）/ **`npm run build`** 已通过。
 - **2026-05-17（回退方案 C）**：恢复单次 OpenAI 整文分析 + **d4aee6e** 词汇/冠词 Prompt（保留 Grammar v2）；已删除双次调用代码。
 - **2026-05-17（grammar 取消 8 条硬上限）**：`json_schema` / Prompt / normalize 均不再限制 grammar ≤8；PRD §13.6、用户手册已同步。**`npm test`** / **`npm run build`** 已通过。
 - **2026-05-17（vocabulary 方案 A）**：删除独立「名词与 grammatical_gender」长节；文末 POS/gender 改为「非名词一律 na、名词可填 m/f/n、冠词不强制」；**Grammar v2 不变**。**`npm test`**（61）/ **`npm run build`** 已通过；POS 分布需 App/live 复测。

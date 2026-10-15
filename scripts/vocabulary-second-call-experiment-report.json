@@ -1,0 +1,762 @@
+{
+  "generatedAt": "2026-05-19T11:37:15.474Z",
+  "strategies": [
+    "production_single_call",
+    "split_second_call_reset_vocab",
+    "split_second_call_minimal_b"
+  ],
+  "cases": [
+    {
+      "case": "short-news",
+      "title": "Bundesregierung beschließt neue Klimaziele",
+      "charCount": 357,
+      "runs": [
+        {
+          "strategy": "production_single_call",
+          "count": 6,
+          "counts": {
+            "total": 6,
+            "noun": 6,
+            "verb": 0,
+            "adjective": 0,
+            "adverb": 0,
+            "phrase": 0,
+            "other": 0
+          },
+          "expressionTypes": 0,
+          "allNounLike": true,
+          "items": [
+            {
+              "pos": "noun",
+              "surface": "Bundesregierung",
+              "lemma": "Bundesregierung"
+            },
+            {
+              "pos": "noun",
+              "surface": "Klimaziele",
+              "lemma": "Klimaziel"
+            },
+            {
+              "pos": "compound_noun",
+              "surface": "Treibhausgas-Emissionen",
+              "lemma": "Treibhausgas-Emission"
+            },
+            {
+              "pos": "noun",
+              "surface": "Jobverlusten",
+              "lemma": "Jobverlust"
+            },
+            {
+              "pos": "noun",
+              "surface": "Experten",
+              "lemma": "Experte"
+            },
+            {
+              "pos": "noun",
+              "surface": "Maßnahmen",
+              "lemma": "Maßnahme"
+            }
+          ]
+        },
+        {
+          "strategy": "split_second_call_reset_vocab",
+          "count": 10,
+          "counts": {
+            "total": 10,
+            "noun": 5,
+            "verb": 4,
+            "adjective": 1,
+            "adverb": 0,
+            "phrase": 0,
+            "other": 0
+          },
+          "expressionTypes": 1,
+          "allNounLike": false,
+          "items": [
+            {
+              "pos": "noun",
+              "surface": "Bundesregierung",
+              "lemma": "die Bundesregierung"
+            },
+            {
+              "pos": "noun",
+              "surface": "Klimaziele",
+              "lemma": "die Klimaziele"
+            },
+            {
+              "pos": "verb",
+              "surface": "beschlossen",
+              "lemma": "beschließen"
+            },
+            {
+              "pos": "compound_noun",
+              "surface": "Treibhausgas-Emissionen",
+              "lemma": "die Treibhausgas-Emissionen"
+            },
+            {
+              "pos": "verb",
+              "surface": "senken",
+              "lemma": "senken"
+            },
+            {
+              "pos": "noun",
+              "surface": "Jobverlusten",
+              "lemma": "der Jobverlust"
+            },
+            {
+              "pos": "verb",
+              "surface": "kritisieren",
+              "lemma": "kritisieren"
+            },
+            {
+              "pos": "noun",
+              "surface": "Experten",
+              "lemma": "der Experte"
+            },
+            {
+              "pos": "adjective",
+              "surface": "positiv",
+              "lemma": "positiv"
+            },
+            {
+              "pos": "verb_phrase",
+              "surface": "verweisen auf",
+              "lemma": "verweisen auf"
+            }
+          ]
+        },
+        {
+          "strategy": "split_second_call_minimal_b",
+          "count": 10,
+          "counts": {
+            "total": 10,
+            "noun": 3,
+            "verb": 6,
+            "adjective": 1,
+            "adverb": 0,
+            "phrase": 0,
+            "other": 0
+          },
+          "expressionTypes": 0,
+          "allNounLike": false,
+          "items": [
+            {
+              "pos": "noun",
+              "surface": "Bundesregierung",
+              "lemma": "Bundesregierung"
+            },
+            {
+              "pos": "noun",
+              "surface": "Klimaziele",
+              "lemma": "Klimaziel"
+            },
+            {
+              "pos": "verb",
+              "surface": "beschlossen",
+              "lemma": "beschließen"
+            },
+            {
+              "pos": "verb",
+              "surface": "müsse",
+              "lemma": "müssen"
+            },
+            {
+              "pos": "verb",
+              "surface": "senken",
+              "lemma": "senken"
+            },
+            {
+              "pos": "verb-preposition combination",
+              "surface": "warnen vor",
+              "lemma": "warnen vor"
+            },
+            {
+              "pos": "noun",
+              "surface": "Jobverlusten",
+              "lemma": "Jobverlust"
+            },
+            {
+              "pos": "verb",
+              "surface": "beurteilen",
+              "lemma": "beurteilen"
+            },
+            {
+              "pos": "adjective",
+              "surface": "positiv",
+              "lemma": "positiv"
+            },
+            {
+              "pos": "verb-preposition combination",
+              "surface": "verweisen auf",
+              "lemma": "verweisen auf"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "gaullismus",
+      "title": "Für einen europäischen Gaullismus",
+      "charCount": 9711,
+      "runs": [
+        {
+          "strategy": "production_single_call",
+          "count": 8,
+          "counts": {
+            "total": 8,
+            "noun": 6,
+            "verb": 0,
+            "adjective": 0,
+            "adverb": 0,
+            "phrase": 2,
+            "other": 0
+          },
+          "expressionTypes": 2,
+          "allNounLike": false,
+          "items": [
+            {
+              "pos": "compound_noun",
+              "surface": "europäischen Gaullismus",
+              "lemma": "europäisch Gaullismus"
+            },
+            {
+              "pos": "noun",
+              "surface": "Weltordnung",
+              "lemma": "Weltordnung"
+            },
+            {
+              "pos": "noun",
+              "surface": "Mitsprache",
+              "lemma": "Mitsprache"
+            },
+            {
+              "pos": "noun",
+              "surface": "Souveränität",
+              "lemma": "Souveränität"
+            },
+            {
+              "pos": "noun",
+              "surface": "Rüstungsindustrie",
+              "lemma": "Rüstungsindustrie"
+            },
+            {
+              "pos": "collocation",
+              "surface": "militärischen Schutz",
+              "lemma": "militärischer Schutz"
+            },
+            {
+              "pos": "collocation",
+              "surface": "militärische Kapazitäten",
+              "lemma": "militärische Kapazität"
+            },
+            {
+              "pos": "compound_noun",
+              "surface": "europäischen Eliten",
+              "lemma": "europäische Elite"
+            }
+          ]
+        },
+        {
+          "strategy": "split_second_call_reset_vocab",
+          "count": 10,
+          "counts": {
+            "total": 10,
+            "noun": 10,
+            "verb": 0,
+            "adjective": 0,
+            "adverb": 0,
+            "phrase": 0,
+            "other": 0
+          },
+          "expressionTypes": 0,
+          "allNounLike": true,
+          "items": [
+            {
+              "pos": "compound_noun",
+              "surface": "europäischen Gaullismus",
+              "lemma": "europäischer Gaullismus"
+            },
+            {
+              "pos": "noun",
+              "surface": "Mitsprache",
+              "lemma": "Mitsprache"
+            },
+            {
+              "pos": "compound_noun",
+              "surface": "militärischen Kapazitäten",
+              "lemma": "militärische Kapazität"
+            },
+            {
+              "pos": "compound_noun",
+              "surface": "vollumfänglichen Souveränität",
+              "lemma": "vollumfängliche Souveränität"
+            },
+            {
+              "pos": "compound_noun",
+              "surface": "militärischen Schutz",
+              "lemma": "militärischer Schutz"
+            },
+            {
+              "pos": "compound_noun",
+              "surface": "Rüstungsausgaben",
+              "lemma": "Rüstungsausgabe"
+            },
+            {
+              "pos": "compound_noun",
+              "surface": "moralischen Eifer",
+              "lemma": "moralischer Eifer"
+            },
+            {
+              "pos": "noun",
+              "surface": "Nachkriegsordnung",
+              "lemma": "Nachkriegsordnung"
+            },
+            {
+              "pos": "compound_noun",
+              "surface": "europäischen Sicherheitsarchitektur",
+              "lemma": "europäische Sicherheitsarchitektur"
+            },
+            {
+              "pos": "noun",
+              "surface": "Führungsrolle",
+              "lemma": "Führungsrolle"
+            }
+          ]
+        },
+        {
+          "strategy": "split_second_call_minimal_b",
+          "count": 10,
+          "counts": {
+            "total": 10,
+            "noun": 10,
+            "verb": 0,
+            "adjective": 0,
+            "adverb": 0,
+            "phrase": 0,
+            "other": 0
+          },
+          "expressionTypes": 0,
+          "allNounLike": true,
+          "items": [
+            {
+              "pos": "noun",
+              "surface": "Gaullismus",
+              "lemma": "Gaullismus"
+            },
+            {
+              "pos": "noun",
+              "surface": "Weltordnung",
+              "lemma": "Weltordnung"
+            },
+            {
+              "pos": "noun",
+              "surface": "Mitsprache",
+              "lemma": "Mitsprache"
+            },
+            {
+              "pos": "compound_noun",
+              "surface": "militärische Kapazitäten",
+              "lemma": "militärische Kapazität"
+            },
+            {
+              "pos": "compound_noun",
+              "surface": "vollumfängliche Souveränität",
+              "lemma": "vollumfängliche Souveränität"
+            },
+            {
+              "pos": "compound_noun",
+              "surface": "militärischen Schutz",
+              "lemma": "militärischer Schutz"
+            },
+            {
+              "pos": "noun",
+              "surface": "Rüstungsindustrie",
+              "lemma": "Rüstungsindustrie"
+            },
+            {
+              "pos": "compound_noun",
+              "surface": "moralischer Eifer",
+              "lemma": "moralischer Eifer"
+            },
+            {
+              "pos": "noun",
+              "surface": "Nachkriegsordnung",
+              "lemma": "Nachkriegsordnung"
+            },
+            {
+              "pos": "noun",
+              "surface": "Führungsrolle",
+              "lemma": "Führungsrolle"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "msc-oil",
+      "title": "Mitten im Iran-Krieg stösst MSC in den Ölhandel vor",
+      "charCount": 1623,
+      "runs": [
+        {
+          "strategy": "production_single_call",
+          "count": 5,
+          "counts": {
+            "total": 5,
+            "noun": 5,
+            "verb": 0,
+            "adjective": 0,
+            "adverb": 0,
+            "phrase": 0,
+            "other": 0
+          },
+          "expressionTypes": 0,
+          "allNounLike": true,
+          "items": [
+            {
+              "pos": "noun",
+              "surface": "Ölhandel",
+              "lemma": "Ölhandel"
+            },
+            {
+              "pos": "compound_noun",
+              "surface": "fossilen Brennstoffen",
+              "lemma": "fossiler Brennstoff"
+            },
+            {
+              "pos": "noun",
+              "surface": "Marktzugang",
+              "lemma": "Marktzugang"
+            },
+            {
+              "pos": "noun",
+              "surface": "Kapitäne",
+              "lemma": "Kapitän"
+            },
+            {
+              "pos": "noun",
+              "surface": "Klimazielen",
+              "lemma": "Klimaziel"
+            }
+          ]
+        },
+        {
+          "strategy": "split_second_call_reset_vocab",
+          "count": 8,
+          "counts": {
+            "total": 8,
+            "noun": 7,
+            "verb": 0,
+            "adjective": 0,
+            "adverb": 0,
+            "phrase": 1,
+            "other": 0
+          },
+          "expressionTypes": 1,
+          "allNounLike": false,
+          "items": [
+            {
+              "pos": "noun",
+              "surface": "Ölhandel",
+              "lemma": "der Ölhandel"
+            },
+            {
+              "pos": "compound_noun",
+              "surface": "fossilen Brennstoffen",
+              "lemma": "die fossilen Brennstoffe"
+            },
+            {
+              "pos": "noun",
+              "surface": "Offensive",
+              "lemma": "die Offensive"
+            },
+            {
+              "pos": "fixed_expression",
+              "surface": "Marktzugang sichern",
+              "lemma": "Marktzugang sichern"
+            },
+            {
+              "pos": "noun",
+              "surface": "Wettbewerbern",
+              "lemma": "die Wettbewerber"
+            },
+            {
+              "pos": "noun",
+              "surface": "Kapitänspatent",
+              "lemma": "das Kapitänspatent"
+            },
+            {
+              "pos": "compound_noun",
+              "surface": "Klimazielen",
+              "lemma": "die Klimaziele"
+            },
+            {
+              "pos": "noun",
+              "surface": "Versicherungsprämien",
+              "lemma": "die Versicherungsprämien"
+            }
+          ]
+        },
+        {
+          "strategy": "split_second_call_minimal_b",
+          "count": 10,
+          "counts": {
+            "total": 10,
+            "noun": 7,
+            "verb": 2,
+            "adjective": 0,
+            "adverb": 1,
+            "phrase": 0,
+            "other": 0
+          },
+          "expressionTypes": 0,
+          "allNounLike": false,
+          "items": [
+            {
+              "pos": "noun",
+              "surface": "Ölhandel",
+              "lemma": "Ölhandel"
+            },
+            {
+              "pos": "verb",
+              "surface": "dominieren",
+              "lemma": "dominieren"
+            },
+            {
+              "pos": "verb",
+              "surface": "ausweiten",
+              "lemma": "ausweiten"
+            },
+            {
+              "pos": "noun",
+              "surface": "Marktzugang",
+              "lemma": "Marktzugang"
+            },
+            {
+              "pos": "noun",
+              "surface": "Kapazität",
+              "lemma": "Kapazität"
+            },
+            {
+              "pos": "noun",
+              "surface": "Wettbewerber",
+              "lemma": "Wettbewerber"
+            },
+            {
+              "pos": "noun",
+              "surface": "Kapitänspatent",
+              "lemma": "Kapitänspatent"
+            },
+            {
+              "pos": "noun",
+              "surface": "Klimazielen",
+              "lemma": "Klimaziel"
+            },
+            {
+              "pos": "adverb",
+              "surface": "langfristig",
+              "lemma": "langfristig"
+            },
+            {
+              "pos": "noun",
+              "surface": "Sanktionen",
+              "lemma": "Sanktion"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "meghan",
+      "title": "In schwarzem Hosenanzug: Herzogin Meghan trat in Genf für eine Herzensangelegenheit auf",
+      "charCount": 2365,
+      "runs": [
+        {
+          "strategy": "production_single_call",
+          "count": 7,
+          "counts": {
+            "total": 7,
+            "noun": 6,
+            "verb": 0,
+            "adjective": 1,
+            "adverb": 0,
+            "phrase": 0,
+            "other": 0
+          },
+          "expressionTypes": 0,
+          "allNounLike": false,
+          "items": [
+            {
+              "pos": "noun",
+              "surface": "Hosenanzug",
+              "lemma": "Hosenanzug"
+            },
+            {
+              "pos": "noun",
+              "surface": "Einweihung",
+              "lemma": "Einweihung"
+            },
+            {
+              "pos": "noun",
+              "surface": "Herzogin",
+              "lemma": "Herzogin"
+            },
+            {
+              "pos": "adjective",
+              "surface": "verstorbenen Kindern",
+              "lemma": "verstorben"
+            },
+            {
+              "pos": "compound_noun",
+              "surface": "digitale Gefahren",
+              "lemma": "digitale Gefahr"
+            },
+            {
+              "pos": "noun",
+              "surface": "Kunstinstallation",
+              "lemma": "Kunstinstallation"
+            },
+            {
+              "pos": "noun",
+              "surface": "Sperrbildschirm",
+              "lemma": "Sperrbildschirm"
+            }
+          ]
+        },
+        {
+          "strategy": "split_second_call_reset_vocab",
+          "count": 10,
+          "counts": {
+            "total": 10,
+            "noun": 8,
+            "verb": 2,
+            "adjective": 0,
+            "adverb": 0,
+            "phrase": 0,
+            "other": 0
+          },
+          "expressionTypes": 1,
+          "allNounLike": false,
+          "items": [
+            {
+              "pos": "noun",
+              "surface": "Hosenanzug",
+              "lemma": "der Hosenanzug"
+            },
+            {
+              "pos": "compound_noun",
+              "surface": "Herzogin Meghan",
+              "lemma": "die Herzogin Meghan"
+            },
+            {
+              "pos": "noun",
+              "surface": "Einweihung",
+              "lemma": "die Einweihung"
+            },
+            {
+              "pos": "compound_noun",
+              "surface": "verstorbenen Kindern",
+              "lemma": "der verstorbene Kind"
+            },
+            {
+              "pos": "noun",
+              "surface": "Kunstinstallation",
+              "lemma": "die Kunstinstallation"
+            },
+            {
+              "pos": "verb_phrase",
+              "surface": "aufmerksam machen auf",
+              "lemma": "aufmerksam machen auf"
+            },
+            {
+              "pos": "noun",
+              "surface": "Schaulustige",
+              "lemma": "der Schaulustige"
+            },
+            {
+              "pos": "noun",
+              "surface": "Schutzmassnahmen",
+              "lemma": "die Schutzmassnahme"
+            },
+            {
+              "pos": "verb",
+              "surface": "sensibilisieren",
+              "lemma": "sensibilisieren"
+            },
+            {
+              "pos": "noun",
+              "surface": "Denkmal",
+              "lemma": "das Denkmal"
+            }
+          ]
+        },
+        {
+          "strategy": "split_second_call_minimal_b",
+          "count": 10,
+          "counts": {
+            "total": 10,
+            "noun": 6,
+            "verb": 3,
+            "adjective": 0,
+            "adverb": 0,
+            "phrase": 0,
+            "other": 1
+          },
+          "expressionTypes": 0,
+          "allNounLike": false,
+          "items": [
+            {
+              "pos": "noun",
+              "surface": "Hosenanzug",
+              "lemma": "Hosenanzug"
+            },
+            {
+              "pos": "noun",
+              "surface": "Herzogin",
+              "lemma": "Herzogin"
+            },
+            {
+              "pos": "noun",
+              "surface": "Einweihung",
+              "lemma": "Einweihung"
+            },
+            {
+              "pos": "verb phrase",
+              "surface": "aufmerksam machen",
+              "lemma": "aufmerksam machen"
+            },
+            {
+              "pos": "verb",
+              "surface": "gedenken",
+              "lemma": "gedenken"
+            },
+            {
+              "pos": "verb",
+              "surface": "sensibilisieren",
+              "lemma": "sensibilisieren"
+            },
+            {
+              "pos": "compound_noun",
+              "surface": "verstorbenen Kindern",
+              "lemma": "verstorbenes Kind"
+            },
+            {
+              "pos": "noun",
+              "surface": "Kunstinstallation",
+              "lemma": "Kunstinstallation"
+            },
+            {
+              "pos": "separable verb",
+              "surface": "Rosen niederlegen",
+              "lemma": "niederlegen"
+            },
+            {
+              "pos": "noun",
+              "surface": "Schaulustige",
+              "lemma": "Schaulustiger"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

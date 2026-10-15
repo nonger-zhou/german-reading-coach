@@ -1,0 +1,16 @@
+﻿node.exe : npm warn Unknown env config "devdir". This will stop working in the next major version of npm.
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm warn Unknow...version of npm.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+(node:28544) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and 
+HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+npm error code UNABLE_TO_VERIFY_LEAF_SIGNATURE
+npm error errno UNABLE_TO_VERIFY_LEAF_SIGNATURE
+npm error request to https://registry.npmjs.org/tsx failed, reason: unable to verify the first certificate; if the 
+root CA is installed locally, try running Node.js with --use-system-ca
+npm error A complete log of this run can be found in: C:\Users\Julia\AppData\Local\Temp\cursor-sandbox-cache\f92b44f025
+7e753d2dc9f22b774fd116\npm\_logs\2026-05-17T08_56_17_786Z-debug-0.log

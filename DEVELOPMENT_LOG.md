@@ -4,6 +4,475 @@
 
 2026-05-02
 
+### 2026-05-19 — 文档：导入来源分类、三条链接用法与 P0–P4 排期
+
+**本次完成了什么**
+
+- 新增 **`docs/IMPORT_SOURCES_AND_ROADMAP.md`**：HTML / 网上 PDF / SCORM 分类；L-GAV FAQ（**原文排版阅读**、P0）、GastroSuisse SCREEN PDF、SCORM 测验的**现在怎么用**；明确 **暂不** 并行开发 PDF/OCR/SCORM 大项，P1 为导入说明、P2–P4 为 PDF/OCR/SCORM。
+- 同步 **`docs/PRD.md` §1.4.2**、**`PROJECT_STATUS.md`**（下一阶段 + Backlog）、**`docs/USER_MANUAL.md` §1.4**。
+
+**修改的主要文件**：`docs/IMPORT_SOURCES_AND_ROADMAP.md`、`docs/PRD.md`、`PROJECT_STATUS.md`、`docs/USER_MANUAL.md`、`DEVELOPMENT_LOG.md`
+
+**构建**：`npm run build`（文档任务，确认仓库健康）。
+
+**下一步建议**：P0 按文档用 L-GAV FAQ 走导入+阅读；P1 在 `/import` 增加简短来源说明（可选开发）。
+
+---
+
+### 2026-05-19 — 导入增强：`<p>` 不足时采集块级 section 正文
+
+**本次完成了什么**
+
+- **链接导入**（`importFromUrl.ts`）：在 `article` / `main` 内除 `<p>` 外，当块级 `section`（如博物馆博客 `section.snm-text`）总字数明显多于 `<p>` 时，改用块级段落；过滤发布日期、URL 行、Newsletter、作者简介等噪声。
+- **Chrome 插件**（`background.js`）：与上相同逻辑；须在 `chrome://extensions/` **重新加载**。
+- 实测 [blog.nationalmuseum.ch 该文](https://blog.nationalmuseum.ch/2026/01/der-hotelier-dem-ein-licht-aufging/)：`cleaned_text` 由约 **568** 字增至约 **8500** 字。
+- 新增 `articleBodyExtractLogic.ts`、`articleBodyExtractCheerio.ts`、fixture 与 Vitest。
+
+**修改的主要文件**：`importFromUrl.ts`、`background.js`、`articleBodyExtract*.ts`、`fixtures/nationalmuseum-like.html`、`USER_MANUAL.md`、`browser-extension/chrome-mv3/README.md`
+
+**构建**：`npm test`（articleBodyExtract）、`npm run build` 通过。
+
+---
+
+### 2026-05-19 — 阅读页：去掉词汇/语法「入选说明」
+
+**本次完成了什么**
+
+- 阅读详情（桌面侧栏 + 手机抽屉）不再展示 **入选说明**（`reason_for_selection`）；保留 **本文含义** + **简单德语解释**（用法）。
+- 整文分析与 **补充 AI 解释** 的 prompt：`reason_for_selection` 要求恒为空；用法、可分动词等只写在 `simple_de_explanation`；enrich 合并时清空该字段。
+
+**修改的主要文件**：`InteractiveArticleReader.tsx`、`vocabularyMinimalBPrompt.ts`、`enrich-vocabulary/route.ts`
+
+**构建**：`npm run build` 通过。
+
+**已知问题**：已保存文章里数据库中的旧 `reason_for_selection` 仍在，只是 UI 不显示；重新整文分析或补充解释后新数据不再写入入选理由。
+
+---
+
+### 2026-05-19 — 导入：过滤 Cookie / 外部嵌入占位段落
+
+**本次完成了什么**
+
+- 插件 `background.js` 与 `visibleArticleExtractLogic.ts`：跳过含 **zusätzliche Cookies**、**ergänzenden externen Inhalt** 的 `<p>`（NZZ/SRF/Tamedia 等常见占位）。
+- `cleanArticleText` / `parseArticleFromRaw` 导入链再次剔除相同段落；Vitest 覆盖。
+
+**修改的主要文件**：`visibleArticleExtractLogic.ts`、`cleanArticleText.ts`、`background.js`、测试、`browser-extension/chrome-mv3/README.md`、`docs/USER_MANUAL.md`
+
+**构建**：`npm test`（相关用例）、`npm run build` 通过。
+
+**维护者**：Chrome 插件须在 `chrome://extensions/` **重新加载**；已保存文章中的旧占位段需手删或重新导入。
+
+---
+
+### 2026-05-19 — 修复：正文选中/手动添加后「黄框」看不见
+
+**本次完成了什么**
+
+- **原因**：定位框原用 **外圈 `ring-2`**，正文卡片 **`overflow-y-auto` 会裁切**外描边；手动词（琥珀底）上再用琥珀 ring，对比度极低，用户反馈「根本没有黄框」。
+- **修复**：选中/闪动用 **内嵌 inset 黄框**（AI/手动词汇统一金黄描边；语法仍蓝/紫 inset）；侧栏悬停改为浅 inset。`applyVocabSelection` 在桌面也会滚到对应 occurrence。手动添加（拖选/表单）一律走 `pendingVocabSelectRef`（含 `normalizedKey` 兜底），列表提交后再选中。
+
+**修改的主要文件**：`src/components/InteractiveArticleReader.tsx`
+
+**构建**：`npm run build` 通过。
+
+**已知问题**：线上若仍见「待 AI 补全」旧文案，需硬刷新或重新部署 Production。
+
+**下一步**：维护者 `npm.cmd run vercel:prod`（或 Git push）同步线上。
+
+---
+
+### 2026-05-19 — 修复：手动添加词汇后黄框仍停在上一词
+
+**本次完成了什么**
+
+- **原因**：拖选/表单添加词汇后 `setVocabularyItems` 与 `selectVocabItem` 同轮执行，新词条 id 尚未进入 `vocabById`，`selectVocabItem` 提前 return，左侧琥珀色 ring 仍绑定旧 `vocabSelection`。
+- **修复**：与语法一致，增加 `pendingVocabSelectRef` + `applyVocabSelection`；列表更新后再选中并 `scrollArticleToOccurrence` 到新 occurrence。（后续由 inset 黄框修复补强可见性与 pending 表单路径。）
+
+**修改的主要文件**：`src/components/InteractiveArticleReader.tsx`
+
+**构建**：`npm run build` 通过。
+
+---
+
+### 2026-05-19 — Chrome 插件：过滤推荐区/作者名、修正标题
+
+**本次完成了什么**
+
+- **插件 `background.js`**：正文只采集 `<p>` 段落；遇「Das könnte Sie auch interessieren」等即停止；跳过作者署名行；标题优先 `og:title` 并去掉 `| 媒体名`；不再用 `body.innerText` 整页兜底（避免侧栏人名列表）。
+- **导入链兜底**：`visibleArticleExtractLogic.ts` + 测试；`parseArticleFromRaw` / `cleanArticleText` / `chooseDraftTitle` 拒绝推荐区标题与人名作标题。
+- **维护者**：改插件后须在 `chrome://extensions/` **重新加载** 扩展。
+
+**修改的主要文件**：`browser-extension/chrome-mv3/background.js`、`src/lib/import/visibleArticleExtractLogic.ts`、`parseArticleFromRaw.ts`、`cleanArticleText.ts`、`import/page.tsx`
+
+---
+
+### 2026-05-19 — 阅读页清爽 P2（元信息 / 帮助合并 / Badge）
+
+**本次完成了什么**
+
+- **文章元信息**：来源保留一行；链接、阅读水平、保存时间收入 **「文章信息」** 折叠（默认收起）。
+- **帮助合并**：去掉工具栏内单独的「AI 分析说明」；与拖选提示、高亮图例合并为左侧 **「阅读帮助（可选）」**（`readingHelpExtra` 传入 AI 流程说明）。
+- **Badge**：阅读页词汇/语法统一 **AI** / **手动**；去掉「待 AI 补全」角标；「入选说明」默认折叠。总词库/总语法库 `ai_mock` 显示为 **AI**。
+
+**修改的主要文件**：`InteractiveArticleReader.tsx`、`articles/[id]/page.tsx`、`vocabulary/page.tsx`、`grammar/page.tsx`、`docs/USER_MANUAL.md`
+
+**构建**：`npm run build` 通过。
+
+---
+
+### 2026-05-19 — 阅读页清爽 MVP（P0 + P1，不改交互逻辑）
+
+**本次完成了什么**
+
+- **P0**：右侧「本篇词汇统计」缩为一行（总数 + 可选手动数）；去掉学习中/已掌握/暂忽略长说明；AI 预览区说明减至 1～2 句，词汇/问题列表放入 `<details>`（已保存默认收起、未保存默认展开）；删除文章页底演示/Mock 脚注；状态/错误文案用户化（「分析失败」「有预览，尚未保存」等），技术详情进折叠。
+- **P1**：词汇/语法详情「外部深入解释」改为默认折叠 `<details>`；顶栏主导航移除「演示课文」（仍可从首页卡片进入 `/articles/mock`）；重新分析按钮与状态行文案缩短；阅读水平并入「AI 分析说明」折叠。
+
+**修改的主要文件**：`src/app/articles/[id]/page.tsx`、`src/components/InteractiveArticleReader.tsx`、`src/components/AppShell.tsx`
+
+**当前项目状态**：`npm run build` 通过；阅读交互（点词、拖选、列表详情、Tab 切换）未改。
+
+**已知问题**：演示课文仍在 `/articles/mock`；统计口径细则见 `docs/USER_MANUAL.md`。
+
+**下一步建议**：按需部署 Production；维护者若未跑 **009** 数据清理，线上仍可能有旧系统语法/摘要。
+
+---
+
+### 2026-05-19 — 全文翻译外接：多按钮（海外 / 国内）
+
+**本次完成了什么**
+
+- 阅读页「全文翻译为中文」改为与词汇「外部深入解释」同类 UI：**海外** ChatGPT、Google 翻译；**国内** DeepSeek、豆包；另保留「仅复制 Prompt」。
+- 点击：复制 `buildFullArticleTranslationPrompt` 生成的 Prompt，并 `window.open` 对应站点。
+- **默认折叠**（`<details>`），收起时仅一行标题；复制结果提示在折叠区外仍可见。
+
+**修改的主要文件**：`src/components/FullArticleTranslationExternal.tsx`、`src/lib/externalTranslationLinks.ts`、`src/app/articles/[id]/page.tsx`
+
+---
+
+### 2026-05-19 — 右侧词汇/语法列表按正文出现顺序排序
+
+**本次完成了什么**
+
+- 修复：手动添加（琥珀）词汇在右侧列表总排在最下；现与 AI 词汇一并按**在正文中首次出现的字符位置**排序。
+- `sortArticleVocabItemsByReadingOrder` / `sortArticleGrammarItemsByReadingOrder`；无法在文中定位的条目仍排在列表末尾。
+
+**修改的主要文件**：`src/lib/articleReadingModel.ts`、`InteractiveArticleReader.tsx`、`articleReadingModel.vocabRanges.test.ts`
+
+---
+
+### 2026-05-19 — 数据清理 + 阅读 UI 精简（无系统语法 / 无摘要 Tab）
+
+**本次完成了什么**
+
+- **数据（须维护者执行）**：新增 `supabase/fixes/009_cleanup_system_grammar_and_summaries.sql` 与 `npm run db:cleanup`（需 `SUPABASE_SERVICE_ROLE_KEY`）：删除 `grammar_items` 中 `ai` / `ai_mock` / `ai_detected` / `ai_detected_then_user_confirmed`；清空全部 `articles.summary_zh` / `summary_de_simple`。
+- **读取**：`fetchArticleManualGrammar` 仅加载 `source = manual`。
+- **UI**：去掉摘要 Tab；高亮说明改为默认折叠（绿/琥珀/紫，无蓝）；删除「同一词在列表中只出现一次…」首屏文案（改入 `docs/USER_MANUAL.md`）；演示课文不再预置系统语法高亮。
+
+**修改的主要文件**：`InteractiveArticleReader.tsx`、`articles/[id]/page.tsx`、`MockArticleReader.tsx`、`mock.ts`、`grammar.ts`、`scripts/cleanup-system-grammar-and-summaries.mjs`、`docs/USER_MANUAL.md`
+
+**已知**：本机若无 `SUPABASE_SERVICE_ROLE_KEY`，请在 Supabase SQL Editor **执行 009** 后再部署，否则线上库仍含旧系统语法/摘要。
+
+---
+
+### 2026-05-19 — 左侧添加语法后自动切到语法 Tab
+
+**本次完成了什么**
+
+- 修复：右侧停留在「词汇」Tab 时，左侧标记/保存语法后右侧面板不跳到对应语法卡片（语法列表里已有项）。
+- 原因：`selectGrammarItem` 在 `setGrammarItems` 同一轮用**旧的** `grammarById` 查 id（新项或入库后 id 变更）会提前 return。
+- 做法：`pendingGrammarSelectRef` + `useEffect`，在 `grammarItems` 提交后再 `setTab("grammar")` 并滚动到列表项。
+
+**修改的主要文件**：`src/components/InteractiveArticleReader.tsx`
+
+---
+
+### 2026-05-19 — 恢复词汇原有高亮/联动 UI
+
+**本次完成了什么**
+
+- 按用户要求：**词汇**交互回退为原先已验收方案——绿色/琥珀 `<button>` 高亮、列表项下展开详情（`md:block`）、文中点击后右侧面板**居中滚到对应列表行**。
+- 移除 Tab 顶部 sticky 详情与「滚回顶部」实验逻辑（仅影响词汇展示路径；语法新能力仍保留在语法侧）。
+- **保留**：拖选时才禁用高亮 pointer-events、语法 `grammarItemsEffective` 与按需语法匹配（不影响词汇列表语义）。
+
+**修改的主要文件**：`src/components/InteractiveArticleReader.tsx`
+
+---
+
+### 2026-05-19 — 右侧联动滚动对齐（详情顶栏）
+
+**本次完成了什么**
+
+- 文中点词汇/语法时，桌面端右侧面板**滚回顶部**展示详情卡，不再把列表项滚到视区中部（避免卡片半截）。
+- 右侧列表内点击不触发面板滚动；详情区 `sticky` 置顶。
+- **`npm run build`** 通过。
+
+**修改的主要文件**：`src/components/InteractiveArticleReader.tsx`
+
+---
+
+### 2026-05-19 — 加语法后点击词汇无法打开右侧卡
+
+**本次完成了什么**
+
+- 修复保存语法后点击文中绿色词汇，右侧词汇详情不显示/像卡住：拖选时才临时 `pointer-events: none`（轻点不再禁用高亮）；全局 `pointerup` 复位。
+- 左侧语法高亮与右侧列表共用 `grammarItemsEffective`（finalize 后 occurrence id 一致）。
+- 点词汇会切到「词汇」Tab 并清空语法选中；桌面端词汇/语法详情固定在 Tab 顶部展示（不再埋在列表折叠里）。
+
+**修改的主要文件**
+
+- `src/components/InteractiveArticleReader.tsx`
+- `DEVELOPMENT_LOG.md`
+
+---
+
+### 2026-05-19 — 跨词汇高亮拖选语法（button→span、选区映射）
+
+**本次完成了什么**
+
+- 系统词汇高亮由 `<button>` 改为 `<span role="button">`，浏览器可连续拖选穿过绿色「sein」等到换行后的「müsse」。
+- 拖选进行中临时 `pointer-events: none` 于 `[data-learning-highlight]`，减少高亮层抢事件。
+- `getArticlePlainOffsetsFromDomRange` 跳过 `aria-hidden` tooltip 文本；`extendGrammarClauseEndInPlain` 在选区止于 `sein` 时延伸至句末情态词。
+- 单测 +1；**`npm test` 69**、**`npm run build`** 通过。
+
+**修改的主要文件**
+
+- `src/components/InteractiveArticleReader.tsx`
+- `src/lib/articleReadingModel.ts`
+- `src/lib/articleReadingModel.grammar.test.ts`
+
+---
+
+### 2026-05-19 — 用户语法左侧紫色高亮修复（选区与正文微差）
+
+**本次完成了什么**
+
+- 修复「右侧已保存用户语法、左侧无紫色高亮」：增强 `findGrammarSurfaceInArticle`（情态动词 müsse/müsste 等变体、截短尾部词再匹配、部分匹配后延伸至句末情态词）。
+- `grammarOccurrenceToRanges` 在常规词汇定位失败时回退到语法专用匹配；`rebuildUserStyleGrammarOccurrencesFromArticle` 尝试更多 needle 字段。
+- 文章页 `articlePlain` 经 `sanitizeArticlePlainForMatching` 去除 BOM/软连字符，与 DOM 偏移一致。
+- 单测 +1（müsse 保存 / müsste 正文）；**`npm test` 68**、**`npm run build`** 通过。
+
+**修改的主要文件**
+
+- `src/lib/articleReadingModel.ts`
+- `src/app/articles/[id]/page.tsx`
+- `src/lib/articleReadingModel.grammar.test.ts`
+- `DEVELOPMENT_LOG.md`、`PROJECT_STATUS.md`
+
+**已知问题**
+
+- 若选区与正文差异过大（整句改写），仍可能「暂无高亮」；可删旧重复语法卡后重新拖选保存。
+
+---
+
+### 2026-05-19 — 词汇优先整文分析 v1（vocab-first + 按需语法）
+
+**本次完成了什么**
+
+- **默认整文分析**（`POST /api/analyze-article`）：仍为**单次 OpenAI**；输出仅 **`vocabulary` + `reading_questions`（3 条中文、无答案）**；词汇段为**极简 B**（`vocabularyMinimalBPrompt.ts`）；**不再**默认输出 grammar / 摘要。
+- **Legacy 回退**：`ENABLE_AUTO_GRAMMAR_ANALYSIS=true` 时走旧 prompt + 全量 schema（Grammar v2 + Reset v1 词汇段 + 摘要）。
+- **新 API**：`POST /api/explain-grammar-selection`（`articleId` + `selected_text`；服务端取 occurrence 句 + snippet，不传整文/总库）。
+- **阅读器**：拖选浮层 **「解释语法」** → 可编辑解释 → **保存到本篇语法**（`explanation_zh`）；**「全文翻译为中文（复制 Prompt）」** 仅剪贴板，不调 App API。
+- **文章页**：AI 预览区仅词汇 + 阅读问题；保存只写词汇与 `reading_questions`；右侧本篇词汇统计仍为**词条卡片数**。
+
+**修改的主要文件**
+
+- `src/lib/articleAnalysis/*`（prompt、schema、normalize、feature flag、explain-grammar、translation prompt）
+- `src/app/api/analyze-article/route.ts`、`src/app/api/explain-grammar-selection/route.ts`
+- `src/app/articles/[id]/page.tsx`、`src/components/InteractiveArticleReader.tsx`
+- `.env.example`
+- `docs/PRD.md`、`PROJECT_STATUS.md`、`DEVELOPMENT_LOG.md`
+
+**当前项目状态**
+
+- **`npm test`**（63）、**`npm run build`** 已通过。
+- Production 部署：若本机未 `vercel login`，请 Git push 触发 Vercel 或见 `docs/DEPLOY_VERCEL.md`。
+
+**已知问题**
+
+- 文章页仍保留未使用的 `editableRealAiGrammar` 等 legacy 预览状态（无害，可后续清理）。
+- Gaullismus 等超长文仍受 10 000 字符截断；仅观察，未改分块。
+
+**下一步建议**
+
+- 实机验收四篇 fixture 词性分布；按需微调极简 B 或 explain JSON 字段。
+- 外部全文翻译「粘贴回写」仍 backlog。
+
+### 2026-05-19 — vocabulary 第二次调用本地实验（未接生产）
+
+**本次完成了什么**
+
+- 扩展 **`articleAnalysisExperiments.ts`**：`requestVocabularyViaSplitAnalysis` 支持自定义 vocabulary system prompt；新增策略 `mini_split_reset_vocab`、`mini_split_minimal_b`（core+grammar 与 vocabulary **并行**两次 API）。
+- 抽取 **`experimentalVocabularyOnlyMinimalPrompt.ts`**（极简 B，供拆分第二次调用与既有 A/B 实验共用）。
+- 新增 **`vocabularySecondCallExperiment.live.test.ts`**：对比生产单次 vs 拆分+Reset v1 vocab vs 拆分+极简 B；四篇 fixture；报告 **`scripts/vocabulary-second-call-experiment-report.json`**。
+- 本地 live 已跑通（约 201s，`VOCAB_SECOND_CALL_LIVE=1`，`NODE_OPTIONS=--use-system-ca`）。
+
+**live 结论摘要（gpt-4o-mini，B1）**
+
+| 篇目 | 生产单次 | 拆分+Reset v1 | 拆分+极简 B |
+|------|----------|---------------|-------------|
+| short-news | 6 条全名词 | 10 条，4 动词 + 1 形容词 + 1 verb_phrase | 10 条，6 动词 |
+| gaullismus | 8 条，2 collocation | **10 条全名词** | **10 条全名词** |
+| msc-oil | 5 条全名词 | 8 条，1 fixed_expression | 10 条，2 动词 + 1 副词 |
+| meghan | 7 条，0 动词 | 10 条，2 动词 + 1 verb_phrase | 10 条，3 动词 + 可分动词 |
+
+- **短文/人物新闻**：第二次 vocabulary 调用（尤其极简 B）明显比生产单次更易出动词；**Gaullismus 长文**拆分仍可能全名词，拆分不保证优于单次。
+- **未改** `/api/analyze-article`、生产 `SYSTEM_PROMPT`、保存逻辑。
+
+**修改的主要文件**
+
+- `src/lib/articleAnalysis/articleAnalysisExperiments.ts`
+- `src/lib/articleAnalysis/experimentalVocabularyOnlyMinimalPrompt.ts`
+- `src/lib/articleAnalysis/vocabularySecondCallExperiment.live.test.ts`
+- `src/lib/articleAnalysis/vocabularyOnlyVsProductionExperiment.live.test.ts`（极简 B 改 import 共用）
+- `scripts/vocabulary-second-call-experiment-report.json`
+
+**当前项目状态**
+
+- 生产仍为单次整文分析；第二次调用仅实验代码。
+- **`npm test`**（63）、**`npm run build`** 已通过。
+
+**已知问题**
+
+- 长文 Gaullismus 在拆分路径下仍全名词；若上生产需权衡 **2× API 成本** 与长文稳定性。
+- 拆分第二次调用与「仅 vocabulary-only 单次（无 grammar 并行）」效果可能不同，需对照 `vocabulary-only-vs-production` 报告区分。
+
+**下一步建议**
+
+- 维持生产单次；个人可用版优先。若再验证拆分，可对比「仅第二次 vocab 调用、不并行 core」作为对照组。
+
+**复现命令**
+
+```powershell
+$env:NODE_OPTIONS='--use-system-ca'
+$env:VOCAB_SECOND_CALL_LIVE='1'
+npx vitest run --config vitest.live.config.ts src/lib/articleAnalysis/vocabularySecondCallExperiment.live.test.ts --testTimeout=900000
+```
+
+**自选一篇正文（两次拆分，不入库）**
+
+1. 把德文正文存为 UTF-8，例如 `scripts/fixtures/my-article.txt`
+2. PowerShell：
+
+```powershell
+$env:NODE_OPTIONS='--use-system-ca'
+$env:VOCAB_SPLIT_LIVE='1'
+$env:VOCAB_SPLIT_FILE='scripts/fixtures/my-article.txt'
+$env:VOCAB_SPLIT_TITLE='你的标题（可选）'
+# 只跑两次拆分、不对比生产单次（省 1 次 API）：
+# $env:VOCAB_SPLIT_STRATEGIES='mini_split_reset_vocab,mini_split_minimal_b'
+npm run vocab-split:try
+```
+
+- 终端会打印每条词汇的词性；报告 **`scripts/vocabulary-split-custom-report.json`**
+- 实现：`vocabularySplitCustomArticle.live.test.ts`；**未接** Web 导入页或 `/api/analyze-article`
+
+### 2026-05-17 — Vocabulary Prompt Reset v1
+
+**本次完成了什么**
+
+- 按 A/B 结论**重置**生产 vocabulary prompt（非追加补丁）：`vocabularySelectionPrompt.ts` 成为**唯一**词汇任务说明（`VOCABULARY_SYSTEM_SECTION`，对齐极简 B 的 balanced mix / reading-learning value）。
+- **`openaiArticleAnalysis.ts`**：删除冗长内联段（【名词：冠词与复数】长段、【part_of_speech 与 grammatical_gender 硬性枚举】、【每条 vocabulary 须在释义中…】、重复推荐数量/反关键词等）；保留 Grammar v2、userLevel 短句、grammar/vocabulary 分工与共用硬性要求。
+- **`openaiVocabularyOnlyAnalysis.ts`**：实验用 prompt 与生产 vocabulary 段同源。
+- **`vocabularySelectionPrompt.test.ts`**：断言 Reset v1 接线、无旧补丁段、仍含 Grammar v2。
+- **`vocabularyResetAcceptance.live.test.ts`**：`news-short-article` live 验收（`VOCAB_RESET_ACCEPTANCE_LIVE=1`）。
+- **`grammarV2Acceptance.live.test.ts`**：修正误用 `ARTICLE_CORE_ANALYSIS_JSON_SCHEMA` → `ARTICLE_ANALYSIS_JSON_SCHEMA`。
+
+**验收（live，`gpt-4o-mini`，`NODE_OPTIONS=--use-system-ca`）**
+
+- **news-short-article**：6 条 — noun=5、verb=1（`verb_phrase`「Experten beurteilen」）；**非全名词**（Reset 前 A/B 为 5/5 名词）。
+- **Grammar v2**：7 句用例全过；含 `Um elf Uhr muss ich Medikamente nehmen.` → `hauptsatz_v2`。
+
+**修改的主要文件**
+
+- `src/lib/articleAnalysis/vocabularySelectionPrompt.ts`
+- `src/lib/articleAnalysis/openaiArticleAnalysis.ts`
+- `src/lib/articleAnalysis/openaiVocabularyOnlyAnalysis.ts`
+- `src/lib/articleAnalysis/vocabularySelectionPrompt.test.ts`
+- `src/lib/articleAnalysis/vocabularyResetAcceptance.live.test.ts`
+- `src/lib/articleAnalysis/grammarV2Acceptance.live.test.ts`
+
+**当前项目状态**
+
+- 生产仍为**单次** `/api/analyze-article` + `gpt-4o-mini`；route/schema/normalize/filter/保存未改。
+- **`npm test`**（62）、**`npm run build`** 已通过。
+
+**已知问题**
+
+- 短文 live 仍偏名词（6 条中 5 名词），未达 A/B 极简 B 的 10 条混合度；长文需本地重分析观察。
+- Live 测试需 `NODE_OPTIONS=--use-system-ca` 或代理/TLS 配置（见 `.env.example`）。
+
+**下一步建议**
+
+- 本地 **重启 dev** 后对已保存短文/长文 **重新分析**，对比词汇 Tab 词性分布。
+- 若短文仍长期偏名词，再评估是否换 `gpt-4o` 或进一步缩短 Grammar v2 与 vocabulary 同屏竞争（仍不做候选池/双 API）。
+
+**批量机检（2026-05-17 夜，`VOCAB_BATCH_LIVE=1`，生产 `SYSTEM_PROMPT` + `gpt-4o-mini`）**
+
+报告：`scripts/vocabulary-reset-batch-report.json`；`promptResetWired: true`。
+
+| fixture | 词汇条数 | 名词类 | 动词类 | 全名词？ |
+|---------|----------|--------|--------|----------|
+| news-short | 6 | 4 | 2 verb | 否 |
+| gaullismus | 8 | 7 | 1 verb_phrase | 否 |
+| msc-oil | 5 | 5 | 0 | **是** |
+
+说明：Reset prompt **已生效**（同链路重跑），但**不稳定**——短文可出现动词，MSC 中等篇幅仍 5/5 名词。仓库无 Meghan 稿正文，无法复现用户截图 8/8 名词；需用户提供正文或从 Supabase 导出后再跑 `vocabularyBatchRegression.live.test.ts` 扩展用例。
+
+### 2026-05-18 — vocabulary-only（极简 B）vs 生产整文：非生产实验
+
+**本次完成了什么**
+
+- 新增 **`src/lib/articleAnalysis/vocabularyOnlyVsProductionExperiment.live.test.ts`**：对 fixture 并行调用 **生产整文** `SYSTEM_PROMPT` + `ARTICLE_ANALYSIS_JSON_SCHEMA` 与 **实验** 英文极简 B + `VOCABULARY_ONLY_JSON_SCHEMA`（无 Grammar v2 / 无摘要 / 无阅读题）；不改 route、不改 schema 文件、不改保存。
+- 统计：每篇 vocabulary 数量、细分 `part_of_speech`（noun、compound_noun、verb、verb_phrase、separable_verb、collocation、fixed_expression、adjective、adverb、connector、other）、`surface_form` 在截断后正文中的子串匹配；`comparison_notes` 对比非名词条数；报告含前 12 条 sample。
+- **Meghan**：若存在 `scripts/fixtures/meghan-article.txt` / `meghan-who.txt` / `meghan.txt` 则自动纳入，否则报告字段 **`meghan_fixture: skipped_no_file`**。（2026-05-18 起已提交 **`meghan-article.txt`**：由用户粘贴正文经去页面噪声清理。）
+- 词性统计将 **`verb-preposition combination`** 等自由文案归入 **`verb_phrase`** 计数（仅实验脚本内归一）。
+
+**如何运行**
+
+```text
+$env:NODE_OPTIONS='--use-system-ca'
+$env:VOCAB_ONLY_VS_PROD_LIVE='1'
+npx vitest run --config vitest.live.config.ts src/lib/articleAnalysis/vocabularyOnlyVsProductionExperiment.live.test.ts --testTimeout=600000
+```
+
+**报告路径**：`scripts/vocabulary-only-vs-production-experiment-report.json`
+
+**一次样例结果（2026-05-18 run，`gpt-4o-mini`）**
+
+| fixture | production | minimal B only |
+|---------|------------|----------------|
+| news-short | 7 条；4 noun + 1 compound + 1 verb + 1 verb_phrase；surface 全匹配 | 10 条；动词/动介/形容词更多 |
+| gaullismus | 7 条；**全名词类**；1 条 surface 未在文中匹配 | 10 条；**仍全名词**；surface 全匹配 |
+| msc-oil | 6 条；**全名词类** | 10 条；含动词；1 条 surface 大小写与原文不一致未匹配 |
+
+**结论（该次 run）**：极简 vocabulary-only 在 **news-short / msc** 上比整文 production **更易出混合词性**；在 **gaullismus** 上与 production **同为全名词**，说明「单独调用」**不保证**长文稳定混合，但与「是否 worth 拆第二次调用」的决策仍相关（需成本与稳定性权衡）。
+
+**修改的主要文件**
+
+- `src/lib/articleAnalysis/vocabularyOnlyVsProductionExperiment.live.test.ts`（新建）
+
+### 2026-05-18 — 本篇词汇统计口径（词条）+ 未定位仍保存
+
+**本次完成了什么**
+
+- 阅读页词汇 Tab：**主统计改为词条/卡片**（本篇词汇 N 条、AI vs 手动、可高亮 vs 暂无高亮、学习中/已掌握/暂忽略）；**移除** token「生词数 / 全文总词数 / 占比」主展示。
+- **`convertAnalysisResultToArticleItems`**：`surface_form` 无法在正文定位时仍生成词条（占位 occurrence），保存后与预览候选数一致。
+- **`articleVocabItemIsHighlightableInText`**；列表卡 **「暂无高亮」**；AI 预览 **「未定位」**；保存提示与 **`listRealAiEntriesWithoutTextMatch`** 语义对齐（不再写「已跳过」）。
+- **`convertAnalysisToArticleItems.test.ts`**；**`docs/PRD.md`** §6 + Phase 5 表。
+
+**修改的主要文件**
+
+- `src/components/InteractiveArticleReader.tsx`
+- `src/lib/articleAnalysis/convertAnalysisToArticleItems.ts`
+- `src/lib/articleReadingModel.ts`
+- `src/app/articles/[id]/page.tsx`
+- `src/lib/articleAnalysis/convertAnalysisToArticleItems.test.ts`
+- `docs/PRD.md`
+
+**构建**：`npm test`（63）、`npm run build` 已通过。
+
+---
+
 ## 当前阶段
 
 **Phase 2.5**、**Phase 3.0（Mock 演示）**、**Phase 3.1（OpenAI 预览）**、**Phase 3.2（真实 AI 确认保存）**、**Phase 3.5（文章页 AI 区：真实 AI 为主，Mock 仅开发工具）**、**Phase 3.6（学习项删除）**、**Phase 3.7（学习项状态语义 UI：学习中 + 已掌握折叠）** 已落地（见下方「更新记录」）。下方「已完成内容」含历史 **Phase 1 Mock** 记录，完整课文演示仍以 **`/articles/mock`** 为准。
@@ -75,6 +544,16 @@
 ---
 
 ## 更新记录（按任务追加）
+
+### 2026-05-17 — vocabularySelectionPrompt 接线（narrow wiring）
+
+**本次完成**
+
+- **`openaiArticleAnalysis.ts`**：`import` 并插入 **`VOCABULARY_LEXICAL_SCOPE_SECTION`**、**`VOCABULARY_SURFACE_FORM_LEMMA_SECTION`**；**替换**原「词汇推荐范围」「可分动词与动词变形」内联段（删除 `richtet … ein` 等矛盾示例）。
+- **保留**：名词冠词、part_of_speech/gender、推荐数量、userLevel、硬性要求、Grammar v2。
+- **`vocabularySelectionPrompt.test.ts`**：断言生产 `SYSTEM_PROMPT` 含 selection 关键词、无省略号示例。
+
+**验证**：**`npm test`** / **`npm run build`** 已通过；live POS 待维护者复测。
 
 ### 2026-05-17 — 回退方案 C，恢复 d4aee6e 单次调用 + 完整词汇 Prompt
 

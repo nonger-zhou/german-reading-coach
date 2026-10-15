@@ -10,7 +10,7 @@ import { filterArticleAnalysisByArticleText } from "./filterAnalysisByArticleTex
 import {
   buildOpenAIAnalysisUserContent,
   normalizeOpenAIArticleAnalysis,
-  SYSTEM_PROMPT,
+  SYSTEM_PROMPT_LEGACY,
 } from "./openaiArticleAnalysis";
 import type { AnalyzedGrammarItem } from "./types";
 import { createServerOpenAIClient } from "../openai/createServerOpenAIClient";
@@ -227,7 +227,7 @@ async function analyzeSentence(sentence: string): Promise<AnalyzedGrammarItem[]>
     model: "gpt-4o-mini",
     temperature: 0.3,
     messages: [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: SYSTEM_PROMPT_LEGACY },
       {
         role: "user",
         content: buildOpenAIAnalysisUserContent({
@@ -239,7 +239,7 @@ async function analyzeSentence(sentence: string): Promise<AnalyzedGrammarItem[]>
     ],
     response_format: {
       type: "json_schema",
-      json_schema: ARTICLE_CORE_ANALYSIS_JSON_SCHEMA,
+      json_schema: ARTICLE_ANALYSIS_JSON_SCHEMA,
     },
   });
   const content = completion.choices[0]?.message?.content;

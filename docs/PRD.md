@@ -96,6 +96,15 @@ German Reading Coach 的**核心不是**单一手机 App，也**不是**只做�
 - 优先做 **PWA / 系统分享导入**：接收 URL、标题、用户选中文本；若仅收到 URL，则走现有 `/import` 链接导入并在失败时引导粘贴。
 - 对于手机上“全文选择困难”的问题，优先支持**选中文本分享**与**剪贴板读取**；完整的一键正文提取需评估 **iOS Safari Extension**、**Android 浏览器扩展**或系统 Share Extension，作为后续较重投入。
 
+**导入来源排期（2026-05 讨论，详见 [`IMPORT_SOURCES_AND_ROADMAP.md`](./IMPORT_SOURCES_AND_ROADMAP.md)）**
+
+- **P0（现在）**：**HTML 正文**（新闻、博客、官网 FAQ 等）— 链接导入、Chrome 插件、粘贴；用于阅读页**原文排版**（段落正文 + 点词/拖选/AI），例如 L-GAV「十个常见问题」外链。
+- **P1**：导入页/插件说明（何种来源用何种入口）；内置 PDF 标签提示拖选导入。
+- **P2**：浏览器 内**有文字层**的 PDF（非 SCORM）。
+- **P3**：SCREEN/扫描 PDF、按页 OCR。
+- **P4**：SCORM 等防复制互动测验（按屏 OCR，单独评估合规）。
+- **暂不与 P0 并行**：Moodle 登录态服务端抓 PDF、SCORM 全自动抓题。
+
 ### 1.4.1 当前已实现（Phase 2.5 Web，截至文档更新日）
 
 - **Supabase Auth**：邮箱密码登录、`profiles`。
@@ -338,6 +347,7 @@ German Reading Coach 的**核心不是**单一手机 App，也**不是**只做�
 
 - 左侧：原文。
 - 右侧 Tabs：**词汇**、**语法**、**摘要**、**阅读问题**。
+- **本篇词汇统计（词汇 Tab）**：主数字为**本篇词汇卡片条数**（1 个固定搭配 / 动词短语 / 复合名词 = 1 条）；展示 AI 保存与手动添加条数、文中可高亮与暂无高亮条数，以及学习中 / 已掌握 / 暂忽略。**不**使用拆词 token 作为「生词数」主统计。AI 分析结果中 `surface_form` 无法在正文精确匹配的词条仍计入本篇并允许保存，但**不产生文中高亮**（卡片标「暂无高亮」，预览标「未定位」）。
 - 原文中高亮重点词和语法结构。
 - 点击高亮词 → 右侧显示词汇详情。
 - 点击语法高亮 → 右侧显示语法解释。
@@ -568,7 +578,7 @@ AI 主动推荐的目标**不是**列出文中所有单词，而是找出：
 | **Phase 2** | Supabase：**✅** 远程项目、schema（7 表）、anon client、**`/settings/supabase-test`**、**Auth**、**`profiles`（001/002）**、**2.3** **`/import`→`articles`→`/articles/[id]`**、**2.4** **`/articles/[id]`** 阅读交互（**`InteractiveArticleReader`**）、**2.5** 阅读页手动词汇/语法写库（**vocabulary_*** / **grammar_***，**005/006**）、**`articles` GRANT（003）**、**dashboard**；**⏳** 总词库/总语法页与 OpenAI、**Vercel**、**Chrome 插件 MVP**（暂缓） |
 | **Phase 3** | **3.0**：**`/articles/[id]`** **「AI 分析本文」** → **`mockAnalyzeArticle`**（无 OpenAI）；类型 **`src/lib/articleAnalysis/types.ts`**；Mock 词汇/语法 **`source = ai_mock`** 写库；摘要/阅读问题**仅页面 state**。**3.1**：**`POST /api/analyze-article`** + OpenAI **结构化 JSON**；阅读页 **「真实 AI 分析测试」** 仅预览、**不写库**；**`OPENAI_API_KEY`** 仅服务端。**3.2+（规划）**：用户确认后持久化真实 AI 词条、质量与过滤迭代。 |
 | **Phase 4** | **4.0 URL 自动导入**：`/import` 新增「链接导入」模式；`POST /api/import-url` 服务端抓取（`http/https`）、解析标题/来源/发布时间文本/正文并复用现有清理/保存流程（不调用 OpenAI、不改 schema/RLS）；抓取失败时在 URL 输入框下方提示「站点可能拒绝抓取或需要登录」，引导手动粘贴；手动粘贴区已支持 **「从剪贴板读取」**，降低手机/桌面复制正文后的导入成本。**4.1 删除文章 v1**：`/articles/[id]` 提供删除入口；执行删除本文 `articles` 与本文 `vocabulary_occurrences` / `grammar_occurrences`，默认保留长期 `vocabulary_items` / `vocabulary_senses` / `grammar_items`。后续再推进长期词库与语法库合并能力。 |
-| **Phase 5** | 自适应解释；新增导入入口评估：**拍照读取文章（OCR）**（用于手机端“复制全文困难”场景）。阅读页词汇统计口径固定为：**全文总词数不去重**；**生词去重**（同词多次出现算 1）；**`ignored` 计入生词**；`mastered`、已删除与未标注不计入生词。 |
+| **Phase 5** | 自适应解释；新增导入入口评估：**拍照读取文章（OCR）**（用于手机端“复制全文困难”场景）。**阅读页「本篇词汇统计」**：主数字为**本篇词汇卡片条数**（1 短语 / 搭配 = 1 条），并区分 AI 保存与手动添加、文中可高亮与暂无高亮；**不再**以拆词 token 作为「生词数」主统计（旧 token 口径已移除）。 |
 | **Phase 6** | Vercel 部署 |
 | **Phase 7** | Chrome 插件（桌面导入入口）MVP 已新增：`browser-extension/chrome-mv3` 提供插件按钮 / 右键菜单 **「导入到 German Reading Coach」**，读取用户当前已可见网页的标题、URL、来源、正文并打开 Web App `/import` 预填草稿；优先解决服务端直抓受限、需要浏览器登录态、手动全选复制困难等场景。插件应过滤常见 newsletter、相关阅读、作者简介、分享与评论等非正文块。合规边界：不绕过付费墙、登录墙或订阅限制。 |
 
@@ -846,7 +856,7 @@ AI 自动分析的目标**不是**罗列文中所有生词，而是：
 - **「词汇 / 表达」**包括（与 **§8.1.1**、**§13.1** 一致）：**单词**、**短语**、**搭配**、**固定表达**、**可分动词**、**复合名词**、**动词短语**、**介词短语**、**新闻常用表达**；**part_of_speech** 须按真实类型标注（动词/搭配/可分动词不得为凑冠词一律标成名词）。
 - **核心目标**（与 **§13.1** 一致）：用户浏览推荐及释义后，应能**大致读懂文章主旨与关键细节**。
 - **当前阶段不做**：**「显示更多词汇 / 展开更多推荐」**等能力；若 AI 漏项，用户**手动添加**后，可**补充 AI 解释**或使用阅读页 **「外部深入解释」**（外链，不产生本应用 API 成本）。
-- **实现侧**：**`POST /api/analyze-article`** **单次** OpenAI 调用（**`SYSTEM_PROMPT`** in **`openaiArticleAnalysis.ts`**，含 Grammar v2 + 2026-05-15 词汇/冠词/词性指引）；**`json_schema`** 对 **`vocabulary`** / **`grammar`** 均**无** **`maxItems`**；规范化**不**截断条数。
+- **实现侧（2026-05-19 默认）**：**`POST /api/analyze-article`** **单次** OpenAI；**`SYSTEM_PROMPT_VOCAB_FIRST`**（极简 B 词汇 + 3 条阅读问题）；**`json_schema`** 仅 **`vocabulary` + `reading_questions`**。整文**不再**默认输出 grammar / 摘要。**`ENABLE_AUTO_GRAMMAR_ANALYSIS=true`** 时恢复旧 **`SYSTEM_PROMPT_LEGACY`**（Grammar v2 + Reset v1 词汇段 + 摘要）。按需语法：**`POST /api/explain-grammar-selection`**（选区 + 短上下文，不入库总库）。全文中文翻译：**复制 Prompt** 至外部 AI，**不**调用本 App API。
 
 ---
 

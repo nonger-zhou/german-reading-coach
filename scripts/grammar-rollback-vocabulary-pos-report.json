@@ -1,0 +1,491 @@
+{
+  "runAt": "2026-05-19T11:28:56.971Z",
+  "model": "gpt-4o-mini",
+  "note": "同一 json_schema（当前生产）；仅 system prompt 不同。pre = git 8fee112 整文 prompt（Grammar v2 之前，语法最多 8 条 + 广义词汇段）。",
+  "production_has_grammar_v2": true,
+  "pre_prompt_source": "git 8fee112:openaiArticleAnalysis.ts",
+  "articles": [
+    {
+      "id": "news-short",
+      "file": "news-short-article.txt",
+      "charCount": 357,
+      "production": {
+        "vocabulary_count": 7,
+        "grammar_count": 2,
+        "pos": {
+          "total": 7,
+          "noun": 5,
+          "compound_noun": 0,
+          "verb": 0,
+          "verb_phrase": 1,
+          "separable_verb": 0,
+          "collocation": 0,
+          "fixed_expression": 0,
+          "adjective": 1,
+          "adverb": 0,
+          "connector": 0,
+          "other": 0
+        },
+        "all_noun_like": false,
+        "sample": [
+          {
+            "surface_form": "Bundesregierung",
+            "lemma": "Bundesregierung",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Klimaziele",
+            "lemma": "Klimaziel",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Treibhausgas-Emissionen",
+            "lemma": "Treibhausgas-Emission",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Jobverlusten",
+            "lemma": "Jobverlust",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Experten",
+            "lemma": "Experte",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "positiv",
+            "lemma": "positiv",
+            "part_of_speech": "adjective"
+          },
+          {
+            "surface_form": "verweisen auf",
+            "lemma": "verweisen auf",
+            "part_of_speech": "verb_phrase"
+          }
+        ]
+      },
+      "pre_grammar_v2": {
+        "vocabulary_count": 8,
+        "grammar_count": 3,
+        "pos": {
+          "total": 8,
+          "noun": 4,
+          "compound_noun": 1,
+          "verb": 0,
+          "verb_phrase": 0,
+          "separable_verb": 0,
+          "collocation": 0,
+          "fixed_expression": 2,
+          "adjective": 1,
+          "adverb": 0,
+          "connector": 0,
+          "other": 0
+        },
+        "all_noun_like": false,
+        "sample": [
+          {
+            "surface_form": "Bundesregierung",
+            "lemma": "die Bundesregierung",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Klimaziele",
+            "lemma": "die Klimaziele",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Treibhausgas-Emissionen",
+            "lemma": "die Treibhausgas-Emissionen",
+            "part_of_speech": "compound_noun"
+          },
+          {
+            "surface_form": "Jobverlusten",
+            "lemma": "der Jobverlust",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Maßnahmen",
+            "lemma": "die Maßnahmen",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "positiv",
+            "lemma": "positiv",
+            "part_of_speech": "adjective"
+          },
+          {
+            "surface_form": "warnen vor",
+            "lemma": "warnen vor",
+            "part_of_speech": "fixed_expression"
+          },
+          {
+            "surface_form": "verweisen auf",
+            "lemma": "verweisen auf",
+            "part_of_speech": "fixed_expression"
+          }
+        ]
+      },
+      "comparison_notes": [
+        "pre_grammar_v2 非名词更多（3 vs 2）"
+      ]
+    },
+    {
+      "id": "gaullismus",
+      "file": "gaullismus-article.txt",
+      "charCount": 9711,
+      "production": {
+        "vocabulary_count": 7,
+        "grammar_count": 2,
+        "pos": {
+          "total": 7,
+          "noun": 3,
+          "compound_noun": 2,
+          "verb": 0,
+          "verb_phrase": 1,
+          "separable_verb": 0,
+          "collocation": 1,
+          "fixed_expression": 0,
+          "adjective": 0,
+          "adverb": 0,
+          "connector": 0,
+          "other": 0
+        },
+        "all_noun_like": false,
+        "sample": [
+          {
+            "surface_form": "europäischen Gaullismus",
+            "lemma": "europäischer Gaullismus",
+            "part_of_speech": "compound_noun"
+          },
+          {
+            "surface_form": "Mitsprache",
+            "lemma": "Mitsprache",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Souveränität",
+            "lemma": "Souveränität",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "militärischen Schutz",
+            "lemma": "militärischer Schutz",
+            "part_of_speech": "collocation"
+          },
+          {
+            "surface_form": "Rüstungsindustrie",
+            "lemma": "Rüstungsindustrie",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "militärisch abzusichern",
+            "lemma": "militärisch absichern",
+            "part_of_speech": "verb_phrase"
+          },
+          {
+            "surface_form": "Karolingisches Reich",
+            "lemma": "Karolingisches Reich",
+            "part_of_speech": "compound_noun"
+          }
+        ]
+      },
+      "pre_grammar_v2": {
+        "vocabulary_count": 8,
+        "grammar_count": 3,
+        "pos": {
+          "total": 8,
+          "noun": 6,
+          "compound_noun": 0,
+          "verb": 0,
+          "verb_phrase": 0,
+          "separable_verb": 0,
+          "collocation": 0,
+          "fixed_expression": 0,
+          "adjective": 0,
+          "adverb": 0,
+          "connector": 0,
+          "other": 2
+        },
+        "all_noun_like": false,
+        "sample": [
+          {
+            "surface_form": "Gaullismus",
+            "lemma": "Gaullismus",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Souveränität",
+            "lemma": "Souveränität",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Mitsprache",
+            "lemma": "Mitsprache",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "militärische Kapazitäten",
+            "lemma": "militärische Kapazitäten",
+            "part_of_speech": "phrase"
+          },
+          {
+            "surface_form": "Rüstungsindustrie",
+            "lemma": "Rüstungsindustrie",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "europäische Sicherheitsarchitektur",
+            "lemma": "europäische Sicherheitsarchitektur",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "militärischen Schutz",
+            "lemma": "militärischen Schutz",
+            "part_of_speech": "phrase"
+          },
+          {
+            "surface_form": "Friedensmacht",
+            "lemma": "Friedensmacht",
+            "part_of_speech": "noun"
+          }
+        ]
+      },
+      "comparison_notes": [
+        "非名词条数相同"
+      ]
+    },
+    {
+      "id": "msc-oil",
+      "file": "msc-oil-article.txt",
+      "charCount": 1623,
+      "production": {
+        "vocabulary_count": 6,
+        "grammar_count": 2,
+        "pos": {
+          "total": 6,
+          "noun": 5,
+          "compound_noun": 1,
+          "verb": 0,
+          "verb_phrase": 0,
+          "separable_verb": 0,
+          "collocation": 0,
+          "fixed_expression": 0,
+          "adjective": 0,
+          "adverb": 0,
+          "connector": 0,
+          "other": 0
+        },
+        "all_noun_like": true,
+        "sample": [
+          {
+            "surface_form": "Ölhandel",
+            "lemma": "Ölhandel",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "fossilen Brennstoffen",
+            "lemma": "fossiler Brennstoff",
+            "part_of_speech": "compound_noun"
+          },
+          {
+            "surface_form": "Marktzugang",
+            "lemma": "Marktzugang",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Wettbewerbern",
+            "lemma": "Wettbewerber",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Kapitänspatent",
+            "lemma": "Kapitänspatent",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Umweltverbände",
+            "lemma": "Umweltverband",
+            "part_of_speech": "noun"
+          }
+        ]
+      },
+      "pre_grammar_v2": {
+        "vocabulary_count": 6,
+        "grammar_count": 3,
+        "pos": {
+          "total": 6,
+          "noun": 4,
+          "compound_noun": 1,
+          "verb": 0,
+          "verb_phrase": 0,
+          "separable_verb": 0,
+          "collocation": 0,
+          "fixed_expression": 1,
+          "adjective": 0,
+          "adverb": 0,
+          "connector": 0,
+          "other": 0
+        },
+        "all_noun_like": false,
+        "sample": [
+          {
+            "surface_form": "Ölhandel",
+            "lemma": "der Ölhandel",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "fossilen Brennstoffen",
+            "lemma": "die fossilen Brennstoffe",
+            "part_of_speech": "compound_noun"
+          },
+          {
+            "surface_form": "Marktzugang sichern",
+            "lemma": "Marktzugang sichern",
+            "part_of_speech": "fixed_expression"
+          },
+          {
+            "surface_form": "Kapitänspatent",
+            "lemma": "das Kapitänspatent",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Umweltverbände",
+            "lemma": "die Umweltverbände",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Versicherungsprämien",
+            "lemma": "die Versicherungsprämien",
+            "part_of_speech": "noun"
+          }
+        ]
+      },
+      "comparison_notes": [
+        "pre_grammar_v2 非名词更多（1 vs 0）",
+        "production：全名词类"
+      ]
+    },
+    {
+      "id": "meghan",
+      "file": "meghan-article.txt",
+      "charCount": 2365,
+      "production": {
+        "vocabulary_count": 6,
+        "grammar_count": 2,
+        "pos": {
+          "total": 6,
+          "noun": 4,
+          "compound_noun": 2,
+          "verb": 0,
+          "verb_phrase": 0,
+          "separable_verb": 0,
+          "collocation": 0,
+          "fixed_expression": 0,
+          "adjective": 0,
+          "adverb": 0,
+          "connector": 0,
+          "other": 0
+        },
+        "all_noun_like": true,
+        "sample": [
+          {
+            "surface_form": "Hosenanzug",
+            "lemma": "Hosenanzug",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Einweihung",
+            "lemma": "Einweihung",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "verstorbenen Kindern",
+            "lemma": "verstorbenes Kind",
+            "part_of_speech": "compound_noun"
+          },
+          {
+            "surface_form": "Kunstinstallation",
+            "lemma": "Kunstinstallation",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Sperrbildschirm",
+            "lemma": "Sperrbildschirm",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "digitalen Gefahren",
+            "lemma": "digitale Gefahr",
+            "part_of_speech": "compound_noun"
+          }
+        ]
+      },
+      "pre_grammar_v2": {
+        "vocabulary_count": 8,
+        "grammar_count": 3,
+        "pos": {
+          "total": 8,
+          "noun": 5,
+          "compound_noun": 2,
+          "verb": 1,
+          "verb_phrase": 0,
+          "separable_verb": 0,
+          "collocation": 0,
+          "fixed_expression": 0,
+          "adjective": 0,
+          "adverb": 0,
+          "connector": 0,
+          "other": 0
+        },
+        "all_noun_like": false,
+        "sample": [
+          {
+            "surface_form": "Hosenanzug",
+            "lemma": "der Hosenanzug",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Herzensangelegenheit",
+            "lemma": "die Herzensangelegenheit",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Einweihung",
+            "lemma": "die Einweihung",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "verstorbenen Kindern",
+            "lemma": "der verstorbene Kind",
+            "part_of_speech": "compound_noun"
+          },
+          {
+            "surface_form": "Online-Schäden",
+            "lemma": "der Online-Schaden",
+            "part_of_speech": "compound_noun"
+          },
+          {
+            "surface_form": "Sperrbildschirm",
+            "lemma": "der Sperrbildschirm",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "Kunstinstallation",
+            "lemma": "die Kunstinstallation",
+            "part_of_speech": "noun"
+          },
+          {
+            "surface_form": "sensibilisieren",
+            "lemma": "sensibilisieren",
+            "part_of_speech": "verb"
+          }
+        ]
+      },
+      "comparison_notes": [
+        "pre_grammar_v2 非名词更多（1 vs 0）",
+        "production：全名词类"
+      ]
+    }
+  ]
+}

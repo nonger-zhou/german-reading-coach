@@ -1,0 +1,1107 @@
+{
+  "generatedAt": "2026-05-19T15:39:20.992Z",
+  "model": "gpt-4o-mini",
+  "userLevel": "B1",
+  "hypotheses": {
+    "H1": "整文单次：vocabulary 段换极简 B，仍含 Grammar v2（mini_single_full_minimal_b_vocab）",
+    "H2": "拆分并行：第二次调用极简 B vocabulary-only（mini_split_minimal_b）",
+    "A0": "生产整文 Reset v1（mini_single）"
+  },
+  "head_to_head_h1_vs_h2": {
+    "verbScore_wins": {
+      "h1": 0,
+      "h2": 5,
+      "tie": 0
+    },
+    "notAllNoun_wins": {
+      "h1": 0,
+      "h2": 2,
+      "tie": 3
+    },
+    "note": "verbScore = verb bucket + phrase bucket; notAllNoun = !allNounLike"
+  },
+  "cases": [
+    {
+      "case": "short-news",
+      "charCount": 357,
+      "runs": [
+        {
+          "strategy": "A0_production_reset_v1_full_single",
+          "count": 5,
+          "counts": {
+            "total": 5,
+            "noun": 3,
+            "verb": 2,
+            "adjective": 0,
+            "adverb": 0,
+            "phrase": 0,
+            "other": 0
+          },
+          "expressionTypes": 1,
+          "allNounLike": false,
+          "verbScore": 2,
+          "items": [
+            {
+              "pos": "noun",
+              "surface": "Klimaziele",
+              "lemma": "das Klimaziel",
+              "zh": "气候目标"
+            },
+            {
+              "pos": "compound_noun",
+              "surface": "Treibhausgas-Emissionen",
+              "lemma": "die Treibhausgas-Emission",
+              "zh": "温室气体排放"
+            },
+            {
+              "pos": "noun",
+              "surface": "Jobverlusten",
+              "lemma": "der Jobverlust",
+              "zh": "失业"
+            },
+            {
+              "pos": "verb",
+              "surface": "beurteilen",
+              "lemma": "beurteilen",
+              "zh": "评估，判断"
+            },
+            {
+              "pos": "verb_phrase",
+              "surface": "verweisen auf",
+              "lemma": "verweisen auf",
+              "zh": "提到，指向"
+            }
+          ]
+        },
+        {
+          "strategy": "H1_full_article_vocab_section_minimal_b",
+          "count": 6,
+          "counts": {
+            "total": 6,
+            "noun": 3,
+            "verb": 3,
+            "adjective": 0,
+            "adverb": 0,
+            "phrase": 0,
+            "other": 0
+          },
+          "expressionTypes": 0,
+          "allNounLike": false,
+          "verbScore": 3,
+          "items": [
+            {
+              "pos": "noun",
+              "surface": "Klimaziele",
+              "lemma": "Klimaziel",
+              "zh": "气候目标"
+            },
+            {
+              "pos": "noun",
+              "surface": "Treibhausgas-Emissionen",
+              "lemma": "Treibhausgas-Emission",
+              "zh": "温室气体排放"
+            },
+            {
+              "pos": "noun",
+              "surface": "Jobverlusten",
+              "lemma": "Jobverlust",
+              "zh": "失业"
+            },
+            {
+              "pos": "verb",
+              "surface": "kritisieren",
+              "lemma": "kritisieren",
+              "zh": "批评"
+            },
+            {
+              "pos": "verb",
+              "surface": "beurteilen",
+              "lemma": "beurteilen",
+              "zh": "评估"
+            },
+            {
+              "pos": "verb",
+              "surface": "verweisen auf",
+              "lemma": "verweisen auf",
+              "zh": "提到，指向"
+            }
+          ]
+        },
+        {
+          "strategy": "H2_split_second_call_minimal_b",
+          "count": 10,
+          "counts": {
+            "total": 10,
+            "noun": 4,
+            "verb": 5,
+            "adjective": 1,
+            "adverb": 0,
+            "phrase": 0,
+            "other": 0
+          },
+          "expressionTypes": 0,
+          "allNounLike": false,
+          "verbScore": 5,
+          "items": [
+            {
+              "pos": "noun",
+              "surface": "Bundesregierung",
+              "lemma": "Bundesregierung",
+              "zh": "联邦政府"
+            },
+            {
+              "pos": "noun",
+              "surface": "Klimaziele",
+              "lemma": "Klimaziel",
+              "zh": "气候目标"
+            },
+            {
+              "pos": "verb",
+              "surface": "beschlossen",
+              "lemma": "beschließen",
+              "zh": "决定"
+            },
+            {
+              "pos": "verb",
+              "surface": "senken",
+              "lemma": "senken",
+              "zh": "降低"
+            },
+            {
+              "pos": "verb-preposition combination",
+              "surface": "warnen vor",
+              "lemma": "warnen vor",
+              "zh": "警告"
+            },
+            {
+              "pos": "noun",
+              "surface": "Jobverlusten",
+              "lemma": "Jobverlust",
+              "zh": "失业"
+            },
+            {
+              "pos": "verb",
+              "surface": "beurteilen",
+              "lemma": "beurteilen",
+              "zh": "评估"
+            },
+            {
+              "pos": "adjective",
+              "surface": "positiv",
+              "lemma": "positiv",
+              "zh": "积极的"
+            },
+            {
+              "pos": "verb-preposition combination",
+              "surface": "verweisen auf",
+              "lemma": "verweisen auf",
+              "zh": "提到"
+            },
+            {
+              "pos": "compound_noun",
+              "surface": "internationale Vorbilder",
+              "lemma": "internationales Vorbild",
+              "zh": "国际榜样"
+            }
+          ]
+        }
+      ],
+      "h1_vs_h2": {
+        "verbScore": {
+          "h1": 3,
+          "h2": 5
+        },
+        "allNounLike": {
+          "h1": false,
+          "h2": false
+        }
+      }
+    },
+    {
+      "case": "gaullismus",
+      "charCount": 9711,
+      "runs": [
+        {
+          "strategy": "A0_production_reset_v1_full_single",
+          "count": 7,
+          "counts": {
+            "total": 7,
+            "noun": 6,
+            "verb": 0,
+            "adjective": 0,
+            "adverb": 0,
+            "phrase": 1,
+            "other": 0
+          },
+          "expressionTypes": 1,
+          "allNounLike": false,
+          "verbScore": 1,
+          "items": [
+            {
+              "pos": "compound_noun",
+              "surface": "europäischen Gaullismus",
+              "lemma": "europäischer Gaullismus",
+              "zh": "欧洲的高尔主义"
+            },
+            {
+              "pos": "noun",
+              "surface": "Mitsprache",
+              "lemma": "Mitsprache",
+              "zh": "发言权，参与权"
+            },
+            {
+              "pos": "noun",
+              "surface": "Souveränität",
+              "lemma": "Souveränität",
+              "zh": "主权，独立性"
+            },
+            {
+              "pos": "collocation",
+              "surface": "militärischen Schutz",
+              "lemma": "militärischer Schutz",
+              "zh": "军事保护"
+            },
+            {
+              "pos": "noun",
+              "surface": "Rüstungsindustrie",
+              "lemma": "Rüstungsindustrie",
+              "zh": "军火工业"
+            },
+            {
+              "pos": "noun",
+              "surface": "militärischen Interventionen",
+              "lemma": "militärische Intervention",
+              "zh": "军事干预"
+            },
+            {
+              "pos": "compound_noun",
+              "surface": "europäischen Sicherheitsarchitektur",
+              "lemma": "europäische Sicherheitsarchitektur",
+              "zh": "欧洲安全架构"
+            }
+          ]
+        },
+        {
+          "strategy": "H1_full_article_vocab_section_minimal_b",
+          "count": 9,
+          "counts": {
+            "total": 9,
+            "noun": 9,
+            "verb": 0,
+            "adjective": 0,
+            "adverb": 0,
+            "phrase": 0,
+            "other": 0
+          },
+          "expressionTypes": 0,
+          "allNounLike": true,
+          "verbScore": 0,
+          "items": [
+            {
+              "pos": "noun",
+              "surface": "europäischen Gaullismus",
+              "lemma": "europäisch Gaullismus",
+              "zh": "欧洲高尔主义"
+            },
+            {
+              "pos": "noun",
+              "surface": "Mitsprache",
+              "lemma": "Mitsprache",
+              "zh": "发言权"
+            },
+            {
+              "pos": "noun",
+              "surface": "Souveränität",
+              "lemma": "Souveränität",
+              "zh": "主权"
+            },
+            {
+              "pos": "noun",
+              "surface": "militärischen Schutz",
+              "lemma": "militärischer Schutz",
+              "zh": "军事保护"
+            },
+            {
+              "pos": "noun",
+              "surface": "Rüstungsindustrie",
+              "lemma": "Rüstungsindustrie",
+              "zh": "军火工业"
+            },
+            {
+              "pos": "noun",
+              "surface": "militärische Interventionen",
+              "lemma": "militärische Intervention",
+              "zh": "军事干预"
+            },
+            {
+              "pos": "noun",
+              "surface": "europäische Sicherheitsarchitektur",
+              "lemma": "europäische Sicherheitsarchitektur",
+              "zh": "欧洲安全架构"
+            },
+            {
+              "pos": "noun",
+              "surface": "transatlantische Partnerschaft",
+              "lemma": "transatlantische Partnerschaft",
+              "zh": "跨大西洋伙伴关系"
+            },
+            {
+              "pos": "noun",
+              "surface": "militärische Kapazitäten",
+              "lemma": "militärische Kapazität",
+              "zh": "军事能力"
+            }
+          ]
+        },
+        {
+          "strategy": "H2_split_second_call_minimal_b",
+          "count": 10,
+          "counts": {
+            "total": 10,
+            "noun": 8,
+            "verb": 1,
+            "adjective": 0,
+            "adverb": 0,
+            "phrase": 0,
+            "other": 1
+          },
+          "expressionTypes": 0,
+          "allNounLike": false,
+          "verbScore": 1,
+          "items": [
+            {
+              "pos": "noun",
+              "surface": "Gaullismus",
+              "lemma": "Gaullismus",
+              "zh": "高尔主义"
+            },
+            {
+              "pos": "noun",
+              "surface": "Mitsprache",
+              "lemma": "Mitsprache",
+              "zh": "发言权"
+            },
+            {
+              "pos": "compound_noun",
+              "surface": "militärische Kapazitäten",
+              "lemma": "militärische Kapazität",
+              "zh": "军事能力"
+            },
+            {
+              "pos": "verb",
+              "surface": "sich zurückziehen",
+              "lemma": "sich zurückziehen",
+              "zh": "撤回，退出"
+            },
+            {
+              "pos": "fixed expression",
+              "surface": "auf sich selbst gestellt",
+              "lemma": "auf sich selbst gestellt sein",
+              "zh": "独立，孤立"
+            },
+            {
+              "pos": "compound_noun",
+              "surface": "militärischen Schutz",
+              "lemma": "militärischer Schutz",
+              "zh": "军事保护"
+            },
+            {
+              "pos": "noun",
+              "surface": "Rüstungsindustrie",
+              "lemma": "Rüstungsindustrie",
+              "zh": "军火工业"
+            },
+            {
+              "pos": "compound_noun",
+              "surface": "moralischer Eifer",
+              "lemma": "moralischer Eifer",
+              "zh": "道德热情"
+            },
+            {
+              "pos": "noun",
+              "surface": "Nachkriegszeit",
+              "lemma": "Nachkriegszeit",
+              "zh": "战后时期"
+            },
+            {
+              "pos": "noun",
+              "surface": "Souveränität",
+              "lemma": "Souveränität",
+              "zh": "主权"
+            }
+          ]
+        }
+      ],
+      "h1_vs_h2": {
+        "verbScore": {
+          "h1": 0,
+          "h2": 1
+        },
+        "allNounLike": {
+          "h1": true,
+          "h2": false
+        }
+      }
+    },
+    {
+      "case": "msc-oil",
+      "charCount": 1623,
+      "runs": [
+        {
+          "strategy": "A0_production_reset_v1_full_single",
+          "count": 5,
+          "counts": {
+            "total": 5,
+            "noun": 5,
+            "verb": 0,
+            "adjective": 0,
+            "adverb": 0,
+            "phrase": 0,
+            "other": 0
+          },
+          "expressionTypes": 0,
+          "allNounLike": true,
+          "verbScore": 0,
+          "items": [
+            {
+              "pos": "noun",
+              "surface": "Ölhandel",
+              "lemma": "Ölhandel",
+              "zh": "石油贸易"
+            },
+            {
+              "pos": "compound_noun",
+              "surface": "fossilen Brennstoffen",
+              "lemma": "fossiler Brennstoff",
+              "zh": "化石燃料"
+            },
+            {
+              "pos": "noun",
+              "surface": "Marktzugang",
+              "lemma": "Marktzugang",
+              "zh": "市场准入"
+            },
+            {
+              "pos": "noun",
+              "surface": "Kapitänspatent",
+              "lemma": "Kapitänspatent",
+              "zh": "船长执照"
+            },
+            {
+              "pos": "compound_noun",
+              "surface": "Umweltverbände",
+              "lemma": "Umweltverband",
+              "zh": "环保组织"
+            }
+          ]
+        },
+        {
+          "strategy": "H1_full_article_vocab_section_minimal_b",
+          "count": 5,
+          "counts": {
+            "total": 5,
+            "noun": 0,
+            "verb": 0,
+            "adjective": 0,
+            "adverb": 0,
+            "phrase": 0,
+            "other": 5
+          },
+          "expressionTypes": 0,
+          "allNounLike": false,
+          "verbScore": 0,
+          "items": [
+            {
+              "pos": "na",
+              "surface": "Ölhandel",
+              "lemma": "Ölhandel",
+              "zh": "石油贸易"
+            },
+            {
+              "pos": "na",
+              "surface": "fossilen Brennstoffen",
+              "lemma": "fossiler Brennstoff",
+              "zh": "化石燃料"
+            },
+            {
+              "pos": "na",
+              "surface": "Marktzugang",
+              "lemma": "Marktzugang",
+              "zh": "市场准入"
+            },
+            {
+              "pos": "na",
+              "surface": "Kapitänspatent",
+              "lemma": "Kapitänspatent",
+              "zh": "船长执照"
+            },
+            {
+              "pos": "na",
+              "surface": "Umweltverbände",
+              "lemma": "Umweltverband",
+              "zh": "环境组织"
+            }
+          ]
+        },
+        {
+          "strategy": "H2_split_second_call_minimal_b",
+          "count": 10,
+          "counts": {
+            "total": 10,
+            "noun": 8,
+            "verb": 2,
+            "adjective": 0,
+            "adverb": 0,
+            "phrase": 0,
+            "other": 0
+          },
+          "expressionTypes": 0,
+          "allNounLike": false,
+          "verbScore": 2,
+          "items": [
+            {
+              "pos": "noun",
+              "surface": "Ölhandel",
+              "lemma": "Ölhandel",
+              "zh": "石油贸易"
+            },
+            {
+              "pos": "verb",
+              "surface": "dominieren",
+              "lemma": "dominieren",
+              "zh": "主导，统治"
+            },
+            {
+              "pos": "verb",
+              "surface": "ausweiten",
+              "lemma": "ausweiten",
+              "zh": "扩展，扩大"
+            },
+            {
+              "pos": "noun",
+              "surface": "offensive",
+              "lemma": "Offensive",
+              "zh": "攻势，进攻"
+            },
+            {
+              "pos": "noun",
+              "surface": "Kapitänspatent",
+              "lemma": "Kapitänspatent",
+              "zh": "船长执照"
+            },
+            {
+              "pos": "noun",
+              "surface": "Marktzugang",
+              "lemma": "Marktzugang",
+              "zh": "市场准入"
+            },
+            {
+              "pos": "noun",
+              "surface": "Wettbewerber",
+              "lemma": "Wettbewerber",
+              "zh": "竞争者"
+            },
+            {
+              "pos": "noun",
+              "surface": "Klimazielen",
+              "lemma": "Klimaziel",
+              "zh": "气候目标"
+            },
+            {
+              "pos": "noun",
+              "surface": "Frachtkapazität",
+              "lemma": "Frachtkapazität",
+              "zh": "货运能力"
+            },
+            {
+              "pos": "noun",
+              "surface": "Versicherungsprämien",
+              "lemma": "Versicherungsprämie",
+              "zh": "保险费"
+            }
+          ]
+        }
+      ],
+      "h1_vs_h2": {
+        "verbScore": {
+          "h1": 0,
+          "h2": 2
+        },
+        "allNounLike": {
+          "h1": false,
+          "h2": false
+        }
+      }
+    },
+    {
+      "case": "meghan",
+      "charCount": 2365,
+      "runs": [
+        {
+          "strategy": "A0_production_reset_v1_full_single",
+          "count": 8,
+          "counts": {
+            "total": 8,
+            "noun": 8,
+            "verb": 0,
+            "adjective": 0,
+            "adverb": 0,
+            "phrase": 0,
+            "other": 0
+          },
+          "expressionTypes": 0,
+          "allNounLike": true,
+          "verbScore": 0,
+          "items": [
+            {
+              "pos": "noun",
+              "surface": "Hosenanzug",
+              "lemma": "Hosenanzug",
+              "zh": "裤装"
+            },
+            {
+              "pos": "noun",
+              "surface": "Einweihung",
+              "lemma": "Einweihung",
+              "zh": "揭幕，开幕"
+            },
+            {
+              "pos": "noun",
+              "surface": "Herz",
+              "lemma": "Herz",
+              "zh": "心，心脏"
+            },
+            {
+              "pos": "noun",
+              "surface": "Schaulustige",
+              "lemma": "Schaulustiger",
+              "zh": "围观者"
+            },
+            {
+              "pos": "noun",
+              "surface": "Denkmal",
+              "lemma": "Denkmal",
+              "zh": "纪念碑，纪念物"
+            },
+            {
+              "pos": "compound_noun",
+              "surface": "Archewell Foundation",
+              "lemma": "Archewell Foundation",
+              "zh": "阿尔基维尔基金会"
+            },
+            {
+              "pos": "noun",
+              "surface": "Online-Schäden",
+              "lemma": "Online-Schaden",
+              "zh": "网络伤害"
+            },
+            {
+              "pos": "noun",
+              "surface": "Kunstinstallation",
+              "lemma": "Kunstinstallation",
+              "zh": "艺术装置"
+            }
+          ]
+        },
+        {
+          "strategy": "H1_full_article_vocab_section_minimal_b",
+          "count": 8,
+          "counts": {
+            "total": 8,
+            "noun": 8,
+            "verb": 0,
+            "adjective": 0,
+            "adverb": 0,
+            "phrase": 0,
+            "other": 0
+          },
+          "expressionTypes": 0,
+          "allNounLike": true,
+          "verbScore": 0,
+          "items": [
+            {
+              "pos": "noun",
+              "surface": "schwarzem Hosenanzug",
+              "lemma": "schwarzer Hosenanzug",
+              "zh": "黑色西装裤"
+            },
+            {
+              "pos": "noun",
+              "surface": "Einweihung",
+              "lemma": "Einweihung",
+              "zh": "揭幕仪式"
+            },
+            {
+              "pos": "noun",
+              "surface": "verstorbenen Kindern",
+              "lemma": "verstorbene Kinder",
+              "zh": "已故儿童"
+            },
+            {
+              "pos": "noun",
+              "surface": "Kunstinstallation",
+              "lemma": "Kunstinstallation",
+              "zh": "艺术装置"
+            },
+            {
+              "pos": "noun",
+              "surface": "Schaulustige",
+              "lemma": "Schaulustiger",
+              "zh": "围观者"
+            },
+            {
+              "pos": "noun",
+              "surface": "digitale Gefahren",
+              "lemma": "digitale Gefahr",
+              "zh": "数字危险"
+            },
+            {
+              "pos": "noun",
+              "surface": "weisse Rosen",
+              "lemma": "weisse Rose",
+              "zh": "白玫瑰"
+            },
+            {
+              "pos": "noun",
+              "surface": "Archewell Foundation",
+              "lemma": "Archewell Foundation",
+              "zh": "阿基维尔基金会"
+            }
+          ]
+        },
+        {
+          "strategy": "H2_split_second_call_minimal_b",
+          "count": 10,
+          "counts": {
+            "total": 10,
+            "noun": 6,
+            "verb": 3,
+            "adjective": 1,
+            "adverb": 0,
+            "phrase": 0,
+            "other": 0
+          },
+          "expressionTypes": 0,
+          "allNounLike": false,
+          "verbScore": 3,
+          "items": [
+            {
+              "pos": "noun",
+              "surface": "Hosenanzug",
+              "lemma": "Hosenanzug",
+              "zh": "裤装"
+            },
+            {
+              "pos": "noun",
+              "surface": "Herzogin",
+              "lemma": "Herzogin",
+              "zh": "公爵夫人"
+            },
+            {
+              "pos": "verb",
+              "surface": "einweihen",
+              "lemma": "einweihen",
+              "zh": "启用，揭幕"
+            },
+            {
+              "pos": "verb phrase",
+              "surface": "aufmerksam machen",
+              "lemma": "aufmerksam machen",
+              "zh": "使人注意"
+            },
+            {
+              "pos": "noun",
+              "surface": "Schaulustige",
+              "lemma": "Schaulustige",
+              "zh": "围观者"
+            },
+            {
+              "pos": "noun",
+              "surface": "Denkmal",
+              "lemma": "Denkmal",
+              "zh": "纪念碑"
+            },
+            {
+              "pos": "verb",
+              "surface": "sensibilisieren",
+              "lemma": "sensibilisieren",
+              "zh": "使人关注"
+            },
+            {
+              "pos": "adjective",
+              "surface": "verstorbenen Kindern",
+              "lemma": "verstorben",
+              "zh": "已故的"
+            },
+            {
+              "pos": "noun",
+              "surface": "Archewell Foundation",
+              "lemma": "Archewell Foundation",
+              "zh": "阿基维尔基金会"
+            },
+            {
+              "pos": "noun",
+              "surface": "Gefahren",
+              "lemma": "Gefahr",
+              "zh": "危险"
+            }
+          ]
+        }
+      ],
+      "h1_vs_h2": {
+        "verbScore": {
+          "h1": 0,
+          "h2": 3
+        },
+        "allNounLike": {
+          "h1": true,
+          "h2": false
+        }
+      }
+    },
+    {
+      "case": "autodiebe",
+      "charCount": 6170,
+      "runs": [
+        {
+          "strategy": "A0_production_reset_v1_full_single",
+          "count": 10,
+          "counts": {
+            "total": 10,
+            "noun": 10,
+            "verb": 0,
+            "adjective": 0,
+            "adverb": 0,
+            "phrase": 0,
+            "other": 0
+          },
+          "expressionTypes": 0,
+          "allNounLike": true,
+          "verbScore": 0,
+          "items": [
+            {
+              "pos": "noun",
+              "surface": "Paradies",
+              "lemma": "das Paradies",
+              "zh": "乐园，天堂"
+            },
+            {
+              "pos": "noun",
+              "surface": "Diebstahl",
+              "lemma": "der Diebstahl",
+              "zh": "盗窃，偷窃"
+            },
+            {
+              "pos": "noun",
+              "surface": "Garagist",
+              "lemma": "der Garagist",
+              "zh": "车库经营者"
+            },
+            {
+              "pos": "noun",
+              "surface": "Luxus",
+              "lemma": "der Luxus",
+              "zh": "奢华，奢侈品"
+            },
+            {
+              "pos": "noun",
+              "surface": "überwachungsvideos",
+              "lemma": "das Überwachungsvideo",
+              "zh": "监控视频"
+            },
+            {
+              "pos": "noun",
+              "surface": "Sicherheit",
+              "lemma": "die Sicherheit",
+              "zh": "安全，保障"
+            },
+            {
+              "pos": "noun",
+              "surface": "Taskforce",
+              "lemma": "die Taskforce",
+              "zh": "特别工作组"
+            },
+            {
+              "pos": "noun",
+              "surface": "GPS-Sender",
+              "lemma": "der GPS-Sender",
+              "zh": "GPS发射器"
+            },
+            {
+              "pos": "noun",
+              "surface": "Einbruchdiebstahl",
+              "lemma": "der Einbruchdiebstahl",
+              "zh": "入室盗窃"
+            },
+            {
+              "pos": "noun",
+              "surface": "Sportwagen",
+              "lemma": "der Sportwagen",
+              "zh": "跑车"
+            }
+          ]
+        },
+        {
+          "strategy": "H1_full_article_vocab_section_minimal_b",
+          "count": 9,
+          "counts": {
+            "total": 9,
+            "noun": 0,
+            "verb": 0,
+            "adjective": 0,
+            "adverb": 0,
+            "phrase": 0,
+            "other": 9
+          },
+          "expressionTypes": 0,
+          "allNounLike": false,
+          "verbScore": 0,
+          "items": [
+            {
+              "pos": "n",
+              "surface": "Paradies",
+              "lemma": "Paradies",
+              "zh": "天堂，乐园"
+            },
+            {
+              "pos": "n",
+              "surface": "Autodiebe",
+              "lemma": "Autodieb",
+              "zh": "汽车盗贼"
+            },
+            {
+              "pos": "n",
+              "surface": "Diebstähle",
+              "lemma": "Diebstahl",
+              "zh": "盗窃，偷窃"
+            },
+            {
+              "pos": "n",
+              "surface": "Luxusautobranche",
+              "lemma": "Luxusautobranche",
+              "zh": "豪华汽车行业"
+            },
+            {
+              "pos": "n",
+              "surface": "Garagisten",
+              "lemma": "Garagist",
+              "zh": "车库经营者"
+            },
+            {
+              "pos": "n",
+              "surface": "Sicherheit",
+              "lemma": "Sicherheit",
+              "zh": "安全，保障"
+            },
+            {
+              "pos": "n",
+              "surface": "überwachungsvideos",
+              "lemma": "Überwachungsvideo",
+              "zh": "监控视频"
+            },
+            {
+              "pos": "n",
+              "surface": "Taskforces",
+              "lemma": "Taskforce",
+              "zh": "特别工作组"
+            },
+            {
+              "pos": "n",
+              "surface": "GPS-Sender",
+              "lemma": "GPS-Sender",
+              "zh": "GPS发射器"
+            }
+          ]
+        },
+        {
+          "strategy": "H2_split_second_call_minimal_b",
+          "count": 10,
+          "counts": {
+            "total": 10,
+            "noun": 3,
+            "verb": 5,
+            "adjective": 0,
+            "adverb": 0,
+            "phrase": 2,
+            "other": 0
+          },
+          "expressionTypes": 2,
+          "allNounLike": false,
+          "verbScore": 7,
+          "items": [
+            {
+              "pos": "noun",
+              "surface": "Paradies",
+              "lemma": "Paradies",
+              "zh": "天堂"
+            },
+            {
+              "pos": "noun",
+              "surface": "Autodiebe",
+              "lemma": "Autodieb",
+              "zh": "汽车盗贼"
+            },
+            {
+              "pos": "verb",
+              "surface": "rüsten auf",
+              "lemma": "aufrüsten",
+              "zh": "加强装备"
+            },
+            {
+              "pos": "fixed_expression",
+              "surface": "schlafende Hunde wecken",
+              "lemma": "schlafende Hunde wecken",
+              "zh": "惹麻烦"
+            },
+            {
+              "pos": "fixed_expression",
+              "surface": "unter Druck",
+              "lemma": "unter Druck",
+              "zh": "承受压力"
+            },
+            {
+              "pos": "verb",
+              "surface": "einbrechen",
+              "lemma": "einbrechen",
+              "zh": "闯入"
+            },
+            {
+              "pos": "verb",
+              "surface": "massiv aufgerüstet",
+              "lemma": "massiv aufrüsten",
+              "zh": "大幅度加强"
+            },
+            {
+              "pos": "verb",
+              "surface": "sich häufen",
+              "lemma": "sich häufen",
+              "zh": "增多"
+            },
+            {
+              "pos": "verb-preposition_combination",
+              "surface": "sich sorgen um",
+              "lemma": "sich sorgen um",
+              "zh": "担心"
+            },
+            {
+              "pos": "noun",
+              "surface": "überwachungsvideos",
+              "lemma": "Überwachungsvideo",
+              "zh": "监控视频"
+            }
+          ]
+        }
+      ],
+      "h1_vs_h2": {
+        "verbScore": {
+          "h1": 0,
+          "h2": 7
+        },
+        "allNounLike": {
+          "h1": false,
+          "h2": false
+        }
+      }
+    }
+  ]
+}

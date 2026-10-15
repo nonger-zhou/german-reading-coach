@@ -1,0 +1,246 @@
+{
+  "generatedAt": "2026-05-19T11:51:18.199Z",
+  "hypothesis": "If vocab_only (no grammar) is mixed-POS but production_full is noun-heavy, grammar prompt likely competes with vocabulary.",
+  "file": "scripts/fixtures/autodiebe-schweiz-article.txt",
+  "title": "Die Schweiz ist das neue Paradies für Autodiebe",
+  "userLevel": "B1",
+  "charCount": 6170,
+  "strategies": [
+    "production_full_prompt_with_grammar",
+    "vocab_only_single_no_grammar_reset_v1",
+    "vocab_only_single_no_grammar_minimal_b"
+  ],
+  "runs": [
+    {
+      "strategy": "production_full_prompt_with_grammar",
+      "count": 10,
+      "counts": {
+        "total": 10,
+        "noun": 10,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "expressionTypes": 0,
+      "allNounLike": true,
+      "items": [
+        {
+          "pos": "noun",
+          "surface": "Paradies",
+          "lemma": "das Paradies",
+          "zh": "乐园，天堂"
+        },
+        {
+          "pos": "compound_noun",
+          "surface": "Autodiebe",
+          "lemma": "der Autodiebstahl",
+          "zh": "汽车盗贼"
+        },
+        {
+          "pos": "compound_noun",
+          "surface": "Einbruchdiebstählen",
+          "lemma": "der Einbruchdiebstahl",
+          "zh": "入室盗窃"
+        },
+        {
+          "pos": "noun",
+          "surface": "Händlern",
+          "lemma": "der Händler",
+          "zh": "商人，交易者"
+        },
+        {
+          "pos": "noun",
+          "surface": "Diebe",
+          "lemma": "der Dieb",
+          "zh": "小偷，盗贼"
+        },
+        {
+          "pos": "compound_noun",
+          "surface": "Luxusautobranche",
+          "lemma": "die Luxusautobranche",
+          "zh": "豪华汽车行业"
+        },
+        {
+          "pos": "compound_noun",
+          "surface": "Sicherheitsvorkehrungen",
+          "lemma": "die Sicherheitsvorkehrung",
+          "zh": "安全措施"
+        },
+        {
+          "pos": "compound_noun",
+          "surface": "Videoüberwachung",
+          "lemma": "die Videoüberwachung",
+          "zh": "视频监控"
+        },
+        {
+          "pos": "noun",
+          "surface": "Taskforces",
+          "lemma": "die Taskforce",
+          "zh": "特别行动小组"
+        },
+        {
+          "pos": "noun",
+          "surface": "Schadenaufkommen",
+          "lemma": "das Schadenaufkommen",
+          "zh": "损失情况"
+        }
+      ]
+    },
+    {
+      "strategy": "vocab_only_single_no_grammar_reset_v1",
+      "count": 10,
+      "counts": {
+        "total": 10,
+        "noun": 9,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 1,
+        "other": 0
+      },
+      "expressionTypes": 1,
+      "allNounLike": false,
+      "items": [
+        {
+          "pos": "noun",
+          "surface": "Paradies",
+          "lemma": "das Paradies",
+          "zh": "天堂，乐园"
+        },
+        {
+          "pos": "compound_noun",
+          "surface": "Autodiebe",
+          "lemma": "der Autodieb",
+          "zh": "汽车盗贼"
+        },
+        {
+          "pos": "noun",
+          "surface": "Händler",
+          "lemma": "der Händler",
+          "zh": "商人，交易者"
+        },
+        {
+          "pos": "compound_noun",
+          "surface": "Einbruchdiebstählen",
+          "lemma": "der Einbruchdiebstahl",
+          "zh": "入室盗窃"
+        },
+        {
+          "pos": "compound_noun",
+          "surface": "Luxusautobranche",
+          "lemma": "die Luxusautobranche",
+          "zh": "奢侈汽车行业"
+        },
+        {
+          "pos": "compound_noun",
+          "surface": "Sicherheitsvorkehrungen",
+          "lemma": "die Sicherheitsvorkehrung",
+          "zh": "安全措施"
+        },
+        {
+          "pos": "collocation",
+          "surface": "über Social-Media-Plattformen",
+          "lemma": "über Social-Media-Plattformen",
+          "zh": "通过社交媒体平台"
+        },
+        {
+          "pos": "noun",
+          "surface": "Totalverlust",
+          "lemma": "der Totalverlust",
+          "zh": "完全损失"
+        },
+        {
+          "pos": "compound_noun",
+          "surface": "Videoüberwachung",
+          "lemma": "die Videoüberwachung",
+          "zh": "视频监控"
+        },
+        {
+          "pos": "compound_noun",
+          "surface": "Bundespolizei",
+          "lemma": "die Bundespolizei",
+          "zh": "联邦警察"
+        }
+      ]
+    },
+    {
+      "strategy": "vocab_only_single_no_grammar_minimal_b",
+      "count": 10,
+      "counts": {
+        "total": 10,
+        "noun": 7,
+        "verb": 2,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 1,
+        "other": 0
+      },
+      "expressionTypes": 1,
+      "allNounLike": false,
+      "items": [
+        {
+          "pos": "noun",
+          "surface": "Paradies",
+          "lemma": "Paradies",
+          "zh": "天堂"
+        },
+        {
+          "pos": "noun",
+          "surface": "Autodiebe",
+          "lemma": "Autodieb",
+          "zh": "汽车盗贼"
+        },
+        {
+          "pos": "verb",
+          "surface": "rüsten auf",
+          "lemma": "aufrüsten",
+          "zh": "加强装备"
+        },
+        {
+          "pos": "noun",
+          "surface": "Händler",
+          "lemma": "Händler",
+          "zh": "商人"
+        },
+        {
+          "pos": "fixed_expression",
+          "surface": "schlafende Hunde wecken",
+          "lemma": "schlafende Hunde wecken",
+          "zh": "引发不必要的麻烦"
+        },
+        {
+          "pos": "verb",
+          "surface": "einbrechen",
+          "lemma": "einbrechen",
+          "zh": "闯入"
+        },
+        {
+          "pos": "noun",
+          "surface": "Sicherheit",
+          "lemma": "Sicherheit",
+          "zh": "安全"
+        },
+        {
+          "pos": "noun",
+          "surface": "überwachungsvideos",
+          "lemma": "Überwachungsvideo",
+          "zh": "监控视频"
+        },
+        {
+          "pos": "noun",
+          "surface": "Diebstähle",
+          "lemma": "Diebstahl",
+          "zh": "盗窃"
+        },
+        {
+          "pos": "noun",
+          "surface": "Zusammenarbeit",
+          "lemma": "Zusammenarbeit",
+          "zh": "合作"
+        }
+      ]
+    }
+  ]
+}

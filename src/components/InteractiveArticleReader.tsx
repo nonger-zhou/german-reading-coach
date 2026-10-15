@@ -31,9 +31,13 @@ import type { CefrLevel, MasteryStatus } from "@/lib/types";
 import {
   alignVocabOccurrenceIdAfterFinalize,
   alignVocabOccurrenceIdAfterPersist,
+  articleVocabItemIsHighlightableInText,
   buildRunsFromReadingItems,
+  dedupeGrammarItemsBySurfaceKey,
   expandGrammarItemsWithRepeatedSurface,
+  finalizeArticleGrammarItems,
   finalizeArticleVocabularyItems,
+  grammarOccurrencePromptSentence,
   grammarUserStyle,
   mergeGrammarFromFormText,
   mergeGrammarOccurrence,
@@ -42,9 +46,15 @@ import {
   occurrencePositionKey,
   overlappingAiVocabIdsForRange,
   resolveUserHighlightInPlain,
+  sortArticleGrammarItemsByReadingOrder,
+  sortArticleVocabItemsByReadingOrder,
   vocabOccurrenceToRanges,
   vocabUserStyle,
 } from "@/lib/articleReadingModel";
+import {
+  formatGrammarExplainForMainField,
+  type GrammarExplainSelectionResult,
+} from "@/lib/articleAnalysis/grammarExplainSelectionSchema";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   deleteArticleGrammarItemOccurrences,
@@ -148,6 +158,31 @@ function scrollElementIntoScrollContainer(
   container.scrollTo({ top: Math.max(0, nextTop), behavior });
 }
 
+/** 仅在元素未完整落在容器视区内时做最小滚动，避免「滚到中部」裁切 */
+function scrollElementIntoViewIfNeeded(
+  container: HTMLElement,
+  element: HTMLElement,
+  options?: {
+    paddingTop?: number;
+    paddingBottom?: number;
+    behavior?: ScrollBehavior;
+  },
+) {
+  const cRect = container.getBoundingClientRect();
+  const tRect = element.getBoundingClientRect();
+  const padTop = options?.paddingTop ?? 12;
+  const padBottom = options?.paddingBottom ?? 12;
+  let delta = 0;
+  if (tRect.top < cRect.top + padTop) {
+    delta = tRect.top - cRect.top - padTop;
+  } else if (tRect.bottom > cRect.bottom - padBottom) {
+    delta = tRect.bottom - cRect.bottom + padBottom;
+  }
+  if (delta !== 0) {
+    container.scrollBy({ top: delta, behavior: options?.behavior ?? "smooth" });
+  }
+}
+
 /** 将视口矩形滚入 overflow 容器（用于文本选区，无对应 DOM 节点时） */
 function scrollRectIntoScrollContainer(
   container: HTMLElement,
@@ -242,6 +277,8 @@ const GERMAN_WORD_TOKEN_RE = /[A-Za-zÄÖÜäöüß]+(?:[-'][A-Za-zÄÖÜäöü�
 
 const TAP_SELECT_MOVE_PX = 12;
 const TAP_SELECT_MAX_MS = 450;
+/** 超过该位移才视为拖选，此时才暂时禁用高亮 pointer-events（避免轻点词汇打不开右侧卡） */
+const DRAG_HIGHLIGHT_PASSTHROUGH_PX = 8;
 
 function getCaretRangeFromPoint(x: number, y: number): Range | null {
   const doc = document as Document & {
@@ -302,12 +339,6 @@ function isArticleLearningHighlightTarget(el: Element | null): boolean {
   );
 }
 
-function extractWordTokens(text: string): string[] {
-  const matches = text.match(/[A-Za-zÄÖÜäöüß]+(?:[-'][A-Za-zÄÖÜäöüß]+)*/g);
-  if (!matches) return [];
-  return matches.map((w) => w.toLocaleLowerCase("de-DE"));
-}
-
 function mergeVocabFromEnrichmentApi(
   item: ArticleVocabItem,
   data: {
@@ -360,7 +391,7 @@ function mergeVocabFromEnrichmentApi(
     part_of_speech: pos && pos !== "—" ? pos : item.part_of_speech,
     grammatical_gender: item.grammatical_gender ?? "na",
     level_estimate: data.level_estimate,
-    reason_for_selection: data.reason_for_selection.trim() || null,
+    reason_for_selection: null,
     needs_ai_enrichment: false,
     senses:
       item.senses.length > 0
@@ -401,7 +432,7 @@ function mergeGrammarFromEnrichmentApi(
     explanation_zh: data.explanation_zh,
     explanation_de_simple: data.explanation_de_simple,
     level_estimate: data.level_estimate,
-    reason_for_selection: data.reason_for_selection.trim() || null,
+    reason_for_selection: null,
     needs_ai_enrichment: false,
   };
 }
@@ -481,14 +512,12 @@ function grammarNeedsAiEnrichEntry(g: ArticleGrammarItem): boolean {
 function vocabBadge(source: ArticleVocabSource) {
   switch (source) {
     case "ai_detected":
-      return <Badge tone="muted">系统词汇</Badge>;
     case "ai_mock":
     case "ai":
       return <Badge tone="muted">AI</Badge>;
     case "user_added":
-      return <Badge tone="warning">用户</Badge>;
     case "ai_detected_then_user_confirmed":
-      return <Badge tone="warning">用户确认</Badge>;
+      return <Badge tone="warning">手动</Badge>;
     default:
       return null;
   }
@@ -497,14 +526,12 @@ function vocabBadge(source: ArticleVocabSource) {
 function grammarBadge(source: ArticleGrammarItem["source"]) {
   switch (source) {
     case "ai_detected":
-      return <Badge tone="muted">系统语法</Badge>;
     case "ai_mock":
     case "ai":
       return <Badge tone="muted">AI</Badge>;
     case "user_added":
-      return <Badge tone="warning">用户语法</Badge>;
     case "ai_detected_then_user_confirmed":
-      return <Badge tone="warning">用户确认</Badge>;
+      return <Badge tone="warning">手动</Badge>;
     default:
       return null;
   }
@@ -601,10 +628,9 @@ export type InteractiveArticleReaderProps = {
   metaTitle: string;
   initialVocabularyItems: ArticleVocabItem[];
   initialGrammarItems: ArticleGrammarItem[];
-  summaryPanel: ReactNode;
+  /** 不传则不显示「摘要」Tab */
+  summaryPanel?: ReactNode | null;
   questionsPanel: ReactNode;
-  /** full：Mock 四项图例；user_only：仅说明用户添加类高亮（真实文章无课文嵌入词时） */
-  legendMode?: "full" | "user_only";
   selectionLabels?: {
     addVocab: string;
     addGrammar: string;
@@ -615,6 +641,8 @@ export type InteractiveArticleReaderProps = {
   onPersistError?: (message: string) => void;
   /** 文章页顶栏：如「AI 分析本文」入口 */
   analysisToolbar?: ReactNode;
+  /** 并入左侧「阅读帮助」折叠区（如 AI 分析流程说明） */
+  readingHelpExtra?: ReactNode;
   /** 补充 AI 解释（手动词汇/语法）时使用的学习者水平 */
   enrichUserLevel?: CefrLevel;
   /** 从总词库/总语法来源链接进入文章时，自动定位到对应学习项和原文位置。 */
@@ -631,14 +659,14 @@ export function InteractiveArticleReader({
   metaTitle,
   initialVocabularyItems,
   initialGrammarItems,
-  summaryPanel,
+  summaryPanel = null,
   questionsPanel,
-  legendMode = "full",
   selectionLabels,
   persistArticleId,
   persistUserId,
   onPersistError,
   analysisToolbar,
+  readingHelpExtra,
   enrichUserLevel,
   initialFocus,
 }: InteractiveArticleReaderProps) {
@@ -653,6 +681,9 @@ export function InteractiveArticleReader({
   const selectionTextSnapshotRef = useRef<string | null>(null);
   /** 手机拖选过程中为 true，避免浮层过早出现、滚动干扰选区 */
   const selectionGestureActiveRef = useRef(false);
+  /** 拖选过程中暂时禁用高亮上的 pointer，便于穿过绿/琥珀词汇与换行选整句语法 */
+  const [learningHighlightPassthrough, setLearningHighlightPassthrough] =
+    useState(false);
   const pointerTapStartRef = useRef<{
     x: number;
     y: number;
@@ -679,9 +710,19 @@ export function InteractiveArticleReader({
     () => initialVocabularyItems,
   );
 
-  const [grammarItems, setGrammarItems] = useState<ArticleGrammarItem[]>(
-    () => initialGrammarItems,
+  const [grammarItems, setGrammarItems] = useState<ArticleGrammarItem[]>(() =>
+    dedupeGrammarItemsBySurfaceKey(
+      finalizeArticleGrammarItems(initialGrammarItems, articlePlain),
+    ),
   );
+
+  useEffect(() => {
+    setGrammarItems(
+      dedupeGrammarItemsBySurfaceKey(
+        finalizeArticleGrammarItems(initialGrammarItems, articlePlain),
+      ),
+    );
+  }, [initialGrammarItems, articlePlain]);
 
   const [textSelectionUi, setTextSelectionUi] = useState<{
     text: string;
@@ -700,6 +741,17 @@ export function InteractiveArticleReader({
   const [grammarFormOpen, setGrammarFormOpen] = useState(false);
   const [vocabFormValue, setVocabFormValue] = useState("");
   const [grammarFormValue, setGrammarFormValue] = useState("");
+  const [grammarExplainOpen, setGrammarExplainOpen] = useState(false);
+  const [grammarExplainLoading, setGrammarExplainLoading] = useState(false);
+  const [grammarExplainSaving, setGrammarExplainSaving] = useState(false);
+  const [grammarExplainError, setGrammarExplainError] = useState<string | null>(
+    null,
+  );
+  const [grammarExplainSelectedText, setGrammarExplainSelectedText] =
+    useState("");
+  const [grammarExplainDraft, setGrammarExplainDraft] = useState("");
+  const [grammarExplainDeSimple, setGrammarExplainDeSimple] = useState("");
+  const grammarExplainDomRangeRef = useRef<Range | null>(null);
 
   const [vocabEnrichLoadingId, setVocabEnrichLoadingId] = useState<
     string | null
@@ -752,9 +804,7 @@ export function InteractiveArticleReader({
   const [showIgnoredVocab, setShowIgnoredVocab] = useState(false);
   const [showIgnoredGrammar, setShowIgnoredGrammar] = useState(false);
 
-  const [tab, setTab] = useState<
-    "vocab" | "grammar" | "summary" | "questions"
-  >("vocab");
+  const [tab, setTab] = useState<"vocab" | "grammar" | "questions">("vocab");
   /** 词汇侧栏/抽屉选中（与语法独立，避免 tab 切换串台） */
   const [vocabSelection, setVocabSelection] = useState<{
     itemId: string;
@@ -772,6 +822,18 @@ export function InteractiveArticleReader({
   const pendingPanelScrollRef = useRef<{
     kind: "vocab" | "grammar";
     id: string;
+  } | null>(null);
+  /** 添加语法后 grammarItems 尚未提交时，selectGrammarItem 无法在 grammarById 中解析 id */
+  const pendingGrammarSelectRef = useRef<{
+    itemId: string;
+    occurrenceId?: string;
+    normalizedKey?: string;
+  } | null>(null);
+  /** 手动添加词汇后 vocabularyItems 尚未提交时，selectVocabItem 无法在 vocabById 中解析 id */
+  const pendingVocabSelectRef = useRef<{
+    itemId: string;
+    occurrenceId?: string;
+    normalizedKey?: string;
   } | null>(null);
   const flashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** 短暂强调（约 1.8s），与 selection 独立 */
@@ -809,14 +871,28 @@ export function InteractiveArticleReader({
     [vocabularyItems],
   );
 
+  /** 与左侧正文高亮同一套 occurrence id/偏移，避免保存语法后文中 id 与列表不一致 */
+  const grammarItemsEffective = useMemo(
+    () =>
+      dedupeGrammarItemsBySurfaceKey(
+        finalizeArticleGrammarItems(grammarItems, articlePlain),
+      ),
+    [grammarItems, articlePlain],
+  );
+
   const grammarById = useMemo(
-    () => Object.fromEntries(grammarItems.map((g) => [g.id, g])),
-    [grammarItems],
+    () => Object.fromEntries(grammarItemsEffective.map((g) => [g.id, g])),
+    [grammarItemsEffective],
   );
 
   const runs = useMemo(
-    () => buildRunsFromReadingItems(articlePlain, vocabularyItems, grammarItems),
-    [articlePlain, vocabularyItems, grammarItems],
+    () =>
+      buildRunsFromReadingItems(
+        articlePlain,
+        vocabularyItems,
+        grammarItemsEffective,
+      ),
+    [articlePlain, vocabularyItems, grammarItemsEffective],
   );
 
   const selectedVocabItem = useMemo(
@@ -832,77 +908,87 @@ export function InteractiveArticleReader({
 
   const vocabLearningItems = useMemo(
     () =>
-      vocabularyItems.filter(
-        (v) => v.mastery_status !== "mastered" && v.mastery_status !== "ignored",
+      sortArticleVocabItemsByReadingOrder(
+        vocabularyItems.filter(
+          (v) =>
+            v.mastery_status !== "mastered" && v.mastery_status !== "ignored",
+        ),
+        articlePlain,
       ),
-    [vocabularyItems],
+    [vocabularyItems, articlePlain],
   );
   const vocabMasteredItems = useMemo(
-    () => vocabularyItems.filter((v) => v.mastery_status === "mastered"),
-    [vocabularyItems],
+    () =>
+      sortArticleVocabItemsByReadingOrder(
+        vocabularyItems.filter((v) => v.mastery_status === "mastered"),
+        articlePlain,
+      ),
+    [vocabularyItems, articlePlain],
   );
   const vocabIgnoredItems = useMemo(
-    () => vocabularyItems.filter((v) => v.mastery_status === "ignored"),
-    [vocabularyItems],
+    () =>
+      sortArticleVocabItemsByReadingOrder(
+        vocabularyItems.filter((v) => v.mastery_status === "ignored"),
+        articlePlain,
+      ),
+    [vocabularyItems, articlePlain],
   );
   const grammarLearningItems = useMemo(
     () =>
-      grammarItems.filter(
-        (g) => g.mastery_status !== "mastered" && g.mastery_status !== "ignored",
+      sortArticleGrammarItemsByReadingOrder(
+        grammarItemsEffective.filter(
+          (g) =>
+            g.mastery_status !== "mastered" && g.mastery_status !== "ignored",
+        ),
+        articlePlain,
       ),
-    [grammarItems],
+    [grammarItemsEffective, articlePlain],
   );
   const grammarMasteredItems = useMemo(
-    () => grammarItems.filter((g) => g.mastery_status === "mastered"),
-    [grammarItems],
+    () =>
+      sortArticleGrammarItemsByReadingOrder(
+        grammarItemsEffective.filter((g) => g.mastery_status === "mastered"),
+        articlePlain,
+      ),
+    [grammarItemsEffective, articlePlain],
   );
   const grammarIgnoredItems = useMemo(
-    () => grammarItems.filter((g) => g.mastery_status === "ignored"),
-    [grammarItems],
+    () =>
+      sortArticleGrammarItemsByReadingOrder(
+        grammarItemsEffective.filter((g) => g.mastery_status === "ignored"),
+        articlePlain,
+      ),
+    [grammarItemsEffective, articlePlain],
   );
 
-  const vocabLearningWordStats = useMemo(() => {
-    const articleTokens = extractWordTokens(articlePlain);
-    const totalWordCount = articleTokens.length;
-    const articleWordSet = new Set(articleTokens);
-
-    const learningWordSet = new Set<string>();
-
-    for (const item of vocabularyItems) {
-      const candidates = [
-        item.lemma,
-        item.display_word,
-        item.occurrences[0]?.surface_form,
-      ].filter((v): v is string => Boolean(v && v.trim()));
-
-      const isUnknownWord =
-        item.mastery_status !== "mastered";
-      if (!isUnknownWord) continue;
-
-      for (const candidate of candidates) {
-        for (const token of extractWordTokens(candidate)) {
-          if (!articleWordSet.has(token)) continue;
-          if (isUnknownWord) learningWordSet.add(token);
-        }
+  const vocabArticleLexicalStats = useMemo(() => {
+    const total = vocabularyItems.length;
+    let manual = 0;
+    let fromAi = 0;
+    let highlightable = 0;
+    for (const v of vocabularyItems) {
+      if (v.source === "user_added") manual += 1;
+      else fromAi += 1;
+      if (articleVocabItemIsHighlightableInText(v, articlePlain)) {
+        highlightable += 1;
       }
     }
-
-    const unknownWordCount = learningWordSet.size;
-    const unknownRatio =
-      totalWordCount > 0 ? unknownWordCount / totalWordCount : 0;
-
     return {
-      unknownWordCount,
-      totalWordCount,
-      unknownRatio,
+      total,
+      manual,
+      fromAi,
+      highlightable,
+      unlocated: total - highlightable,
     };
-  }, [articlePlain, vocabularyItems]);
+  }, [vocabularyItems, articlePlain]);
 
   const selectedVocabOccurrence = useMemo(() => {
     if (!selectedVocabItem || !vocabSelection) return undefined;
     if (vocabSelection.occurrenceId) {
-      return selectedVocabItem.occurrences.find(
-        (o) => o.id === vocabSelection.occurrenceId,
+      return (
+        selectedVocabItem.occurrences.find(
+          (o) => o.id === vocabSelection.occurrenceId,
+        ) ?? selectedVocabItem.occurrences[0]
       );
     }
     return selectedVocabItem.occurrences[0];
@@ -923,8 +1009,10 @@ export function InteractiveArticleReader({
   const selectedGrammarOccurrence = useMemo(() => {
     if (!selectedGrammarItem || !grammarSelection) return undefined;
     if (grammarSelection.occurrenceId) {
-      return selectedGrammarItem.occurrences.find(
-        (o) => o.id === grammarSelection.occurrenceId,
+      return (
+        selectedGrammarItem.occurrences.find(
+          (o) => o.id === grammarSelection.occurrenceId,
+        ) ?? selectedGrammarItem.occurrences[0]
       );
     }
     return selectedGrammarItem.occurrences[0];
@@ -1089,9 +1177,27 @@ export function InteractiveArticleReader({
     [updateSelectionPopover],
   );
 
+  const handleArticlePointerMove = useCallback(
+    (event: React.PointerEvent<HTMLElement>) => {
+      if (!selectionGestureActiveRef.current) return;
+      const start = pointerTapStartRef.current;
+      if (!start) return;
+      const dx = event.clientX - start.x;
+      const dy = event.clientY - start.y;
+      if (
+        dx * dx + dy * dy >=
+        DRAG_HIGHLIGHT_PASSTHROUGH_PX * DRAG_HIGHLIGHT_PASSTHROUGH_PX
+      ) {
+        setLearningHighlightPassthrough(true);
+      }
+    },
+    [],
+  );
+
   const handleArticlePointerDown = useCallback(
     (event: React.PointerEvent<HTMLElement>) => {
       selectionGestureActiveRef.current = true;
+      setLearningHighlightPassthrough(false);
       pointerTapStartRef.current = {
         x: event.clientX,
         y: event.clientY,
@@ -1110,6 +1216,7 @@ export function InteractiveArticleReader({
   const handleArticlePointerUp = useCallback(
     (event: React.PointerEvent<HTMLElement>) => {
       selectionGestureActiveRef.current = false;
+      setLearningHighlightPassthrough(false);
       const narrow =
         typeof window !== "undefined" &&
         window.matchMedia("(max-width: 767px)").matches;
@@ -1146,6 +1253,19 @@ export function InteractiveArticleReader({
     },
     [scheduleSelectionPopoverUpdate, tryTapSelectWordAtPoint],
   );
+
+  useEffect(() => {
+    const endHighlightPassthrough = () => {
+      selectionGestureActiveRef.current = false;
+      setLearningHighlightPassthrough(false);
+    };
+    window.addEventListener("pointerup", endHighlightPassthrough);
+    window.addEventListener("pointercancel", endHighlightPassthrough);
+    return () => {
+      window.removeEventListener("pointerup", endHighlightPassthrough);
+      window.removeEventListener("pointercancel", endHighlightPassthrough);
+    };
+  }, []);
 
   useEffect(() => {
     const onSelectionChange = () => {
@@ -1294,24 +1414,69 @@ export function InteractiveArticleReader({
     [],
   );
 
-  const selectVocabItem = useCallback(
+  const applyVocabSelection = useCallback(
     (itemId: string, occurrenceId?: string) => {
       setVocabSelection({ itemId, occurrenceId });
       setTab("vocab");
       pendingPanelScrollRef.current = { kind: "vocab", id: itemId };
       triggerFlashPulse("vocab", itemId);
+      const item = vocabById[itemId];
+      const occId =
+        occurrenceId && item?.occurrences.some((o) => o.id === occurrenceId)
+          ? occurrenceId
+          : item?.occurrences[0]?.id;
+      if (occId) {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            scrollArticleToOccurrence(occId);
+          });
+        });
+      }
     },
-    [triggerFlashPulse],
+    [triggerFlashPulse, scrollArticleToOccurrence, vocabById],
   );
 
-  const selectGrammarItem = useCallback(
+  const selectVocabItem = useCallback(
     (itemId: string, occurrenceId?: string) => {
+      if (vocabById[itemId]) {
+        applyVocabSelection(itemId, occurrenceId);
+        return;
+      }
+      pendingVocabSelectRef.current = { itemId, occurrenceId };
+    },
+    [applyVocabSelection, vocabById],
+  );
+
+  const applyGrammarSelection = useCallback(
+    (itemId: string, occurrenceId?: string) => {
+      clearNativeSelection();
+      selectionTextSnapshotRef.current = null;
+      setTextSelectionUi(null);
       setGrammarSelection({ itemId, occurrenceId });
       setTab("grammar");
       pendingPanelScrollRef.current = { kind: "grammar", id: itemId };
       triggerFlashPulse("grammar", itemId);
     },
-    [triggerFlashPulse],
+    [clearNativeSelection, triggerFlashPulse],
+  );
+
+  const selectGrammarItem = useCallback(
+    (
+      itemId: string,
+      occurrenceId?: string,
+      opts?: { normalizedKey?: string },
+    ) => {
+      if (grammarById[itemId]) {
+        applyGrammarSelection(itemId, occurrenceId);
+        return;
+      }
+      pendingGrammarSelectRef.current = {
+        itemId,
+        occurrenceId,
+        normalizedKey: opts?.normalizedKey,
+      };
+    },
+    [applyGrammarSelection, grammarById],
   );
 
   useEffect(() => {
@@ -1469,6 +1634,50 @@ export function InteractiveArticleReader({
     setGrammarDeepNoteError(null);
     setGrammarDeepNoteNotice(null);
   }, [grammarSelection?.itemId]);
+
+  useEffect(() => {
+    const pending = pendingGrammarSelectRef.current;
+    if (!pending) return;
+
+    let resolvedId = pending.itemId;
+    if (!grammarById[resolvedId] && pending.normalizedKey) {
+      const byKey = grammarItemsEffective.find(
+        (g) => g.normalized_key === pending.normalizedKey,
+      );
+      if (byKey) resolvedId = byKey.id;
+    }
+    const item = grammarById[resolvedId];
+    if (!item) return;
+
+    pendingGrammarSelectRef.current = null;
+    let occId = pending.occurrenceId;
+    if (occId && !item.occurrences.some((o) => o.id === occId)) {
+      occId = item.occurrences.at(-1)?.id ?? occId;
+    }
+    applyGrammarSelection(resolvedId, occId);
+  }, [grammarItemsEffective, grammarById, applyGrammarSelection]);
+
+  useEffect(() => {
+    const pending = pendingVocabSelectRef.current;
+    if (!pending) return;
+
+    let resolvedId = pending.itemId;
+    if (!vocabById[resolvedId] && pending.normalizedKey) {
+      const byKey = vocabularyItems.find(
+        (v) => v.normalized_key === pending.normalizedKey,
+      );
+      if (byKey) resolvedId = byKey.id;
+    }
+    const item = vocabById[resolvedId];
+    if (!item) return;
+
+    pendingVocabSelectRef.current = null;
+    let occId = pending.occurrenceId;
+    if (occId && !item.occurrences.some((o) => o.id === occId)) {
+      occId = item.occurrences.at(-1)?.id ?? occId;
+    }
+    applyVocabSelection(resolvedId, occId);
+  }, [vocabularyItems, vocabById, applyVocabSelection]);
 
   function formatDeepNoteUpdatedAt(v: string | null | undefined): string {
     if (!v) return "";
@@ -1833,7 +2042,7 @@ export function InteractiveArticleReader({
         typeof window !== "undefined" &&
         window.matchMedia("(max-width: 767px)").matches;
 
-      /** 仅在有 pending（文中/列表选中）时滚右侧面板 occurrence；右侧详情里点「本篇出现位置」不设 pending，避免与 scrollArticleToOccurrence 的 smooth 争抢导致左侧不滚 */
+      /** 仅在有 pending（文中/列表选中）时滚右侧面板 occurrence */
       if (pending && !narrow) {
         const map =
           pending.kind === "vocab" ? vocabItemRefs : grammarItemRefs;
@@ -2028,7 +2237,10 @@ export function InteractiveArticleReader({
         userLevel: enrichLevelEffective,
         grammarName,
         selectedText: occ?.surface_form ?? "",
-        occurrenceSentence: occ?.sentence ?? "",
+        occurrenceSentence: grammarOccurrencePromptSentence(
+          articlePlain,
+          occ ?? { surface_form: "" },
+        ),
         articleTitle: metaTitle,
         explanationZh: selectedGrammarItem.explanation_zh ?? "",
         explanationDeSimple: selectedGrammarItem.explanation_de_simple ?? "",
@@ -2052,6 +2264,7 @@ export function InteractiveArticleReader({
     [
       enrichLevelEffective,
       grammarSelection,
+      articlePlain,
       metaTitle,
       selectedGrammarItem,
       selectedGrammarOccurrence,
@@ -2179,11 +2392,16 @@ export function InteractiveArticleReader({
       }
     }
 
+    const selectTarget = merged.find((v) => v.id === selectItemId);
+    pendingVocabSelectRef.current = {
+      itemId: selectItemId,
+      occurrenceId: selectOccId,
+      normalizedKey: selectTarget?.normalized_key,
+    };
     setVocabularyItems(merged);
     selectionTextSnapshotRef.current = null;
     setTextSelectionUi(null);
     clearNativeSelection();
-    selectVocabItem(selectItemId, selectOccId);
   }
 
   async function addGrammarFromText(
@@ -2208,7 +2426,11 @@ export function InteractiveArticleReader({
           resolved,
         )
       : mergeGrammarFromFormText(grammarItems, articlePlain, surface);
-    let merged = expandGrammarItemsWithRepeatedSurface(nextItems, articlePlain);
+    let merged = finalizeArticleGrammarItems(
+      expandGrammarItemsWithRepeatedSurface(nextItems, articlePlain),
+      articlePlain,
+    );
+    merged = dedupeGrammarItemsBySurfaceKey(merged);
     let selectItemId = itemId;
     let selectOccId = occurrenceId;
 
@@ -2233,10 +2455,16 @@ export function InteractiveArticleReader({
       if (error) {
         emitPersistError(`语法保存失败：${error}`);
       } else if (saved) {
-        merged = merged.map((g) =>
-          g.normalized_key === saved.normalized_key ? saved : g,
+        const finalizedSaved = finalizeArticleGrammarItems(
+          [saved],
+          articlePlain,
+        )[0]!;
+        merged = dedupeGrammarItemsBySurfaceKey(
+          merged.map((g) =>
+            g.normalized_key === saved.normalized_key ? finalizedSaved : g,
+          ),
         );
-        selectItemId = saved.id;
+        selectItemId = finalizedSaved.id;
         selectOccId = prevOccSnapshot
           ? saved.occurrences.find(
               (o) =>
@@ -2253,7 +2481,166 @@ export function InteractiveArticleReader({
     selectionTextSnapshotRef.current = null;
     setTextSelectionUi(null);
     clearNativeSelection();
-    selectGrammarItem(selectItemId, selectOccId);
+    selectGrammarItem(selectItemId, selectOccId, {
+      normalizedKey: targetMerged?.normalized_key,
+    });
+  }
+
+  async function openGrammarExplainFromSelection() {
+    const phrase = (
+      textSelectionUi?.text ||
+      selectionTextSnapshotRef.current ||
+      ""
+    ).trim();
+    if (!phrase || !persistArticleId) return;
+    grammarExplainDomRangeRef.current = cloneDomRangeInArticle();
+    setGrammarExplainSelectedText(phrase);
+    setGrammarExplainDraft("");
+    setGrammarExplainDeSimple("");
+    setGrammarExplainError(null);
+    setGrammarExplainOpen(true);
+    setGrammarExplainLoading(true);
+    selectionTextSnapshotRef.current = null;
+    setTextSelectionUi(null);
+    clearNativeSelection();
+    try {
+      const sb = getSupabaseBrowserClient();
+      const {
+        data: { session },
+      } = await sb.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        setGrammarExplainError("请先登录后再试。");
+        return;
+      }
+      const res = await fetch("/api/explain-grammar-selection", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          articleId: persistArticleId,
+          selected_text: phrase,
+        }),
+      });
+      const data: unknown = await res.json().catch(() => null);
+      if (!data || typeof data !== "object") {
+        setGrammarExplainError(`请求失败（${res.status}）`);
+        return;
+      }
+      const d = data as Record<string, unknown>;
+      if (d.ok !== true) {
+        setGrammarExplainError(
+          typeof d.error === "string" ? d.error : "语法解释失败，请稍后重试。",
+        );
+        return;
+      }
+      const explanation = d.explanation as GrammarExplainSelectionResult | undefined;
+      if (!explanation || typeof explanation !== "object") {
+        setGrammarExplainError("返回数据异常。");
+        return;
+      }
+      setGrammarExplainDraft(formatGrammarExplainForMainField(explanation));
+      setGrammarExplainDeSimple(
+        typeof explanation.explanation_de_simple === "string"
+          ? explanation.explanation_de_simple
+          : "",
+      );
+    } catch (e: unknown) {
+      setGrammarExplainError(
+        e instanceof Error ? e.message : "语法解释请求异常。",
+      );
+    } finally {
+      setGrammarExplainLoading(false);
+    }
+  }
+
+  async function saveGrammarExplainToArticle() {
+    const phrase = grammarExplainSelectedText.trim();
+    const explanationZh = grammarExplainDraft.trim();
+    if (!phrase || !explanationZh || !persistEnabled || !persistArticleId) {
+      return;
+    }
+    setGrammarExplainSaving(true);
+    setGrammarExplainError(null);
+    try {
+      const root = articleRef.current;
+      const domRange = grammarExplainDomRangeRef.current;
+      const resolved = resolveUserHighlightInPlain(
+        root,
+        domRange,
+        articlePlain,
+        phrase,
+      );
+      const surface = resolved?.surface ?? phrase;
+      const { nextItems, itemId, occurrenceId } = resolved
+        ? mergeGrammarOccurrence(grammarItems, articlePlain, surface, resolved)
+        : mergeGrammarFromFormText(grammarItems, articlePlain, surface);
+      let merged = finalizeArticleGrammarItems(
+        expandGrammarItemsWithRepeatedSurface(nextItems, articlePlain),
+        articlePlain,
+      );
+      merged = dedupeGrammarItemsBySurfaceKey(merged);
+      merged = merged.map((g) =>
+        g.id === itemId
+          ? {
+              ...g,
+              explanation_zh: explanationZh,
+              explanation_de_simple:
+                grammarExplainDeSimple.trim() || g.explanation_de_simple,
+              name_zh: "选区语法解释",
+              needs_ai_enrichment: false,
+            }
+          : g,
+      );
+      let selectItemId = itemId;
+      let selectOccId = occurrenceId;
+      const targetMerged = merged.find((g) => g.id === itemId);
+      const prevOccSnapshot = targetMerged?.occurrences.find(
+        (o) => o.id === occurrenceId,
+      );
+      if (persistUserId && targetMerged) {
+        const sb = getSupabaseBrowserClient();
+        const { item: saved, error } = await persistManualGrammarItem(sb, {
+          userId: persistUserId,
+          articleId: persistArticleId,
+          articlePlain,
+          item: targetMerged,
+        });
+        if (error) {
+          emitPersistError(`语法保存失败：${error}`);
+        } else if (saved) {
+          const finalizedSaved = finalizeArticleGrammarItems(
+            [saved],
+            articlePlain,
+          )[0]!;
+          merged = dedupeGrammarItemsBySurfaceKey(
+            merged.map((g) =>
+              g.normalized_key === saved.normalized_key ? finalizedSaved : g,
+            ),
+          );
+          selectItemId = finalizedSaved.id;
+          selectOccId = prevOccSnapshot
+            ? saved.occurrences.find(
+                (o) =>
+                  occurrencePositionKey(o) ===
+                  occurrencePositionKey(prevOccSnapshot),
+              )?.id ??
+              saved.occurrences[0]?.id ??
+              occurrenceId
+            : occurrenceId;
+        }
+      }
+      setGrammarItems(merged);
+      setGrammarExplainOpen(false);
+      grammarExplainDomRangeRef.current = null;
+      selectGrammarItem(selectItemId, selectOccId, {
+        normalizedKey: targetMerged?.normalized_key,
+      });
+    } finally {
+      setGrammarExplainSaving(false);
+    }
   }
 
   function cloneDomRangeInArticle(): Range | null {
@@ -2300,9 +2687,6 @@ export function InteractiveArticleReader({
                   )}
                 </CardTitle>
                 {vocabBadge(selectedVocabItem.source)}
-                {vocabNeedsAiEnrichEntry(selectedVocabItem) ? (
-                  <Badge tone="muted">待 AI 补全</Badge>
-                ) : null}
               </div>
               <CardDescription>
                 {posLabelZh(selectedVocabItem.part_of_speech)}
@@ -2390,14 +2774,6 @@ export function InteractiveArticleReader({
             {selectedSense?.simple_de_explanation ??
               selectedVocabItem.simple_de_explanation}
           </p>
-          {selectedVocabItem.reason_for_selection ? (
-            <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-              <span className="font-medium text-zinc-600 dark:text-zinc-300">
-                入选说明：
-              </span>
-              {selectedVocabItem.reason_for_selection}
-            </p>
-          ) : null}
           {selectedVocabItem.senses.length > 1 ? (
             <div className="mt-3 rounded-lg border border-zinc-200 p-2 dark:border-zinc-800">
               <p className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
@@ -2410,69 +2786,71 @@ export function InteractiveArticleReader({
               </ul>
             </div>
           ) : null}
-          <div className="mt-3 rounded-lg border border-zinc-200/80 bg-zinc-50/60 p-2.5 dark:border-zinc-700/80 dark:bg-zinc-900/35">
-            <p className="mb-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400">
-              外部深入解释
-            </p>
-            <p className="mb-2 rounded-md border border-emerald-200/70 bg-emerald-50/80 px-2 py-1.5 text-xs font-medium text-emerald-900 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-200">
-              提示：点击后会自动复制深度学习 Prompt，可在外部页面直接 Ctrl+V 粘贴发送。
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              <Button
-                type="button"
-                variant="secondary"
-                className="px-2 py-1 text-xs font-normal"
-                onClick={() =>
-                  void runVocabExternalPrompt(VOCAB_EXTERNAL_DEEP_LINKS.chatgpt)
-                }
-              >
-                ChatGPT
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                className="px-2 py-1 text-xs font-normal"
-                onClick={() =>
-                  void runVocabExternalPrompt(VOCAB_EXTERNAL_DEEP_LINKS.claude)
-                }
-              >
-                Claude
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                className="px-2 py-1 text-xs font-normal"
-                onClick={() =>
-                  void runVocabExternalPrompt(VOCAB_EXTERNAL_DEEP_LINKS.gemini)
-                }
-              >
-                Gemini
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                className="px-2 py-1 text-xs font-normal"
-                onClick={() =>
-                  void runVocabExternalPrompt(VOCAB_EXTERNAL_DEEP_LINKS.deepseek)
-                }
-              >
-                DeepSeek
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                className="px-2 py-1 text-xs font-normal"
-                onClick={() => void runVocabExternalPrompt(null)}
-              >
-                仅复制 Prompt
-              </Button>
-            </div>
-            {vocabExternalPromptNotice ? (
-              <p className="mt-2 text-xs font-medium text-emerald-700 dark:text-emerald-300">
-                {vocabExternalPromptNotice}
+          <details className="mt-3 rounded-lg border border-zinc-200/80 bg-zinc-50/60 dark:border-zinc-700/80 dark:bg-zinc-900/35">
+            <summary className="cursor-pointer select-none px-2.5 py-2 text-xs font-medium text-zinc-700 marker:hidden dark:text-zinc-300 [&::-webkit-details-marker]:hidden">
+              用外部 AI 深入解释（可选）
+            </summary>
+            <div className="space-y-2 border-t border-zinc-200/80 px-2.5 pb-2.5 pt-2 dark:border-zinc-700/80">
+              <p className="text-[11px] leading-snug text-zinc-500 dark:text-zinc-400">
+                点击后复制 Prompt，到外部网站粘贴；本应用不调用 API。
               </p>
-            ) : null}
-          </div>
+              <div className="flex flex-wrap gap-1.5">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="px-2 py-1 text-xs font-normal"
+                  onClick={() =>
+                    void runVocabExternalPrompt(VOCAB_EXTERNAL_DEEP_LINKS.chatgpt)
+                  }
+                >
+                  ChatGPT
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="px-2 py-1 text-xs font-normal"
+                  onClick={() =>
+                    void runVocabExternalPrompt(VOCAB_EXTERNAL_DEEP_LINKS.claude)
+                  }
+                >
+                  Claude
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="px-2 py-1 text-xs font-normal"
+                  onClick={() =>
+                    void runVocabExternalPrompt(VOCAB_EXTERNAL_DEEP_LINKS.gemini)
+                  }
+                >
+                  Gemini
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="px-2 py-1 text-xs font-normal"
+                  onClick={() =>
+                    void runVocabExternalPrompt(VOCAB_EXTERNAL_DEEP_LINKS.deepseek)
+                  }
+                >
+                  DeepSeek
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="px-2 py-1 text-xs font-normal"
+                  onClick={() => void runVocabExternalPrompt(null)}
+                >
+                  仅复制 Prompt
+                </Button>
+              </div>
+              {vocabExternalPromptNotice ? (
+                <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                  {vocabExternalPromptNotice}
+                </p>
+              ) : null}
+            </div>
+          </details>
           {persistEnabled && selectedVocabItem.dbItemId ? (
             <details className="group mt-3 rounded-lg border border-amber-200/80 bg-amber-50/50 dark:border-amber-900/50 dark:bg-amber-950/20">
               <summary className="cursor-pointer list-none px-2.5 py-2 text-xs font-medium text-amber-900 marker:hidden dark:text-amber-200 [&::-webkit-details-marker]:hidden">
@@ -2711,9 +3089,6 @@ export function InteractiveArticleReader({
                   {selectedGrammarItem.name_zh}
                 </CardTitle>
                 {grammarBadge(selectedGrammarItem.source)}
-                {grammarNeedsAiEnrichEntry(selectedGrammarItem) ? (
-                  <Badge tone="muted">待 AI 补全</Badge>
-                ) : null}
               </div>
               <CardDescription>
                 {selectedGrammarItem.name_de}
@@ -2774,79 +3149,73 @@ export function InteractiveArticleReader({
               {selectedGrammarItem.explanation_de_simple}
             </p>
           ) : null}
-          {selectedGrammarItem.reason_for_selection ? (
-            <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-              <span className="font-medium text-zinc-600 dark:text-zinc-300">
-                入选说明：
-              </span>
-              {selectedGrammarItem.reason_for_selection}
-            </p>
-          ) : null}
-          <div className="mt-3 rounded-lg border border-zinc-200/80 bg-zinc-50/60 p-2.5 dark:border-zinc-700/80 dark:bg-zinc-900/35">
-            <p className="mb-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400">
-              外部深入解释
-            </p>
-            <p className="mb-2 rounded-md border border-emerald-200/70 bg-emerald-50/80 px-2 py-1.5 text-xs font-medium text-emerald-900 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-200">
-              提示：点击后会自动复制深度学习 Prompt，可在外部页面直接 Ctrl+V 粘贴发送。
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              <Button
-                type="button"
-                variant="secondary"
-                className="px-2 py-1 text-xs font-normal"
-                onClick={() =>
-                  void runGrammarExternalPrompt(GRAMMAR_EXTERNAL_DEEP_LINKS.chatgpt)
-                }
-              >
-                ChatGPT
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                className="px-2 py-1 text-xs font-normal"
-                onClick={() =>
-                  void runGrammarExternalPrompt(GRAMMAR_EXTERNAL_DEEP_LINKS.claude)
-                }
-              >
-                Claude
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                className="px-2 py-1 text-xs font-normal"
-                onClick={() =>
-                  void runGrammarExternalPrompt(GRAMMAR_EXTERNAL_DEEP_LINKS.gemini)
-                }
-              >
-                Gemini
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                className="px-2 py-1 text-xs font-normal"
-                onClick={() =>
-                  void runGrammarExternalPrompt(
-                    GRAMMAR_EXTERNAL_DEEP_LINKS.deepseek,
-                  )
-                }
-              >
-                DeepSeek
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                className="px-2 py-1 text-xs font-normal"
-                onClick={() => void runGrammarExternalPrompt(null)}
-              >
-                仅复制 Prompt
-              </Button>
-            </div>
-            {grammarExternalPromptNotice ? (
-              <p className="mt-2 text-xs font-medium text-emerald-700 dark:text-emerald-300">
-                {grammarExternalPromptNotice}
+          <details className="mt-3 rounded-lg border border-zinc-200/80 bg-zinc-50/60 dark:border-zinc-700/80 dark:bg-zinc-900/35">
+            <summary className="cursor-pointer select-none px-2.5 py-2 text-xs font-medium text-zinc-700 marker:hidden dark:text-zinc-300 [&::-webkit-details-marker]:hidden">
+              用外部 AI 深入解释（可选）
+            </summary>
+            <div className="space-y-2 border-t border-zinc-200/80 px-2.5 pb-2.5 pt-2 dark:border-zinc-700/80">
+              <p className="text-[11px] leading-snug text-zinc-500 dark:text-zinc-400">
+                点击后复制 Prompt，到外部网站粘贴；本应用不调用 API。
               </p>
-            ) : null}
-          </div>
+              <div className="flex flex-wrap gap-1.5">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="px-2 py-1 text-xs font-normal"
+                  onClick={() =>
+                    void runGrammarExternalPrompt(GRAMMAR_EXTERNAL_DEEP_LINKS.chatgpt)
+                  }
+                >
+                  ChatGPT
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="px-2 py-1 text-xs font-normal"
+                  onClick={() =>
+                    void runGrammarExternalPrompt(GRAMMAR_EXTERNAL_DEEP_LINKS.claude)
+                  }
+                >
+                  Claude
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="px-2 py-1 text-xs font-normal"
+                  onClick={() =>
+                    void runGrammarExternalPrompt(GRAMMAR_EXTERNAL_DEEP_LINKS.gemini)
+                  }
+                >
+                  Gemini
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="px-2 py-1 text-xs font-normal"
+                  onClick={() =>
+                    void runGrammarExternalPrompt(
+                      GRAMMAR_EXTERNAL_DEEP_LINKS.deepseek,
+                    )
+                  }
+                >
+                  DeepSeek
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="px-2 py-1 text-xs font-normal"
+                  onClick={() => void runGrammarExternalPrompt(null)}
+                >
+                  仅复制 Prompt
+                </Button>
+              </div>
+              {grammarExternalPromptNotice ? (
+                <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                  {grammarExternalPromptNotice}
+                </p>
+              ) : null}
+            </div>
+          </details>
           {persistEnabled && selectedGrammarItem.dbItemId ? (
             <details className="group mt-3 rounded-lg border border-amber-200/80 bg-amber-50/50 dark:border-amber-900/50 dark:bg-amber-950/20">
               <summary className="cursor-pointer list-none px-2.5 py-2 text-xs font-medium text-amber-900 marker:hidden dark:text-amber-200 [&::-webkit-details-marker]:hidden">
@@ -3069,6 +3438,14 @@ export function InteractiveArticleReader({
                   )}
                 </span>
                 {vocabBadge(v.source)}
+                {!articleVocabItemIsHighlightableInText(v, articlePlain) ? (
+                  <span
+                    className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-900 dark:bg-amber-950/70 dark:text-amber-100"
+                    title="正文中未匹配到可高亮片段，请核对 surface 或原文"
+                  >
+                    暂无高亮
+                  </span>
+                ) : null}
                 <span className="text-xs font-normal text-zinc-500">
                   {v.occurrences.length} 次
                 </span>
@@ -3283,29 +3660,18 @@ export function InteractiveArticleReader({
         <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
           本篇词汇
         </p>
-        <div className="rounded-lg border border-zinc-200 bg-zinc-50/70 p-2.5 text-xs text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-300">
-          <p className="font-medium text-zinc-800 dark:text-zinc-200">
-            本篇词汇统计
-          </p>
-          <div className="mt-1.5 grid gap-1 sm:grid-cols-2">
-            <p>
-              生词数（去重，含暂忽略）：{vocabLearningWordStats.unknownWordCount}
-            </p>
-            <p>
-              全文总词数（不去重）：{vocabLearningWordStats.totalWordCount}
-            </p>
-            <p className="sm:col-span-2">
-              生词占比：
-              {vocabLearningWordStats.unknownWordCount}/
-              {vocabLearningWordStats.totalWordCount}
-              {" ("}
-              {(vocabLearningWordStats.unknownRatio * 100).toFixed(1)}%
-              {")"}
-            </p>
-          </div>
-        </div>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">
-          学习中：保留并可继续推荐；已掌握：保留但以后少推荐；暂忽略：暂时不学；删除：从本文移除。
+        <p className="text-sm text-zinc-700 dark:text-zinc-300">
+          本篇{" "}
+          <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+            {vocabArticleLexicalStats.total}
+          </span>{" "}
+          个词
+          {vocabArticleLexicalStats.manual > 0 ? (
+            <span className="text-zinc-500 dark:text-zinc-400">
+              {" "}
+              · 手动 {vocabArticleLexicalStats.manual}
+            </span>
+          ) : null}
         </p>
         <ul className="space-y-2">{vocabLearningItems.map(renderVocabListItem)}</ul>
         {vocabMasteredItems.length > 0 ? (
@@ -3367,9 +3733,6 @@ export function InteractiveArticleReader({
         <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
           本篇语法
         </p>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">
-          学习中：保留并可继续推荐；已掌握：保留但以后少推荐；暂忽略：暂时不学；删除：从本文移除。
-        </p>
         <ul className="space-y-2">{grammarLearningItems.map(renderGrammarListItem)}</ul>
         {grammarMasteredItems.length > 0 ? (
           <div className="pt-1">
@@ -3414,7 +3777,9 @@ export function InteractiveArticleReader({
   const tabItems = [
     { id: "vocab", label: "词汇", content: vocabList },
     { id: "grammar", label: "语法", content: grammarList },
-    { id: "summary", label: "摘要", content: summaryPanel },
+    ...(summaryPanel != null
+      ? [{ id: "summary" as const, label: "摘要", content: summaryPanel }]
+      : []),
     { id: "questions", label: "阅读问题", content: questionsPanel },
   ];
 
@@ -3447,17 +3812,17 @@ export function InteractiveArticleReader({
       (!grammarSelection.occurrenceId ||
         grammarSelection.occurrenceId === meta.occurrenceId);
     if (flash || pressed || vocabActive || grammarActive) {
-      // 点击/选中后左侧定位：高对比描边 + 外发光（不用 animate-pulse，避免低谷时几乎看不见）
-      const ring =
-        meta.kind === "ai_grammar" || meta.kind === "user_grammar"
-          ? "ring-sky-500 dark:ring-sky-300"
-          : meta.kind === "user_vocab"
-            ? "ring-amber-500 dark:ring-amber-300"
-            : "ring-emerald-600 dark:ring-emerald-300";
-      return `relative z-[1] rounded-sm ring-2 ${ring} ring-offset-2 ring-offset-white shadow-[0_0_12px_rgba(245,158,11,0.45)] dark:ring-offset-zinc-950 dark:shadow-[0_0_14px_rgba(253,224,71,0.4)]`;
+      // 内嵌描边：正文卡片 overflow-y-auto 会裁切外圈 ring，改用 inset 黄框/色框保证可见
+      if (meta.kind === "ai_grammar") {
+        return "relative z-[1] rounded-sm shadow-[inset_0_0_0_2px_#0369a1,inset_0_0_0_3px_#e0f2fe] dark:shadow-[inset_0_0_0_2px_#38bdf8,inset_0_0_0_3px_#0c4a6e]";
+      }
+      if (meta.kind === "user_grammar") {
+        return "relative z-[1] rounded-sm shadow-[inset_0_0_0_2px_#7c3aed,inset_0_0_0_3px_#ede9fe] dark:shadow-[inset_0_0_0_2px_#a78bfa,inset_0_0_0_3px_#2e1065]";
+      }
+      return "relative z-[1] rounded-sm shadow-[inset_0_0_0_2px_#ca8a04,inset_0_0_0_3px_#fef08a] dark:shadow-[inset_0_0_0_2px_#facc15,inset_0_0_0_3px_#422006]";
     }
     if (itemMatch) {
-      return "ring-2 ring-zinc-900/35 ring-offset-0 dark:ring-zinc-100/30";
+      return "relative z-[1] rounded-sm shadow-[inset_0_0_0_1px_rgb(0_0_0/0.22)] dark:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.18)]";
     }
     return "";
   }
@@ -3480,7 +3845,7 @@ export function InteractiveArticleReader({
   }
 
   function handleHighlightPointerDown(
-    event: ReactPointerEvent<HTMLButtonElement>,
+    event: ReactPointerEvent<HTMLElement>,
     _activate: () => void,
     occurrenceId?: string,
   ) {
@@ -3500,7 +3865,7 @@ export function InteractiveArticleReader({
   }
 
   function handleHighlightClick(
-    event: ReactMouseEvent<HTMLButtonElement>,
+    event: ReactMouseEvent<HTMLElement>,
     activate: () => void,
   ) {
     event.stopPropagation();
@@ -3563,6 +3928,7 @@ export function InteractiveArticleReader({
           </button>
           {!isMasteredVocabRun(meta) ? (
             <span
+              aria-hidden
               className="invisible absolute left-1/2 top-full z-20 w-max -translate-x-1/2 pt-1 opacity-0 transition-opacity group-hover:visible group-hover:opacity-100 max-md:hidden"
               role="tooltip"
             >
@@ -3604,6 +3970,7 @@ export function InteractiveArticleReader({
           </button>
           {!isMasteredVocabRun(meta) ? (
             <span
+              aria-hidden
               className="invisible absolute left-1/2 top-full z-20 w-max -translate-x-1/2 pt-1 opacity-0 transition-opacity group-hover:visible group-hover:opacity-100 max-md:hidden"
               role="tooltip"
             >
@@ -3645,6 +4012,7 @@ export function InteractiveArticleReader({
             onPointerCancel={() => handleHighlightPointerUp(meta.occurrenceId)}
             onClick={(event) => handleGrammarHighlightClick(event, onGrammar)}
             style={GRAMMAR_ARTICLE_HIGHLIGHT_STYLE}
+            data-learning-highlight
             data-marker-id={meta.itemId}
             data-occurrence-id={meta.occurrenceId}
             data-occurrence-index={occurrenceRowIndex(meta)}
@@ -3654,6 +4022,7 @@ export function InteractiveArticleReader({
             {text}
           </span>
           <span
+            aria-hidden
             className="invisible absolute left-1/2 top-full z-20 w-max max-w-xs -translate-x-1/2 pt-1 opacity-0 transition-opacity group-hover:visible group-hover:opacity-100 max-md:hidden"
             role="tooltip"
           >
@@ -3693,6 +4062,7 @@ export function InteractiveArticleReader({
           onPointerCancel={() => handleHighlightPointerUp(meta.occurrenceId)}
           onClick={(event) => handleGrammarHighlightClick(event, onGrammar)}
           style={GRAMMAR_ARTICLE_HIGHLIGHT_STYLE}
+          data-learning-highlight
           data-marker-id={meta.itemId}
           data-occurrence-id={meta.occurrenceId}
           data-occurrence-index={occurrenceRowIndex(meta)}
@@ -3702,6 +4072,7 @@ export function InteractiveArticleReader({
           {text}
         </span>
         <span
+          aria-hidden
           className="invisible absolute left-1/2 top-full z-20 w-max max-w-xs -translate-x-1/2 pt-1 opacity-0 transition-opacity group-hover:visible group-hover:opacity-100 max-md:hidden"
           role="tooltip"
         >
@@ -3740,68 +4111,48 @@ export function InteractiveArticleReader({
           } ${!showMobileSheet ? "max-h-[calc(100vh-100px)]" : ""}`}
         >
           <CardTitle className="text-base">{metaTitle}</CardTitle>
-          <div className="mt-1 space-y-1.5 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
-            <p>
-              可选中单词、短语或句子，使用浮层加入词库、标记语法或发音（不悬停自动播放）。
-            </p>
-            <p className="md:hidden">
-              语法高亮（蓝 / 紫）内也可拖选其中单词加入词库；无选区时轻点该片段仍会打开语法说明。
-            </p>
-            <p className="md:hidden text-zinc-500">
-              <strong>轻点</strong>普通文字可选中单词；<strong>可分动词、短语请拖选</strong>（可从绿/琥珀/蓝/紫高亮上起拖，选区下方出按钮）。无选区时轻点彩色高亮打开详情。
-            </p>
-            <p className="font-medium text-zinc-700 dark:text-zinc-300">高亮含义</p>
-            {legendMode === "full" ? (
+          <details className="mt-1 rounded-md border border-zinc-200/80 bg-zinc-50/50 text-xs leading-relaxed text-zinc-600 dark:border-zinc-700/80 dark:bg-zinc-900/30 dark:text-zinc-400">
+            <summary className="cursor-pointer select-none px-2 py-1.5 font-medium text-zinc-700 marker:hidden dark:text-zinc-300 [&::-webkit-details-marker]:hidden">
+              阅读帮助（可选）
+            </summary>
+            <div className="space-y-2 border-t border-zinc-200/80 px-2.5 pb-2 pt-1.5 dark:border-zinc-700/80">
+              <p>拖选正文可添加词汇或标记语法；点击彩色高亮查看右侧详情。</p>
               <ul className="list-inside list-disc space-y-0.5 pl-0.5">
                 <li>
                   <span className="font-medium text-emerald-800 dark:text-emerald-200">
                     绿色
                   </span>
-                  ：系统自动标出的<strong>课文词汇</strong>
+                  ：AI <strong>词汇</strong>
                 </li>
                 <li>
                   <span className="font-medium text-amber-800 dark:text-amber-200">
                     琥珀色
                   </span>
-                  ：<strong>用户添加</strong>或<strong>用户确认</strong>的词汇
-                </li>
-                <li>
-                  <span className="font-medium text-sky-800 dark:text-sky-200">
-                    蓝色
-                  </span>
-                  ：系统自动标出的<strong>课文语法</strong>
+                  ：手动 <strong>词汇</strong>
                 </li>
                 <li>
                   <span className="font-medium text-violet-800 dark:text-violet-200">
                     紫色
                   </span>
-                  ：<strong>用户标记</strong>的语法片段
+                  ：手动 <strong>语法</strong>
                 </li>
               </ul>
-            ) : (
-              <ul className="list-inside list-disc space-y-0.5 pl-0.5">
-                <li>
-                  <span className="font-medium text-amber-800 dark:text-amber-200">
-                    琥珀色
-                  </span>
-                  ：您添加的<strong>词汇</strong>
-                </li>
-                <li>
-                  <span className="font-medium text-violet-800 dark:text-violet-200">
-                    紫色
-                  </span>
-                  ：您标记的<strong>语法</strong>片段
-                </li>
-              </ul>
-            )}
-            <p className="text-zinc-500">
-              同一词在列表中只出现一次；文中多次出现时会尽量全部高亮。
-            </p>
-          </div>
+              {readingHelpExtra ? (
+                <div className="space-y-1 border-t border-zinc-200/80 pt-2 dark:border-zinc-700/80">
+                  {readingHelpExtra}
+                </div>
+              ) : null}
+            </div>
+          </details>
           <article
             ref={articleRef}
-            className="article-reading-body mt-4 cursor-text select-text text-[17px] selection:bg-blue-300/80 selection:text-inherit max-md:touch-manipulation max-md:[-webkit-touch-callout:none] dark:selection:bg-blue-500/50"
+            className={`article-reading-body mt-4 cursor-text select-text text-[17px] selection:bg-blue-300/80 selection:text-inherit max-md:touch-manipulation max-md:[-webkit-touch-callout:none] dark:selection:bg-blue-500/50${
+              learningHighlightPassthrough
+                ? " [&_[data-learning-highlight]]:pointer-events-none"
+                : ""
+            }`}
             onPointerDown={handleArticlePointerDown}
+            onPointerMove={handleArticlePointerMove}
             onPointerUp={handleArticlePointerUp}
             onPointerCancel={handleArticlePointerUp}
           >
@@ -3887,6 +4238,17 @@ export function InteractiveArticleReader({
           >
             {addGrammarLabel}
           </Button>
+          {persistArticleId ? (
+            <Button
+              type="button"
+              variant="secondary"
+              className="px-2 py-1 text-xs"
+              disabled={grammarExplainLoading}
+              onClick={() => void openGrammarExplainFromSelection()}
+            >
+              {grammarExplainLoading ? "解释中…" : "解释语法"}
+            </Button>
+          ) : null}
           <Button
             type="button"
             variant="secondary"
@@ -3985,9 +4347,16 @@ export function InteractiveArticleReader({
                       );
                     }
                   }
+                  const selectTarget = merged.find((v) => v.id === selectItemId);
+                  pendingVocabSelectRef.current = selectItemId
+                    ? {
+                        itemId: selectItemId,
+                        occurrenceId: selectOccId,
+                        normalizedKey: selectTarget?.normalized_key,
+                      }
+                    : null;
                   setVocabularyItems(merged);
                   setVocabFormOpen(false);
-                  if (selectItemId) selectVocabItem(selectItemId, selectOccId);
                 }}
               >
                 保存
@@ -4041,9 +4410,14 @@ export function InteractiveArticleReader({
                   if (!t) return;
                   const { nextItems, itemId, occurrenceId } =
                     mergeGrammarFromFormText(grammarItems, articlePlain, t);
-                  let merged = expandGrammarItemsWithRepeatedSurface(
-                    nextItems,
-                    articlePlain,
+                  let merged = dedupeGrammarItemsBySurfaceKey(
+                    finalizeArticleGrammarItems(
+                      expandGrammarItemsWithRepeatedSurface(
+                        nextItems,
+                        articlePlain,
+                      ),
+                      articlePlain,
+                    ),
                   );
                   let selectItemId = itemId;
                   let selectOccId = occurrenceId;
@@ -4068,10 +4442,18 @@ export function InteractiveArticleReader({
                     if (error) {
                       emitPersistError(`语法保存失败：${error}`);
                     } else if (saved) {
-                      merged = merged.map((g) =>
-                        g.normalized_key === saved.normalized_key ? saved : g,
+                      const finalizedSaved = finalizeArticleGrammarItems(
+                        [saved],
+                        articlePlain,
+                      )[0]!;
+                      merged = dedupeGrammarItemsBySurfaceKey(
+                        merged.map((g) =>
+                          g.normalized_key === saved.normalized_key
+                            ? finalizedSaved
+                            : g,
+                        ),
                       );
-                      selectItemId = saved.id;
+                      selectItemId = finalizedSaved.id;
                       selectOccId = prevOccSnapshot
                         ? saved.occurrences.find(
                             (o) =>
@@ -4085,10 +4467,84 @@ export function InteractiveArticleReader({
                   }
                   setGrammarItems(merged);
                   setGrammarFormOpen(false);
-                  if (selectItemId) selectGrammarItem(selectItemId, selectOccId);
+                  if (selectItemId) {
+                    selectGrammarItem(selectItemId, selectOccId, {
+                      normalizedKey: targetMerged?.normalized_key,
+                    });
+                  }
                 }}
               >
                 保存
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {grammarExplainOpen ? (
+        <div
+          className="fixed inset-0 z-[70] flex items-end justify-center bg-black/40 p-4 sm:items-center"
+          role="presentation"
+          onClick={() => {
+            if (!grammarExplainLoading && !grammarExplainSaving) {
+              setGrammarExplainOpen(false);
+            }
+          }}
+        >
+          <div
+            className="w-full max-w-lg rounded-xl border border-zinc-200 bg-white p-4 shadow-xl dark:border-zinc-800 dark:bg-zinc-950"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="grammar-explain-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2
+              id="grammar-explain-title"
+              className="text-base font-semibold text-zinc-900 dark:text-zinc-50"
+            >
+              语法解释
+            </h2>
+            <p className="mt-1 text-xs text-zinc-500">
+              选区：「{grammarExplainSelectedText}」。可编辑后保存到本篇语法（写入主解释
+              explanation_zh）。
+            </p>
+            {grammarExplainLoading ? (
+              <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
+                正在生成解释…
+              </p>
+            ) : (
+              <textarea
+                value={grammarExplainDraft}
+                onChange={(e) => setGrammarExplainDraft(e.target.value)}
+                rows={14}
+                className="mt-3 w-full resize-y rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm leading-relaxed dark:border-zinc-700 dark:bg-zinc-900"
+                placeholder="解释将显示在这里，可编辑…"
+              />
+            )}
+            {grammarExplainError ? (
+              <p className="mt-2 text-xs text-red-700 dark:text-red-300" role="alert">
+                {grammarExplainError}
+              </p>
+            ) : null}
+            <div className="mt-4 flex flex-wrap justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={grammarExplainLoading || grammarExplainSaving}
+                onClick={() => setGrammarExplainOpen(false)}
+              >
+                关闭
+              </Button>
+              <Button
+                type="button"
+                disabled={
+                  grammarExplainLoading ||
+                  grammarExplainSaving ||
+                  !grammarExplainDraft.trim()
+                }
+                onClick={() => void saveGrammarExplainToArticle()}
+              >
+                {grammarExplainSaving ? "保存中…" : "保存到本篇语法"}
               </Button>
             </div>
           </div>

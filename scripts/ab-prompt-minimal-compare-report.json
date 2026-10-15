@@ -1,0 +1,127 @@
+{
+  "article": "scripts/fixtures/news-short-article.txt",
+  "model": "gpt-4o-mini",
+  "A": {
+    "items": [
+      {
+        "surface_form": "Klimaziele",
+        "lemma": "das Klimaziel",
+        "part_of_speech": "noun"
+      },
+      {
+        "surface_form": "Treibhausgas-Emissionen",
+        "lemma": "die Treibhausgas-Emission",
+        "part_of_speech": "compound_noun"
+      },
+      {
+        "surface_form": "Jobverlusten",
+        "lemma": "der Jobverlust",
+        "part_of_speech": "noun"
+      },
+      {
+        "surface_form": "Maßnahmen",
+        "lemma": "die Maßnahme",
+        "part_of_speech": "noun"
+      },
+      {
+        "surface_form": "internationalen Vorbilder",
+        "lemma": "das internationale Vorbild",
+        "part_of_speech": "compound_noun"
+      }
+    ],
+    "stats": {
+      "noun": 5,
+      "verb": 0,
+      "expr": 0,
+      "adjAdvConn": 0,
+      "buckets": {
+        "total": 5,
+        "noun": 5,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      }
+    }
+  },
+  "B": {
+    "items": [
+      {
+        "surface_form": "Bundesregierung",
+        "lemma": "Bundesregierung",
+        "part_of_speech": "noun",
+        "zh_meaning": "联邦政府"
+      },
+      {
+        "surface_form": "Klimaziele",
+        "lemma": "Klimaziel",
+        "part_of_speech": "noun",
+        "zh_meaning": "气候目标"
+      },
+      {
+        "surface_form": "beschließen",
+        "lemma": "beschließen",
+        "part_of_speech": "verb",
+        "zh_meaning": "决定；通过"
+      },
+      {
+        "surface_form": "sagte",
+        "lemma": "sagen",
+        "part_of_speech": "verb",
+        "zh_meaning": "说；讲"
+      },
+      {
+        "surface_form": "müsse",
+        "lemma": "müssen",
+        "part_of_speech": "verb",
+        "zh_meaning": "必须；需要"
+      },
+      {
+        "surface_form": "deutlich senken",
+        "lemma": "deutlich senken",
+        "part_of_speech": "verb-phrase",
+        "zh_meaning": "明显降低"
+      },
+      {
+        "surface_form": "kritisieren",
+        "lemma": "kritisieren",
+        "part_of_speech": "verb",
+        "zh_meaning": "批评"
+      },
+      {
+        "surface_form": "warnen vor",
+        "lemma": "warnen vor",
+        "part_of_speech": "verb-preposition",
+        "zh_meaning": "警告；提醒"
+      },
+      {
+        "surface_form": "Jobverlusten",
+        "lemma": "Jobverlust",
+        "part_of_speech": "noun",
+        "zh_meaning": "失业；职位损失"
+      },
+      {
+        "surface_form": "überwiegend positiv",
+        "lemma": "überwiegend positiv",
+        "part_of_speech": "adjective",
+        "zh_meaning": "主要是积极的"
+      }
+    ],
+    "stats": {
+      "noun": 3,
+      "verb": 6,
+      "expr": 0,
+      "adjAdvConn": 1,
+      "buckets": {
+        "total": 10,
+        "noun": 3,
+        "verb": 6,
+        "adjective": 1,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      }
+    }
+  }
+}

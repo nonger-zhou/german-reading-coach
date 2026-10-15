@@ -4,6 +4,11 @@ import {
   GRAMMAR_ANALYSIS_V2_SYSTEM_SECTION,
   GRAMMAR_SELECTED_TEXT_CONTIGUOUS_SUBSTRING_RULE,
 } from "@/lib/articleAnalysis/grammarAnalysisV2Prompt";
+import { VOCABULARY_SYSTEM_SECTION } from "@/lib/articleAnalysis/vocabularySelectionPrompt";
+import {
+  READING_QUESTIONS_SHORT_SECTION,
+  VOCABULARY_MINIMAL_B_SYSTEM,
+} from "@/lib/articleAnalysis/vocabularyMinimalBPrompt";
 import {
   parseFiniteVerbPosition,
   parseGrammarType,
@@ -19,85 +24,60 @@ import { normalizeTextKey } from "@/lib/articleReadingModel";
  */
 export const OPENAI_ANALYSIS_TEXT_CHAR_LIMIT = 10_000;
 
-const SYSTEM_PROMPT = `你是德语阅读学习助手。
-目标用户默认为中文母语者，正在学习德语；解释语言默认为中文；simple_de_explanation / explanation_de_simple 使用简单德语。
+export const SYSTEM_PROMPT_LEGACY = `你是德语阅读学习助手。
+目标用户为中文母语德语学习者；解释语言默认为中文；simple_de_explanation / explanation_de_simple 使用简单德语。
 
-核心目标：用户在阅读文章前，先查看你标出的关键词汇和语法点；看完这些解释后，应能大致读懂文章主旨和关键细节，阅读过程中不需要频繁查词。
+核心目标：用户在阅读文章前，先查看你标出的关键词汇和语法点；看完这些解释后，应能大致读懂文章主旨和关键细节。
 
-【推荐数量】
-- vocabulary（广义词汇 / 表达，lexical item）：**不设固定条数上限**；应覆盖文中影响读懂主旨与关键细节、且符合 **userLevel** 的值得学项（单词、复合名词、搭配、可分动词、固定表达等）。
-- grammar（语法点）：**不设固定条数上限**；应覆盖文中确有学习价值、且符合 **userLevel** 的结构；**不要为了凑条数**编造语法点。
-- reading_questions **恰好 3 条**中文问题。
-- 简单、篇幅短或整体较易的文章，词汇条数自然会较少；**不要为了凑满条数**而加入过于基础、对读懂主旨与关键细节帮助很小的项目。
+【输出范围】
+- reading_questions：**恰好 3 条**中文问题。
+- grammar：见下方 Grammar Analysis v2；不设固定条数上限；不要为了凑条数编造语法点。
+- vocabulary：见下方【vocabulary】专节（唯一词汇任务说明）。
 
-【词汇推荐范围：主动覆盖广义 lexical item】
-不要只推荐单个生词。应主动识别影响理解的词汇型表达，包括但不限于：
-- 单词（如 Täter）
-- 复合名词（如 Untersuchungshaft）
-- 短语、搭配、固定表达（如 in fünf Fällen、unter Druck geraten、eine Entscheidung treffen）
-- 动词短语、介词短语、新闻常用表达
-- 可分动词（见下节）
-用户若在界面中框选较长片段再「添加为词汇」，通常表示表达层面需求；全文分析时你也应同样积极地识别这类片段。
+${VOCABULARY_SYSTEM_SECTION}
 
-【可分动词与动词变形】
-若文中出现可分动词或动词的非原形形式，每个相关 vocabulary 项应尽量体现：
-- lemma：德语词典形式（动词多为不定式，如 einrichten、umbringen、niederlegen）
-- surface_form：原文中的真实片段（可与 lemma 不同），例如「richtet … ein」「brachte … um」「niedergelegt」
-- 在 zh_meaning / simple_de_explanation / reason_for_selection 中说明：是否为可分动词或变形、词典形式与文中形式的对应关系、为何值得推荐。
-示例：原文「richtet für sie eine Beratungsstelle ein」→ lemma「einrichten」、surface 体现句中拆分形式、中文含「设立」等。
-示例：「niedergelegt」→ lemma「niederlegen」，中文可含「辞去职务、放弃职位」等。
-
-【名词：冠词与复数】
-若推荐名词类条目，尽量在 lemma 或解释中给出：
-- 名词性与推荐词典形式（如 das Mandat），并尽量标注 **der/die/das**；
-- **part_of_speech 为 noun 或 compound_noun 时，lemma 字段必须以 der / die / das 之一开头并空格接词干**（如 das Mandat、die Entscheidung）；若冠词确实无法判断，lemma 仍用无冠词形式，并在 simple_de_explanation 首句写明「词典冠词不确定」。
-- 常见复数形式（如 die Mandate），可在 zh_meaning 或 simple_de_explanation 中简要写出。
-**不确定冠词或复数时不要编造**；宁可略写或标注「需查词典确认」。
-
-【用户水平 userLevel】
-userLevel 表示本次分析使用的学习者水平（若调用方未指定则常见默认为 B1）。你必须依据该水平判断哪些词汇与语法「值得推荐」：
-- A2：侧重基础词与基础结构，但仍遵守非凑数原则。
-- B1：新闻常见词、搭配、可分动词、复合名词、被动、主句 V2、从句、Konjunktiv 等——**不要把「语法」等同于「从句」**。
-- B2：减少过于基础的词，侧重抽象表达、长句、语气、Konjunktiv/间接引语、复杂结构。
-- C1/C2：仅在确有帮助时增加难度；grammar 仍须遵守「准确性优先、不凑条数」。
+【userLevel】
+依据 user 消息中的 userLevel 判断哪些词汇与语法值得推荐（A2 偏基础；B1 新闻常见搭配与结构；B2 减少过于基础的词；C1/C2 仅在确有帮助时提高难度）。
 
 ${GRAMMAR_ANALYSIS_V2_SYSTEM_SECTION}
 
 ${GRAMMAR_SELECTED_TEXT_CONTIGUOUS_SUBSTRING_RULE}
 
 【grammar 与 vocabulary 的分工】
-若某片段更适合作为**语法结构**讲解（从句、语序、语态等），放入 grammar；若主要是**词汇 / 表达含义**学习，放入 vocabulary。同一位置不要重复堆砌。标题式论断句、口号式短句**不要**标成 fixed_expression，除非确是惯用搭配。
+语法结构（从句、语序、语态等）→ grammar；词汇与表达含义 → vocabulary。同一位置不要重复堆砌。
 
-【每条 vocabulary 须在释义中交代清楚的要点】
-- lemma 尽量为词典形式；动词用不定式；名词尽量带冠词的规范形式（不确定则不瞎编）。
-- 说明属于哪类表达（可分动词、固定搭配、介词短语、复合名词等，择要）。
-- surface_form 若为句中变形或拆分形式，说明与 lemma 的对应关系。
-
-硬性要求：
+【硬性要求】
 1. 不要推荐明显人名、地名、媒体名、公司名，除非它们本身有语言学习价值。
-2. 不要推荐文章标题或正文中不存在的词或片段。
-3. grammar.**selected_text** 必须是所给 **originalText 中的真实连续子串**（区分大小写与变音符号，与原文逐字一致）。**禁止**删减、改写、重组后当作 selected_text。vocabulary.**surface_form** 优先选用文中连续片段以便高亮；**禁止**在 surface_form 中使用「…」或文中不存在的拼接。
-4. 不要编造原文中不存在的词或例句；example_sentence 可摘自原文或基于原文片段的简短引用。
-5. normalized_key：词汇的小写归一化键（可去重参考，如 lemma 小写或规范形式）。
-6. grammar 每条输出 **grammar_type**（枚举）与 **normalized_key**；入库时 **grammar_key = grammar_type**。normalized_key 区分同一类型下的不同具体结构；须小写归一化、折叠多余空白。
+2. 不要推荐正文中不存在的词或片段。
+3. grammar.**selected_text** 必须是 originalText 中的真实连续子串（区分大小写与变音符号）。vocabulary.**surface_form** 优先为文中连续片段；禁止省略号占位或文中不存在的拼接。
+4. 不要编造原文中不存在的例句；example_sentence 可摘自原文。
+5. vocabulary 填写 **normalized_key**（lemma 小写或规范形式的归一化键）。
+6. grammar 每条输出 **grammar_type** 与 **normalized_key**；入库 grammar_key = grammar_type。`;
 
-【part_of_speech 与 grammatical_gender（硬性，与 JSON schema 一致）】
-每条 vocabulary 须**同时**正确填写 **part_of_speech** 与 **grammatical_gender**。
+/** 生产默认：极简 B vocabulary + 短阅读问题；无 grammar、无摘要。 */
+export const SYSTEM_PROMPT_VOCAB_FIRST = `你是德语阅读学习助手。
+目标用户为中文母语德语学习者；词汇释义与阅读问题使用中文；simple_de_explanation 使用简单德语。
 
-**part_of_speech** — 按表达的真实类型选择，**不要**为填 m/f/n 而把动词、搭配、可分动词一律标成名词：
-- 单个名词 → **noun**
-- 连写的复合名词（如 Untersuchungshaft）→ **compound_noun**
-- 可分动词（句中可拆分）→ **separable_verb**
-- 动词短语、多词动词表达 → **verb_phrase**
-- 固定搭配、惯用表达（多词、以动词或虚词为主）→ **collocation** 或 **fixed_expression**
-- 介词短语、一般短语 → **prepositional_phrase** 或 **phrase**
-- 单个动词、形容词等 → **verb** / **adjective** 等
+核心目标：帮助用户在阅读前掌握值得学习的词汇与表达，并通过 3 条阅读问题检查理解。不要推荐语法点，不要写摘要。
 
-**grammatical_gender** — 仅取：**na** | **m** | **f** | **n** | **unclear**。
-- **仅当** part_of_speech 为 **noun** 或 **compound_noun**（或条目本质上是名词性学习对象）时：填 **m / f / n**（无法判断用 **unclear**，不要用 na）；lemma 尽量以 **der / die / das** 开头（见上文名词节）。
-- part_of_speech 为 **separable_verb、verb、verb_phrase、phrase、collocation、fixed_expression、prepositional_phrase** 及形容词、副词、介词等时：填 **na**。
+【输出范围】
+- vocabulary：见下方英文任务说明。
+- reading_questions：见下方短说明。
 
-**禁止**：把明显是动词搭配、固定表达、可分动词的条目标成 noun / compound_noun，仅为了输出冠词或 gender。`;
+${VOCABULARY_MINIMAL_B_SYSTEM}
+
+${READING_QUESTIONS_SHORT_SECTION}
+
+【userLevel】
+依据 user 消息中的 userLevel 判断哪些词汇值得推荐（A2 偏基础；B1 新闻常见搭配；B2 减少过于基础的词）。
+
+【硬性要求】
+1. 不要推荐正文中不存在的 surface_form。
+2. vocabulary 填写 normalized_key。
+3. 不要输出 grammar、summary_zh、summary_de_simple。`;
+
+/** 生产默认 system prompt（legacy 见 ENABLE_AUTO_GRAMMAR_ANALYSIS）。 */
+export const SYSTEM_PROMPT = SYSTEM_PROMPT_VOCAB_FIRST;
 
 export function truncateForOpenAIAnalysis(fullText: string): {
   text: string;
@@ -118,7 +98,7 @@ export function buildOpenAIAnalysisUserContent(params: {
   userLevel: CefrLevel;
   /** 已掌握/暂忽略词汇键说明（OpenAI user 消息附加段） */
   vocabLibraryBlockAppendix?: string;
-  /** 已掌握/暂忽略语法键说明（OpenAI user 消息附加段） */
+  /** 已掌握/暂忽略语法键说明（legacy 整文分析） */
   grammarLibraryBlockAppendix?: string;
 }): string {
   const base = `userLevel: ${params.userLevel}
@@ -138,6 +118,65 @@ ${params.originalText}`;
   return `${base}\n\n${extras.join("\n\n")}`;
 }
 
+function normalizeVocabularyRows(
+  vocRaw: unknown[],
+): ArticleAnalysisResult["vocabulary"] {
+  return vocRaw.map((row): AnalyzedVocabularyItem => {
+    const r = row as Record<string, unknown>;
+    const base = r as unknown as AnalyzedVocabularyItem;
+    return {
+      ...base,
+      grammatical_gender: parseGrammaticalGender(r.grammatical_gender),
+    };
+  });
+}
+
+function normalizeGrammarRows(
+  graRaw: unknown[],
+): ArticleAnalysisResult["grammar"] {
+  return graRaw.map((row) => {
+    const r = row as Record<string, unknown>;
+    const grammar_type = parseGrammarType(r.grammar_type ?? r.grammar_key);
+    const grammar_key = grammar_type;
+    const nkIn = typeof r.normalized_key === "string" ? r.normalized_key : "";
+    const nk = nkIn.trim()
+      ? normalizeTextKey(nkIn)
+      : normalizeTextKey(grammar_key);
+    const base = r as unknown as ArticleAnalysisResult["grammar"][0];
+    return {
+      ...base,
+      grammar_type,
+      grammar_key,
+      normalized_key: nk,
+      is_subordinate_clause: parseIsSubordinateClause(r.is_subordinate_clause),
+      finite_verb: typeof r.finite_verb === "string" ? r.finite_verb.trim() : "",
+      finite_verb_position: parseFiniteVerbPosition(r.finite_verb_position),
+    };
+  });
+}
+
+/** vocab-first API 响应规范化（grammar/摘要恒空，兼容 ArticleAnalysisResult）。 */
+export function normalizeOpenAIVocabFirstArticleAnalysis(
+  raw: unknown,
+): ArticleAnalysisResult {
+  if (!raw || typeof raw !== "object") {
+    throw new Error("分析结果格式无效");
+  }
+  const o = raw as Record<string, unknown>;
+  const reading_questions = Array.isArray(o.reading_questions)
+    ? o.reading_questions.filter((x) => typeof x === "string")
+    : [];
+  const vocRaw = Array.isArray(o.vocabulary) ? o.vocabulary : [];
+
+  return {
+    vocabulary: normalizeVocabularyRows(vocRaw),
+    grammar: [],
+    summary_zh: "",
+    summary_de_simple: "",
+    reading_questions: reading_questions.slice(0, 3),
+  };
+}
+
 export function normalizeOpenAIArticleAnalysis(
   raw: unknown,
 ): ArticleAnalysisResult {
@@ -150,51 +189,14 @@ export function normalizeOpenAIArticleAnalysis(
     : [];
 
   const vocRaw = Array.isArray(o.vocabulary) ? o.vocabulary : [];
-  const vocSanitized: ArticleAnalysisResult["vocabulary"] = vocRaw.map(
-    (row): AnalyzedVocabularyItem => {
-      const r = row as Record<string, unknown>;
-      const base = r as unknown as AnalyzedVocabularyItem;
-      return {
-        ...base,
-        grammatical_gender: parseGrammaticalGender(r.grammatical_gender),
-      };
-    },
-  );
-
   const graRaw = Array.isArray(o.grammar) ? o.grammar : [];
-  const grammar = graRaw.map((row) => {
-    const r = row as Record<string, unknown>;
-    const grammar_type = parseGrammarType(
-      r.grammar_type ?? r.grammar_key,
-    );
-    const grammar_key = grammar_type;
-    const nkIn = typeof r.normalized_key === "string" ? r.normalized_key : "";
-    const nk = nkIn.trim()
-      ? normalizeTextKey(nkIn)
-      : normalizeTextKey(grammar_key);
-    const base = r as unknown as ArticleAnalysisResult["grammar"][0];
-    return {
-      ...base,
-      grammar_type,
-      grammar_key,
-      normalized_key: nk,
-      is_subordinate_clause: parseIsSubordinateClause(
-        r.is_subordinate_clause,
-      ),
-      finite_verb:
-        typeof r.finite_verb === "string" ? r.finite_verb.trim() : "",
-      finite_verb_position: parseFiniteVerbPosition(r.finite_verb_position),
-    };
-  });
 
   return {
-    vocabulary: vocSanitized,
-    grammar,
+    vocabulary: normalizeVocabularyRows(vocRaw),
+    grammar: normalizeGrammarRows(graRaw),
     summary_zh: typeof o.summary_zh === "string" ? o.summary_zh : "",
     summary_de_simple:
       typeof o.summary_de_simple === "string" ? o.summary_de_simple : "",
     reading_questions: reading_questions.slice(0, 3),
   };
 }
-
-export { SYSTEM_PROMPT };

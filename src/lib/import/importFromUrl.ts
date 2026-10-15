@@ -2,6 +2,8 @@ import * as dns from "node:dns";
 import * as http from "node:http";
 import * as https from "node:https";
 import { load } from "cheerio";
+import { collectBlockParagraphs } from "@/lib/import/articleBodyExtractCheerio";
+import { shouldPreferBlockParagraphs } from "@/lib/import/articleBodyExtractLogic";
 import { parseArticleFromRawInput } from "@/lib/text/parseArticleFromRaw";
 
 export type ImportedArticlePreview = {
@@ -205,6 +207,31 @@ function excerptRedundantWithBodyLead(excerpt: string, bodyText: string): boolea
   return nb.includes(ne.slice(0, Math.min(120, ne.length)));
 }
 
+function pickBodyTextFromContainer(
+  $: ReturnType<typeof load>,
+  selector: string,
+): string | null {
+  const root = $(selector).first();
+  if (!root.length) return null;
+
+  const fromP = collectParagraphs($, selector);
+  const fromBlocks = collectBlockParagraphs($, selector);
+  const pJoined = joinParagraphsDeduped(fromP);
+  const blockJoined = joinParagraphsDeduped(fromBlocks);
+
+  if (shouldPreferBlockParagraphs(fromP, fromBlocks)) {
+    return blockJoined;
+  }
+  if (fromP.length >= 3) return pJoined;
+  if (fromBlocks.length >= 2) return blockJoined;
+  if (pJoined.length >= 600) return pJoined;
+  if (blockJoined.length >= 600) return blockJoined;
+
+  const text = safeText(root.text());
+  if (text.length >= 600) return text;
+  return pJoined || blockJoined || null;
+}
+
 function pickBodyText($: ReturnType<typeof load>): string {
   const priorities = [
     "article",
@@ -214,10 +241,8 @@ function pickBodyText($: ReturnType<typeof load>): string {
   ] as const;
 
   for (const sel of priorities) {
-    const p = collectParagraphs($, sel);
-    if (p.length >= 3) return joinParagraphsDeduped(p);
-    const text = safeText($(sel).first().text());
-    if (text.length >= 600) return text;
+    const body = pickBodyTextFromContainer($, sel);
+    if (body) return body;
   }
 
   const generalParagraphs: string[] = [];
@@ -227,7 +252,13 @@ function pickBodyText($: ReturnType<typeof load>): string {
     const t = safeText($p.text());
     if (t.length >= 30) generalParagraphs.push(t);
   });
-  if (generalParagraphs.length >= 4) return joinParagraphsDeduped(generalParagraphs);
+  const generalBlocks = collectBlockParagraphs($, "body");
+  if (shouldPreferBlockParagraphs(generalParagraphs, generalBlocks)) {
+    return joinParagraphsDeduped(generalBlocks);
+  }
+  if (generalParagraphs.length >= 4) {
+    return joinParagraphsDeduped(generalParagraphs);
+  }
 
   return safeText($("body").text());
 }

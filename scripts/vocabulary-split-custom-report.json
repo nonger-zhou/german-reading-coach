@@ -1,0 +1,245 @@
+{
+  "generatedAt": "2026-05-19T11:46:24.916Z",
+  "file": "scripts/fixtures/autodiebe-schweiz-article.txt",
+  "title": "Die Schweiz ist das neue Paradies für Autodiebe",
+  "userLevel": "B1",
+  "charCount": 6170,
+  "strategies": [
+    "production_single_call",
+    "split_second_call_reset_vocab",
+    "split_second_call_minimal_b"
+  ],
+  "runs": [
+    {
+      "strategy": "production_single_call",
+      "count": 10,
+      "counts": {
+        "total": 10,
+        "noun": 10,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "expressionTypes": 0,
+      "allNounLike": true,
+      "items": [
+        {
+          "pos": "noun",
+          "surface": "Paradies",
+          "lemma": "das Paradies",
+          "zh": "乐园，天堂"
+        },
+        {
+          "pos": "compound_noun",
+          "surface": "Autodiebe",
+          "lemma": "der Autodieb",
+          "zh": "汽车盗贼"
+        },
+        {
+          "pos": "compound_noun",
+          "surface": "Luxusgaragisten",
+          "lemma": "der Luxusgaragist",
+          "zh": "豪华车库经营者"
+        },
+        {
+          "pos": "compound_noun",
+          "surface": "Einbruchdiebstählen",
+          "lemma": "der Einbruchdiebstahl",
+          "zh": "入室盗窃"
+        },
+        {
+          "pos": "noun",
+          "surface": "Diebe",
+          "lemma": "der Dieb",
+          "zh": "小偷，盗贼"
+        },
+        {
+          "pos": "noun",
+          "surface": "Sicherheit",
+          "lemma": "die Sicherheit",
+          "zh": "安全，保障"
+        },
+        {
+          "pos": "compound_noun",
+          "surface": "Überwachungsvideos",
+          "lemma": "das Überwachungsvideo",
+          "zh": "监控视频"
+        },
+        {
+          "pos": "noun",
+          "surface": "Taskforces",
+          "lemma": "die Taskforce",
+          "zh": "特别小组，工作组"
+        },
+        {
+          "pos": "noun",
+          "surface": "Versicherungen",
+          "lemma": "die Versicherung",
+          "zh": "保险"
+        },
+        {
+          "pos": "noun",
+          "surface": "Schlagzeilen",
+          "lemma": "die Schlagzeile",
+          "zh": "头条新闻"
+        }
+      ]
+    },
+    {
+      "strategy": "split_second_call_reset_vocab",
+      "count": 10,
+      "counts": {
+        "total": 10,
+        "noun": 6,
+        "verb": 3,
+        "adjective": 1,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "expressionTypes": 2,
+      "allNounLike": false,
+      "items": [
+        {
+          "pos": "noun",
+          "surface": "Paradies",
+          "lemma": "das Paradies",
+          "zh": "天堂，乐土"
+        },
+        {
+          "pos": "compound_noun",
+          "surface": "Autodiebe",
+          "lemma": "der Autodieb",
+          "zh": "汽车盗贼"
+        },
+        {
+          "pos": "noun",
+          "surface": "Garagen",
+          "lemma": "die Garage",
+          "zh": "车库"
+        },
+        {
+          "pos": "verb",
+          "surface": "einbrechen",
+          "lemma": "einbrechen",
+          "zh": "闯入，入室盗窃"
+        },
+        {
+          "pos": "verb_phrase",
+          "surface": "sich sorgen um",
+          "lemma": "sich sorgen um",
+          "zh": "担心，忧虑"
+        },
+        {
+          "pos": "adjective",
+          "surface": "hochpreisige Autos",
+          "lemma": "hochpreisig",
+          "zh": "高价的汽车"
+        },
+        {
+          "pos": "noun",
+          "surface": "Diebstähle",
+          "lemma": "der Diebstahl",
+          "zh": "盗窃"
+        },
+        {
+          "pos": "verb_phrase",
+          "surface": "sich häufen",
+          "lemma": "sich häufen",
+          "zh": "增加，频繁发生"
+        },
+        {
+          "pos": "noun",
+          "surface": "Sicherheitsvorkehrungen",
+          "lemma": "die Sicherheitsvorkehrung",
+          "zh": "安全措施"
+        },
+        {
+          "pos": "noun",
+          "surface": "Zusammenarbeit der Behörden",
+          "lemma": "die Zusammenarbeit",
+          "zh": "当局的合作"
+        }
+      ]
+    },
+    {
+      "strategy": "split_second_call_minimal_b",
+      "count": 10,
+      "counts": {
+        "total": 10,
+        "noun": 5,
+        "verb": 3,
+        "adjective": 1,
+        "adverb": 0,
+        "phrase": 1,
+        "other": 0
+      },
+      "expressionTypes": 1,
+      "allNounLike": false,
+      "items": [
+        {
+          "pos": "noun",
+          "surface": "Paradies",
+          "lemma": "Paradies",
+          "zh": "天堂"
+        },
+        {
+          "pos": "noun",
+          "surface": "Autodiebe",
+          "lemma": "Autodieb",
+          "zh": "汽车盗贼"
+        },
+        {
+          "pos": "verb",
+          "surface": "auf rüsten",
+          "lemma": "aufrüsten",
+          "zh": "加强，提升"
+        },
+        {
+          "pos": "fixed_expression",
+          "surface": "schlafende Hunde wecken",
+          "lemma": "schlafende Hunde wecken",
+          "zh": "惹麻烦，触碰敏感话题"
+        },
+        {
+          "pos": "adjective",
+          "surface": "nervös",
+          "lemma": "nervös",
+          "zh": "紧张的"
+        },
+        {
+          "pos": "verb",
+          "surface": "einbrechen",
+          "lemma": "einbrechen",
+          "zh": "闯入，破门而入"
+        },
+        {
+          "pos": "noun",
+          "surface": "Sicherheit",
+          "lemma": "Sicherheit",
+          "zh": "安全"
+        },
+        {
+          "pos": "noun",
+          "surface": "Massnahme",
+          "lemma": "Massnahme",
+          "zh": "措施"
+        },
+        {
+          "pos": "verb",
+          "surface": "überwachen",
+          "lemma": "überwachen",
+          "zh": "监控"
+        },
+        {
+          "pos": "noun",
+          "surface": "Zusammenarbeit",
+          "lemma": "Zusammenarbeit",
+          "zh": "合作"
+        }
+      ]
+    }
+  ]
+}

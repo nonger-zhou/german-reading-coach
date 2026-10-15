@@ -1,0 +1,181 @@
+{
+  "runAt": "2026-05-17T23:42:08.564Z",
+  "model": "gpt-4o-mini",
+  "promptResetWired": true,
+  "results": [
+    {
+      "id": "news-short",
+      "file": "news-short-article.txt",
+      "charCount": 357,
+      "grammarCount": 2,
+      "vocabulary": [
+        {
+          "surface_form": "Klimaziele",
+          "lemma": "das Klimaziel",
+          "part_of_speech": "noun",
+          "grammatical_gender": "n"
+        },
+        {
+          "surface_form": "Treibhausgas-Emissionen",
+          "lemma": "die Treibhausgas-Emission",
+          "part_of_speech": "compound_noun",
+          "grammatical_gender": "f"
+        },
+        {
+          "surface_form": "Jobverlusten",
+          "lemma": "der Jobverlust",
+          "part_of_speech": "noun",
+          "grammatical_gender": "m"
+        },
+        {
+          "surface_form": "kritisieren",
+          "lemma": "kritisieren",
+          "part_of_speech": "verb",
+          "grammatical_gender": "na"
+        },
+        {
+          "surface_form": "beurteilen",
+          "lemma": "beurteilen",
+          "part_of_speech": "verb",
+          "grammatical_gender": "na"
+        },
+        {
+          "surface_form": "Maßnahmen",
+          "lemma": "die Maßnahme",
+          "part_of_speech": "noun",
+          "grammatical_gender": "f"
+        }
+      ],
+      "counts": {
+        "total": 6,
+        "noun": 4,
+        "verb": 2,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "posSummary": "total=6, noun=4, verb=2, adjective=0, adverb=0, phrase=0, other=0",
+      "allNounLike": false,
+      "promptHasResetMarkers": true
+    },
+    {
+      "id": "gaullismus",
+      "file": "gaullismus-article.txt",
+      "charCount": 9711,
+      "grammarCount": 2,
+      "vocabulary": [
+        {
+          "surface_form": "europäischen Gaullismus",
+          "lemma": "europäischer Gaullismus",
+          "part_of_speech": "compound_noun",
+          "grammatical_gender": "m"
+        },
+        {
+          "surface_form": "Weltordnung",
+          "lemma": "Weltordnung",
+          "part_of_speech": "noun",
+          "grammatical_gender": "f"
+        },
+        {
+          "surface_form": "militärischen Kapazitäten",
+          "lemma": "militärische Kapazität",
+          "part_of_speech": "compound_noun",
+          "grammatical_gender": "f"
+        },
+        {
+          "surface_form": "Souveränität",
+          "lemma": "Souveränität",
+          "part_of_speech": "noun",
+          "grammatical_gender": "f"
+        },
+        {
+          "surface_form": "Rüstungsindustrie",
+          "lemma": "Rüstungsindustrie",
+          "part_of_speech": "noun",
+          "grammatical_gender": "f"
+        },
+        {
+          "surface_form": "militärisch abzusichern",
+          "lemma": "militärisch absichern",
+          "part_of_speech": "verb_phrase",
+          "grammatical_gender": "na"
+        },
+        {
+          "surface_form": "europäische Sicherheitsarchitektur",
+          "lemma": "europäische Sicherheitsarchitektur",
+          "part_of_speech": "compound_noun",
+          "grammatical_gender": "f"
+        },
+        {
+          "surface_form": "Machtpolitik",
+          "lemma": "Machtpolitik",
+          "part_of_speech": "noun",
+          "grammatical_gender": "f"
+        }
+      ],
+      "counts": {
+        "total": 8,
+        "noun": 7,
+        "verb": 1,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "posSummary": "total=8, noun=7, verb=1, adjective=0, adverb=0, phrase=0, other=0",
+      "allNounLike": false,
+      "promptHasResetMarkers": true
+    },
+    {
+      "id": "msc-oil",
+      "file": "msc-oil-article.txt",
+      "charCount": 1623,
+      "grammarCount": 2,
+      "vocabulary": [
+        {
+          "surface_form": "Ölhandel",
+          "lemma": "Ölhandel",
+          "part_of_speech": "noun",
+          "grammatical_gender": "m"
+        },
+        {
+          "surface_form": "fossilen Brennstoffen",
+          "lemma": "fossiler Brennstoff",
+          "part_of_speech": "compound_noun",
+          "grammatical_gender": "m"
+        },
+        {
+          "surface_form": "Marktzugang",
+          "lemma": "Marktzugang",
+          "part_of_speech": "noun",
+          "grammatical_gender": "m"
+        },
+        {
+          "surface_form": "Kapitänspatent",
+          "lemma": "Kapitänspatent",
+          "part_of_speech": "noun",
+          "grammatical_gender": "n"
+        },
+        {
+          "surface_form": "Umweltverbände",
+          "lemma": "Umweltverband",
+          "part_of_speech": "noun",
+          "grammatical_gender": "m"
+        }
+      ],
+      "counts": {
+        "total": 5,
+        "noun": 5,
+        "verb": 0,
+        "adjective": 0,
+        "adverb": 0,
+        "phrase": 0,
+        "other": 0
+      },
+      "posSummary": "total=5, noun=5, verb=0, adjective=0, adverb=0, phrase=0, other=0",
+      "allNounLike": true,
+      "promptHasResetMarkers": true
+    }
+  ]
+}

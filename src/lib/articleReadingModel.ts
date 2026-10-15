@@ -17,6 +17,167 @@ export function normalizeTextKey(s: string): string {
     .toLowerCase();
 }
 
+/** 语法选区去重：忽略句末标点差异，避免「…müsse」与「…müsse.」变成三条。 */
+export function normalizeGrammarSurfaceKey(s: string): string {
+  return normalizeTextKey(
+    s
+      .trim()
+      .replace(/[.,!?;:…，。！？、]+$/u, ""),
+  );
+}
+
+/** 匹配正文时统一引号、空白（导入/抓取常见差异） */
+export function normalizeArticleMatchText(s: string): string {
+  return s
+    .normalize("NFKC")
+    .replace(/[\u2018\u2019\u201A\u201B]/g, "'")
+    .replace(/[\u201C\u201D\u201E\u201F]/g, '"')
+    .replace(/\u00A0/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** 阅读/高亮用正文：去掉 BOM、软连字符，避免保存偏移与 DOM 切片错位 */
+export function sanitizeArticlePlainForMatching(plain: string): string {
+  return plain.replace(/\uFEFF/g, "").replace(/\u00AD/g, "");
+}
+
+/** 用户语法选区：生成多种匹配变体（标点、情态动词、截短尾部词等） */
+function grammarNeedleVariants(needle: string): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const push = (s: string) => {
+    const t = s.trim();
+    if (!t || seen.has(t)) return;
+    seen.add(t);
+    out.push(t);
+  };
+
+  push(needle);
+  push(needle.replace(/[.,!?;:…，。！？、]+$/u, ""));
+  push(normalizeArticleMatchText(needle));
+
+  const words = needle.trim().split(/\s+/).filter(Boolean);
+  if (words.length >= 2) {
+    const lastRaw = words[words.length - 1]!;
+    const last = lastRaw.replace(/[.,!?;:…，。！？、]+$/u, "");
+    const modalAlts = [
+      "müsse",
+      "müsste",
+      "müssen",
+      "muss",
+      "musste",
+      "müsse.",
+      "müsste.",
+    ];
+    for (const alt of modalAlts) {
+      if (alt.replace(/[.,!?;:…，。！？、]+$/u, "") !== last) {
+        push([...words.slice(0, -1), alt].join(" "));
+      }
+    }
+    for (let n = words.length - 1; n >= 2; n--) {
+      const partial = words.slice(0, n).join(" ");
+      if (partial.length >= 12) push(partial);
+    }
+  }
+
+  return out;
+}
+
+function extendGrammarRangeAfterPartialMatch(
+  articlePlain: string,
+  range: { start: number; end: number },
+  originalNeedle: string,
+): { start: number; end: number } {
+  const needleWords = originalNeedle.trim().split(/\s+/).filter(Boolean);
+  const partialWords = articlePlain
+    .slice(range.start, range.end)
+    .trim()
+    .split(/\s+/).filter(Boolean);
+  if (needleWords.length <= partialWords.length) return range;
+
+  let end = range.end;
+  while (end < articlePlain.length && /\s/.test(articlePlain[end]!)) end++;
+  const tail = articlePlain.slice(end);
+  const modal = tail.match(
+    /^m[uü]ss(?:e|te|en)?[.,!?;:…，。！？、]?/iu,
+  );
+  if (modal) {
+    return { start: range.start, end: end + modal[0].length };
+  }
+  return range;
+}
+
+function findGrammarSurfaceInArticle(
+  articlePlain: string,
+  needle: string,
+): { start: number; end: number } | null {
+  const variants = grammarNeedleVariants(needle);
+
+  for (const n of variants) {
+    let ranges = findAllExactSubstringRanges(articlePlain, n);
+    if (ranges.length > 0) {
+      return extendGrammarRangeAfterPartialMatch(articlePlain, ranges[0]!, needle);
+    }
+    ranges = findAllCaseInsensitiveSubstringRanges(articlePlain, n);
+    if (ranges.length > 0) {
+      return extendGrammarRangeAfterPartialMatch(articlePlain, ranges[0]!, needle);
+    }
+    const loose = findLooseWhitespaceOccurrence(articlePlain, n);
+    if (loose) {
+      return extendGrammarRangeAfterPartialMatch(articlePlain, loose, needle);
+    }
+  }
+
+  return null;
+}
+
+/** 该语法条目在正文中是否至少有一处可绘制高亮。 */
+export function articleGrammarItemIsHighlightableInText(
+  item: ArticleGrammarItem,
+  articlePlain: string,
+): boolean {
+  return item.occurrences.some(
+    (occ) => grammarOccurrenceToRanges(occ, articlePlain).length > 0,
+  );
+}
+
+/**
+ * 外部 AI / 本应用语法解释：返回含主句的完整德语原句（按 . ! ? 切句，非仅选区片段）。
+ */
+export function grammarOccurrencePromptSentence(
+  articlePlain: string,
+  occ: {
+    sentence?: string;
+    start_offset?: number;
+    end_offset?: number;
+    surface_form?: string;
+    fallbackMatchText?: string;
+  },
+): string {
+  if (
+    occ.start_offset !== undefined &&
+    occ.end_offset !== undefined &&
+    occ.end_offset > occ.start_offset
+  ) {
+    return extractSentence(articlePlain, occ.start_offset, occ.end_offset);
+  }
+  const surf = (occ.surface_form || occ.fallbackMatchText || "").trim();
+  if (surf) {
+    const hit =
+      findBestTextOccurrence(articlePlain, surf, 0) ??
+      findLooseWhitespaceOccurrence(articlePlain, surf);
+    if (hit) {
+      return extractSentence(articlePlain, hit.start, hit.end);
+    }
+  }
+  const sent = (occ.sentence ?? "").trim();
+  if (sent.length >= 12 && /[a-zA-ZäöüßÄÖÜ]{3,}/.test(sent)) {
+    return sent;
+  }
+  return sent || surf;
+}
+
 export function newEntityId(prefix: string): string {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
     return `${prefix}-${crypto.randomUUID()}`;
@@ -124,6 +285,67 @@ function findLooseWhitespaceOccurrence(
   return { start: m.index, end: m.index + m[0].length };
 }
 
+function plainTextNodeExcluded(textNode: Text): boolean {
+  return Boolean(textNode.parentElement?.closest('[aria-hidden="true"]'));
+}
+
+/**
+ * 将 DOM 选区映射到 `articlePlain` 偏移；跳过发音 tooltip 等 `aria-hidden` 文本，
+ * 避免 `Range#toString` / `pre.toString()` 与正文长度不一致。
+ */
+export function getArticlePlainOffsetsFromDomRange(
+  root: HTMLElement,
+  range: Range,
+): { start: number; end: number } | null {
+  if (range.collapsed || !root.contains(range.commonAncestorContainer)) {
+    return null;
+  }
+
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let offset = 0;
+  let start: number | null = null;
+  let end: number | null = null;
+  const { startContainer, startOffset, endContainer, endOffset } = range;
+
+  let n: Node | null;
+  while ((n = walker.nextNode())) {
+    if (n.nodeType !== Node.TEXT_NODE) continue;
+    const textNode = n as Text;
+    if (plainTextNodeExcluded(textNode)) continue;
+    const len = (textNode.textContent ?? "").length;
+
+    if (n === startContainer && start === null) {
+      start = offset + startOffset;
+    }
+    if (n === endContainer) {
+      end = offset + endOffset;
+    }
+    offset += len;
+  }
+
+  if (start === null || end === null || end < start) return null;
+  return { start, end };
+}
+
+/** 选区已含 sein 但句末情态词在换行后时，延伸至 müsse/müsste 等 */
+export function extendGrammarClauseEndInPlain(
+  articlePlain: string,
+  start: number,
+  end: number,
+): number | null {
+  const slice = articlePlain.slice(start, end).trimEnd();
+  const rest = articlePlain.slice(end);
+  const withSein = rest.match(
+    /^(\s+sein\s+m[uü]ss\w*[.,!?;:…，。！？、]?)/iu,
+  );
+  if (withSein) return end + withSein[1]!.length;
+  if (/\bsein\s*$/iu.test(slice)) {
+    const modalOnly = rest.match(/^(\s+m[uü]ss\w*[.,!?;:…，。！？、]?)/iu);
+    if (modalOnly) return end + modalOnly[1]!.length;
+  }
+  return null;
+}
+
 export function resolveUserHighlightInPlain(
   root: HTMLElement | null,
   range: Range | null,
@@ -139,14 +361,21 @@ export function resolveUserHighlightInPlain(
       : "";
 
   let hintStart = 0;
+  let domOffsets: { start: number; end: number } | null = null;
+
   if (range && root && root.contains(range.commonAncestorContainer)) {
-    try {
-      const pre = document.createRange();
-      pre.setStart(root, 0);
-      pre.setEnd(range.startContainer, range.startOffset);
-      hintStart = pre.toString().length;
-    } catch {
-      hintStart = 0;
+    domOffsets = getArticlePlainOffsetsFromDomRange(root, range);
+    if (domOffsets) {
+      hintStart = domOffsets.start;
+    } else {
+      try {
+        const pre = document.createRange();
+        pre.setStart(root, 0);
+        pre.setEnd(range.startContainer, range.startOffset);
+        hintStart = pre.toString().length;
+      } catch {
+        hintStart = 0;
+      }
     }
   }
 
@@ -157,24 +386,53 @@ export function resolveUserHighlightInPlain(
     root.contains(range.commonAncestorContainer)
   ) {
     try {
-      const endR = document.createRange();
-      endR.setStart(root, 0);
-      endR.setEnd(range.endContainer, range.endOffset);
-      const endOff = endR.toString().length;
-      const startR = document.createRange();
-      startR.setStart(root, 0);
-      startR.setEnd(range.startContainer, range.startOffset);
-      const startOff = startR.toString().length;
-      const domSlice = articlePlain.slice(startOff, endOff);
-      const rt = range.toString();
+      let startOff: number;
+      let endOff: number;
+      if (domOffsets) {
+        startOff = domOffsets.start;
+        endOff = domOffsets.end;
+      } else {
+        const endR = document.createRange();
+        endR.setStart(root, 0);
+        endR.setEnd(range.endContainer, range.endOffset);
+        endOff = endR.toString().length;
+        const startR = document.createRange();
+        startR.setStart(root, 0);
+        startR.setEnd(range.startContainer, range.startOffset);
+        startOff = startR.toString().length;
+      }
+
+      const extendedEnd = extendGrammarClauseEndInPlain(
+        articlePlain,
+        startOff,
+        endOff,
+      );
+      if (extendedEnd !== null) endOff = extendedEnd;
+
       if (
         startOff >= 0 &&
         endOff <= articlePlain.length &&
-        endOff >= startOff &&
-        domSlice === rt
+        endOff > startOff
       ) {
-        return { start: startOff, end: endOff, surface: domSlice };
+        const domSlice = articlePlain.slice(startOff, endOff);
+        const rt = range.toString();
+        if (domSlice === rt || normalizeArticleMatchText(domSlice) === normalizeArticleMatchText(rt)) {
+          return { start: startOff, end: endOff, surface: domSlice };
+        }
+        const looseDom = findLooseWhitespaceOccurrence(articlePlain, domSlice);
+        if (looseDom && looseDom.start === startOff) {
+          return {
+            start: looseDom.start,
+            end: looseDom.end,
+            surface: articlePlain.slice(looseDom.start, looseDom.end),
+          };
+        }
+        if (domSlice.trim()) {
+          return { start: startOff, end: endOff, surface: domSlice };
+        }
       }
+
+      const rt = range.toString();
       const occ = findBestTextOccurrence(articlePlain, rt, hintStart);
       if (occ) {
         const surface = articlePlain.slice(occ.start, occ.end);
@@ -186,7 +444,9 @@ export function resolveUserHighlightInPlain(
         (s, i, a) => s.length > 0 && a.indexOf(s) === i,
       );
       for (const n of needles) {
-        const o = findBestTextOccurrence(articlePlain, n, hintStart);
+        const o =
+          findBestTextOccurrence(articlePlain, n, hintStart) ??
+          findLooseWhitespaceOccurrence(articlePlain, n);
         if (o) {
           const surface = articlePlain.slice(o.start, o.end);
           return { start: o.start, end: o.end, surface };
@@ -201,7 +461,9 @@ export function resolveUserHighlightInPlain(
     (s, i, a) => s.length > 0 && a.indexOf(s) === i,
   );
   for (const n of needles) {
-    const o = findBestTextOccurrence(articlePlain, n, hintStart);
+    const o =
+      findBestTextOccurrence(articlePlain, n, hintStart) ??
+      findLooseWhitespaceOccurrence(articlePlain, n);
     if (o) {
       const surface = articlePlain.slice(o.start, o.end);
       return { start: o.start, end: o.end, surface };
@@ -389,6 +651,110 @@ export function vocabOccurrenceToRanges(
   return trust.length ? trust : [];
 }
 
+/** 该词汇条目在正文中是否至少有一处可绘制高亮（任意 occurrence 能解析出非空 ranges）。 */
+export function articleVocabItemIsHighlightableInText(
+  item: ArticleVocabItem,
+  articlePlain: string,
+): boolean {
+  const ctx: VocabOccurrenceRangeContext = {
+    displayWord: item.display_word,
+    lemma: item.lemma,
+  };
+  return item.occurrences.some(
+    (occ) => vocabOccurrenceToRanges(occ, articlePlain, ctx).length > 0,
+  );
+}
+
+const UNLOCATED_IN_ARTICLE_ORDER = Number.MAX_SAFE_INTEGER;
+
+/** 词条在正文中首次出现位置（用于右侧列表按阅读顺序排序） */
+export function articleVocabItemMinStartOffset(
+  item: ArticleVocabItem,
+  articlePlain: string,
+): number {
+  const ctx: VocabOccurrenceRangeContext = {
+    displayWord: item.display_word,
+    lemma: item.lemma,
+  };
+  let min = UNLOCATED_IN_ARTICLE_ORDER;
+  for (const occ of item.occurrences) {
+    if (
+      occ.start_offset !== undefined &&
+      occ.end_offset !== undefined &&
+      occ.start_offset >= 0 &&
+      occ.end_offset <= articlePlain.length &&
+      occ.end_offset > occ.start_offset
+    ) {
+      min = Math.min(min, occ.start_offset);
+    }
+    for (const r of vocabOccurrenceToRanges(occ, articlePlain, ctx)) {
+      min = Math.min(min, r.start);
+    }
+  }
+  return min;
+}
+
+export function compareArticleVocabItemsByReadingOrder(
+  a: ArticleVocabItem,
+  b: ArticleVocabItem,
+  articlePlain: string,
+): number {
+  const da = articleVocabItemMinStartOffset(a, articlePlain);
+  const db = articleVocabItemMinStartOffset(b, articlePlain);
+  if (da !== db) return da - db;
+  return (a.display_word || a.lemma || a.id).localeCompare(
+    b.display_word || b.lemma || b.id,
+    "de",
+  );
+}
+
+export function sortArticleVocabItemsByReadingOrder(
+  items: ArticleVocabItem[],
+  articlePlain: string,
+): ArticleVocabItem[] {
+  return [...items].sort((a, b) =>
+    compareArticleVocabItemsByReadingOrder(a, b, articlePlain),
+  );
+}
+
+/** 语法项在正文中首次出现位置 */
+export function articleGrammarItemMinStartOffset(
+  item: ArticleGrammarItem,
+  articlePlain: string,
+): number {
+  let min = UNLOCATED_IN_ARTICLE_ORDER;
+  for (const occ of item.occurrences) {
+    if (
+      occ.start_offset !== undefined &&
+      occ.end_offset !== undefined &&
+      occ.start_offset >= 0 &&
+      occ.end_offset <= articlePlain.length &&
+      occ.end_offset > occ.start_offset
+    ) {
+      min = Math.min(min, occ.start_offset);
+    }
+    for (const r of grammarOccurrenceToRanges(occ, articlePlain)) {
+      min = Math.min(min, r.start);
+    }
+  }
+  return min;
+}
+
+export function sortArticleGrammarItemsByReadingOrder(
+  items: ArticleGrammarItem[],
+  articlePlain: string,
+): ArticleGrammarItem[] {
+  return [...items].sort((a, b) => {
+    const da = articleGrammarItemMinStartOffset(a, articlePlain);
+    const db = articleGrammarItemMinStartOffset(b, articlePlain);
+    if (da !== db) return da - db;
+    return (a.name_de || a.normalized_key || a.id).localeCompare(
+      b.name_de || b.normalized_key || b.id,
+      "de",
+    );
+  });
+}
+
 /**
  * 用户侧 occurrence 的 start/end 来自选区，应与 `articlePlain` 一致；当 surface / needle 与正文略不一致
  *（空白、断词、模型改写卡面等）时仍用偏移画高亮，避免「已加入词库但正文无色」。
@@ -482,7 +848,7 @@ export function grammarOccurrenceToRanges(
   articlePlain: string,
   ctx?: VocabOccurrenceRangeContext,
 ): { start: number; end: number }[] {
-  return vocabOccurrenceToRanges(
+  const fromVocab = vocabOccurrenceToRanges(
     {
       id: occ.id,
       surface_form: occ.surface_form,
@@ -495,6 +861,20 @@ export function grammarOccurrenceToRanges(
     articlePlain,
     ctx,
   );
+  if (fromVocab.length > 0) return fromVocab;
+
+  const needles = [
+    occ.fallbackMatchText,
+    occ.surface_form,
+    occ.sentence,
+  ].filter((s): s is string => Boolean((s ?? "").trim()));
+
+  for (const n of needles) {
+    const hit = findGrammarSurfaceInArticle(articlePlain, n);
+    if (hit) return [hit];
+  }
+
+  return [];
 }
 
 export function vocabUserStyle(item: ArticleVocabItem): boolean {
@@ -754,6 +1134,134 @@ export function expandVocabItemsWithRepeatedSurface(
     }
     return { ...item, occurrences: next };
   });
+}
+
+function hydrateGrammarOccurrenceOffsets(
+  occ: GrammarOccurrence,
+  articlePlain: string,
+  needle: string,
+): GrammarOccurrence {
+  if (
+    occ.start_offset !== undefined &&
+    occ.end_offset !== undefined &&
+    occ.end_offset > occ.start_offset &&
+    occ.end_offset <= articlePlain.length
+  ) {
+    const sentence = grammarOccurrencePromptSentence(articlePlain, occ);
+    return { ...occ, sentence: sentence || occ.sentence };
+  }
+  const n = needle.trim();
+  if (!n) return occ;
+  const hit =
+    findBestTextOccurrence(articlePlain, n, occ.start_offset ?? 0) ??
+    findLooseWhitespaceOccurrence(articlePlain, n);
+  if (!hit) return occ;
+  const surface = articlePlain.slice(hit.start, hit.end);
+  return {
+    ...occ,
+    surface_form: surface,
+    fallbackMatchText: occ.fallbackMatchText || surface,
+    start_offset: hit.start,
+    end_offset: hit.end,
+    sentence: extractSentence(articlePlain, hit.start, hit.end),
+  };
+}
+
+/** 用户语法：在正文中重算 occurrence 偏移与完整原句，修复「已保存但左侧无紫色高亮」。 */
+export function rebuildUserStyleGrammarOccurrencesFromArticle(
+  item: ArticleGrammarItem,
+  articlePlain: string,
+): ArticleGrammarItem {
+  if (!grammarUserStyle(item)) return item;
+  const needles = [
+    item.occurrences[0]?.fallbackMatchText,
+    item.occurrences[0]?.surface_form,
+    item.name_de,
+    item.normalized_key,
+    item.grammar_key,
+  ].filter((s): s is string => Boolean((s ?? "").trim()));
+
+  let hit: { start: number; end: number } | null = null;
+  let needle = "";
+  for (const n of needles) {
+    needle = n.trim();
+    hit = findGrammarSurfaceInArticle(articlePlain, needle);
+    if (hit) break;
+  }
+  if (!needle) return item;
+  const ranges = hit ? [hit] : [];
+
+  if (ranges.length === 0) {
+    const occurrences = item.occurrences.map((o) =>
+      hydrateGrammarOccurrenceOffsets(o, articlePlain, needle),
+    );
+    return { ...item, occurrences };
+  }
+
+  const occurrences: GrammarOccurrence[] = ranges.map(({ start, end }) => ({
+    id: `${item.id}-${start}-${end}`,
+    surface_form: articlePlain.slice(start, end),
+    sentence: extractSentence(articlePlain, start, end),
+    start_offset: start,
+    end_offset: end,
+    fallbackMatchText: needle,
+    source: "user_added",
+  }));
+  const nk = normalizeGrammarSurfaceKey(needle);
+  return {
+    ...item,
+    occurrences,
+    normalized_key: nk,
+    grammar_key: nk,
+  };
+}
+
+export function finalizeArticleGrammarItems(
+  items: ArticleGrammarItem[],
+  articlePlain: string,
+): ArticleGrammarItem[] {
+  return items.map((item) =>
+    grammarUserStyle(item)
+      ? rebuildUserStyleGrammarOccurrencesFromArticle(item, articlePlain)
+      : item,
+  );
+}
+
+/** 合并 normalized_key 相同的重复语法卡片（如多次手动添加同一从句）。 */
+export function dedupeGrammarItemsBySurfaceKey(
+  items: ArticleGrammarItem[],
+): ArticleGrammarItem[] {
+  const map = new Map<string, ArticleGrammarItem>();
+  for (const item of items) {
+    const key = normalizeGrammarSurfaceKey(
+      item.normalized_key ||
+        item.occurrences[0]?.surface_form ||
+        item.name_de ||
+        "",
+    );
+    if (!key) continue;
+    const prev = map.get(key);
+    if (!prev) {
+      map.set(key, item);
+      continue;
+    }
+    const occs = [...prev.occurrences];
+    for (const o of item.occurrences) {
+      if (
+        !occs.some(
+          (x) => occurrencePositionKey(x) === occurrencePositionKey(o),
+        )
+      ) {
+        occs.push(o);
+      }
+    }
+    map.set(key, {
+      ...prev,
+      occurrences: occs,
+      dbItemId: prev.dbItemId ?? item.dbItemId,
+    });
+  }
+  return [...map.values()];
 }
 
 export function expandGrammarItemsWithRepeatedSurface(
@@ -1047,7 +1555,7 @@ export function mergeGrammarOccurrence(
   itemId: string;
   occurrenceId: string;
 } {
-  const norm = normalizeTextKey(surface);
+  const norm = normalizeGrammarSurfaceKey(surface);
   const fallback = resolved?.surface ?? surface.trim();
   const sentence = resolved
     ? extractSentence(articlePlain, resolved.start, resolved.end)

@@ -37,4 +37,21 @@ Fehler gefunden? Jetzt melden.
     expect(result.cleanedText).not.toContain("Der perfekte Start in den Tag");
     expect(result.cleanedText).not.toContain("111 Kommentare");
   });
+
+  it("removes cookie / external embed placeholder paragraphs", () => {
+    const result = cleanArticleText(`
+Einleitung zum Thema.
+
+Hier wird Inhalt angezeigt, der zusätzliche Cookies setzt.
+
+An dieser Stelle finden Sie einen ergänzenden externen Inhalt. Falls Sie damit einverstanden sind, dass Cookies von externen Anbietern gesetzt werden, können Sie alle Cookies zulassen.
+
+Der eigentliche Absatz der Geschichte geht hier weiter.
+`);
+
+    expect(result.cleanedText).toContain("Einleitung zum Thema");
+    expect(result.cleanedText).toContain("eigentliche Absatz");
+    expect(result.cleanedText).not.toContain("zusätzliche Cookies");
+    expect(result.cleanedText).not.toContain("ergänzenden externen Inhalt");
+  });
 });
