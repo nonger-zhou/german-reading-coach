@@ -545,6 +545,17 @@ npx vitest run --config vitest.live.config.ts src/lib/articleAnalysis/vocabulary
 
 ## 更新记录（按任务追加）
 
+### 2026-10-15 — 修复：总词库「读取词库失败 Bad Request」
+
+**原因**：`/vocabulary` 用 `.in("vocabulary_item_id", 全部 ID)` 一次查释义与出处；词库约 700 条时 URL 超长，Supabase 返回 400。数据本身完好（核对：698 词、1487 出处、62 篇文章、27 条语法）。与选词 v2 无关，词条数增长到一定量即触发。
+
+**本次完成**
+- 新增 **`src/lib/supabase/inChunks.ts`**（`selectInChunks`，每批 100 个 ID）。
+- **`src/app/vocabulary/page.tsx`**：释义、出处、文章标题改为分批查询；主词条列表改为每页 1000 行分页读取（避免超过 1000 条后被静默截断）。
+- **`src/app/grammar/page.tsx`**：出处与文章标题同样分批（预防）。
+
+**验证**：`npm test`（93）/ `npm run build` 通过。
+
 ### 2026-10-15 — 选词 v2：只推用户不认识的词（词频表 + 词库画像）
 
 **背景**：本地 5 月 17–19 日的工作此前未提交到 GitHub（线上为 5 月 25 日 CLI 部署）；本次先原样提交为 `local-work` 分支，再在其上叠加选词 v2。

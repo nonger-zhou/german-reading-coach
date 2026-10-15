@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { selectInChunks } from "@/lib/supabase/inChunks";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { Badge } from "@/components/ui/Badge";
@@ -264,19 +265,33 @@ function VocabularyPageContent() {
         const itemSelectBase =
           "id,lemma,display_word,normalized_key,part_of_speech,zh_meaning,simple_de_explanation,mastery_status,source,level_estimate,encounter_count,created_at,updated_at,last_seen_at";
 
-        const initialItemsResult = await sb
-          .from("vocabulary_items")
-          .select(itemSelectWithDeepNote)
-          .eq("user_id", session.user.id)
-          .order("created_at", { ascending: false });
+        /** 分页读取全部词条（Supabase 单次最多返回 1000 行，超过会被静默截断） */
+        const fetchAllItems = async (
+          columns: string,
+        ): Promise<{ data: unknown[] | null; error: unknown }> => {
+          const PAGE = 1000;
+          const all: unknown[] = [];
+          for (let from = 0; ; from += PAGE) {
+            const res = await sb
+              .from("vocabulary_items")
+              .select(columns)
+              .eq("user_id", session.user.id)
+              .order("created_at", { ascending: false })
+              .order("id", { ascending: true })
+              .range(from, from + PAGE - 1);
+            if (res.error) return { data: null, error: res.error };
+            const batch = (res.data ?? []) as unknown[];
+            all.push(...batch);
+            if (batch.length < PAGE) break;
+          }
+          return { data: all, error: null };
+        };
+
+        const initialItemsResult = await fetchAllItems(itemSelectWithDeepNote);
         let itemRows: unknown[] | null = initialItemsResult.data;
         let itemErr: unknown = initialItemsResult.error;
         if (itemErr && isMissingDeepNoteColumn(itemErr)) {
-          const fallback = await sb
-            .from("vocabulary_items")
-            .select(itemSelectBase)
-            .eq("user_id", session.user.id)
-            .order("created_at", { ascending: false });
+          const fallback = await fetchAllItems(itemSelectBase);
           itemRows = fallback.data;
           itemErr = fallback.error;
         }
@@ -288,36 +303,41 @@ function VocabularyPageContent() {
         }
 
         const itemIds = rows.map((r) => r.id);
-        const { data: senseRows, error: senseErr } = await sb
-          .from("vocabulary_senses")
-          .select("vocabulary_item_id,zh_meaning,simple_de_explanation,created_at")
-          .eq("user_id", session.user.id)
-          .in("vocabulary_item_id", itemIds)
-          .order("created_at", { ascending: true });
-        if (senseErr) throw senseErr;
+        const senseRows = (
+          await selectInChunks<VocabularySenseRow>(itemIds, (chunk) =>
+            sb
+              .from("vocabulary_senses")
+              .select("vocabulary_item_id,zh_meaning,simple_de_explanation,created_at")
+              .eq("user_id", session.user.id)
+              .in("vocabulary_item_id", chunk),
+          )
+        ).sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)));
 
-        const { data: occurrenceRows, error: occErr } = await sb
-          .from("vocabulary_occurrences")
-          .select("id,vocabulary_item_id,article_id,surface_form,created_at")
-          .eq("user_id", session.user.id)
-          .in("vocabulary_item_id", itemIds);
-        if (occErr) throw occErr;
-
-        const occs = (occurrenceRows ?? []) as VocabularyOccurrenceRow[];
+        const occs = await selectInChunks<VocabularyOccurrenceRow>(
+          itemIds,
+          (chunk) =>
+            sb
+              .from("vocabulary_occurrences")
+              .select("id,vocabulary_item_id,article_id,surface_form,created_at")
+              .eq("user_id", session.user.id)
+              .in("vocabulary_item_id", chunk),
+        );
         const articleIds = [...new Set(occs.map((o) => o.article_id))];
         let articleTitleRows: ArticleTitleRow[] = [];
         if (articleIds.length > 0) {
-          const { data: arts, error: artErr } = await sb
-            .from("articles")
-            .select("id,title")
-            .eq("user_id", session.user.id)
-            .in("id", articleIds);
-          if (artErr) throw artErr;
-          articleTitleRows = (arts ?? []) as ArticleTitleRow[];
+          articleTitleRows = await selectInChunks<ArticleTitleRow>(
+            articleIds,
+            (chunk) =>
+              sb
+                .from("articles")
+                .select("id,title")
+                .eq("user_id", session.user.id)
+                .in("id", chunk),
+          );
         }
 
         const firstSenseByItem = new Map<string, VocabularySenseRow>();
-        for (const s of (senseRows ?? []) as VocabularySenseRow[]) {
+        for (const s of senseRows) {
           if (!firstSenseByItem.has(s.vocabulary_item_id)) {
             firstSenseByItem.set(s.vocabulary_item_id, s);
           }

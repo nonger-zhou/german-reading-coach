@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { selectInChunks } from "@/lib/supabase/inChunks";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { Badge } from "@/components/ui/Badge";
@@ -207,24 +208,27 @@ function GrammarPageContent() {
         }
 
         const itemIds = rows.map((r) => r.id);
-        const { data: occurrenceRows, error: occErr } = await sb
-          .from("grammar_occurrences")
-          .select("id,grammar_item_id,article_id,selected_text,sentence,created_at")
-          .eq("user_id", session.user.id)
-          .in("grammar_item_id", itemIds);
-        if (occErr) throw occErr;
-
-        const occs = (occurrenceRows ?? []) as GrammarOccurrenceRow[];
+        const occs = await selectInChunks<GrammarOccurrenceRow>(
+          itemIds,
+          (chunk) =>
+            sb
+              .from("grammar_occurrences")
+              .select("id,grammar_item_id,article_id,selected_text,sentence,created_at")
+              .eq("user_id", session.user.id)
+              .in("grammar_item_id", chunk),
+        );
         const articleIds = [...new Set(occs.map((o) => o.article_id))];
         let articleTitleRows: ArticleTitleRow[] = [];
         if (articleIds.length > 0) {
-          const { data: arts, error: artErr } = await sb
-            .from("articles")
-            .select("id,title")
-            .eq("user_id", session.user.id)
-            .in("id", articleIds);
-          if (artErr) throw artErr;
-          articleTitleRows = (arts ?? []) as ArticleTitleRow[];
+          articleTitleRows = await selectInChunks<ArticleTitleRow>(
+            articleIds,
+            (chunk) =>
+              sb
+                .from("articles")
+                .select("id,title")
+                .eq("user_id", session.user.id)
+                .in("id", chunk),
+          );
         }
 
         const occByItem = new Map<string, GrammarOccurrenceRow[]>();
