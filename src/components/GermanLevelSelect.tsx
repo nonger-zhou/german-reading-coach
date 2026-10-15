@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { CefrLevel } from "@/lib/types";
 import { Badge } from "@/components/ui/Badge";
 
@@ -55,6 +56,9 @@ export function GermanLevelSelect({
         <span className="font-medium">重要提醒：</span>
         所选等级仅用于<strong>调节阅读辅助强度</strong>（释义多少、提示频率等），
         <strong>不代表</strong>您在听说读写上的完整 CEFR 水平。
+        <Link href="/help#level" className="ml-1 font-medium text-emerald-700 underline-offset-2 hover:underline dark:text-emerald-400">
+          不知道选哪个？看对照表 →
+        </Link>
       </p>
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {LEVELS.map((lvl) => {

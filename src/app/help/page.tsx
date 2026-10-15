@@ -28,6 +28,7 @@ function Section({
 const toc = [
   { id: "flow", label: "一篇文章怎么学" },
   { id: "import", label: "导入文章" },
+  { id: "level", label: "阅读水平怎么选" },
   { id: "recommend", label: "AI 会推荐哪些词" },
   { id: "status", label: "学习中 / 已掌握 / 暂忽略" },
   { id: "long", label: "长文章" },
@@ -89,6 +90,45 @@ export default function HelpPage() {
             <strong>手动粘贴</strong>：复制正文后在导入页「从剪贴板读取」。
           </li>
         </ul>
+      </Section>
+
+      <Section id="level" title="阅读水平怎么选">
+        <p>
+          在
+          <Link href="/settings" className="mx-0.5 text-emerald-700 hover:underline dark:text-emerald-400">
+            设置
+          </Link>
+          里选默认水平，导入时也可以给单篇文章改。不必很准：你标「已掌握」和手动添加的词会让系统<strong>自动校准</strong>，读几篇后就会贴近实际水平。
+        </p>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[22rem] text-left text-sm">
+            <thead className="text-xs text-zinc-500">
+              <tr>
+                <th className="py-1 pr-3 font-medium">你的德语情况</th>
+                <th className="py-1 font-medium">大约选</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+              {[
+                ["歌德 / telc / ÖSD 证书", "证书上的等级"],
+                ["TestDaF 各项 TDN 3", "B2"],
+                ["TestDaF 各项 TDN 4–5", "C1"],
+                ["DSH-1 / DSH-2 / DSH-3", "B2 / C1 / C2"],
+                ["没考过试：能读简化新闻，常查词", "B1"],
+                ["没考过试：能读瑞士 / 德国报纸，每段有几个生词", "B2"],
+                ["没考过试：读报基本顺畅，只有少量专业词不认识", "C1"],
+              ].map(([a, b]) => (
+                <tr key={a}>
+                  <td className="py-1.5 pr-3">{a}</td>
+                  <td className="py-1.5 font-medium">{b}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p>
+          选高了会少推、选低了会多推；用一段时间后系统会自动往合适的方向调。
+        </p>
       </Section>
 
       <Section id="recommend" title="AI 会推荐哪些词">
