@@ -97,6 +97,26 @@ function lineMatchesBreadcrumbOrUiNoise(trimmedLine: string): boolean {
   return false;
 }
 
+/**
+ * 网页按钮与元信息单独成行时去掉（2026-10-15，德语 / 英语）：朗读、保存、分享、语言切换、
+ * 「本文发布于 …」、阅读时长等。整行必须完全是这些内容才删，避免误删正文。
+ */
+const STANDALONE_UI_LINE_PATTERNS: RegExp[] = [
+  // English
+  /^(listen to (the|this) (article|story)|listen|toggle language selector|change language|save( article| for later)?|share( this (article|story))?|print|copy link|read more|advertisement|skip advertisement|sign up|subscribe|follow|bookmark)$/i,
+  /^\d{1,3}\s*(min|mins|minutes?)(\s+read)?$/i,
+  /^(this content was|first)\s+published\s*on.{0,80}$/i,
+  // Deutsch
+  /^(((den )?artikel|beitrag) (anhören|vorlesen)|vorlesen|sprache (wählen|ändern)|speichern|merken|drucken|link kopieren)$/i,
+  /^(lesezeit:?\s*)?\d{1,3}\s*(min\.?|minuten?)(\s+lesezeit)?$/i,
+  /^dieser inhalt wurde am\b.{0,80}$/i,
+];
+
+function lineMatchesStandaloneUiControl(trimmedLine: string): boolean {
+  if (trimmedLine.length > 120) return false;
+  return STANDALONE_UI_LINE_PATTERNS.some((re) => re.test(trimmedLine));
+}
+
 function lineMatchesTerminalSection(trimmedLine: string): boolean {
   if (
     /^(Das könnte (Sie|Ihnen) auch interessieren|Könnte (Sie|Ihnen) auch interessieren|Fehler gefunden|Jetzt melden|Mehr zum Thema|Auch interessant|Weitere Artikel|Weitere Newsletter|Newsletter|Kommentare?)\b/i.test(
@@ -169,6 +189,9 @@ function shouldRemoveLine(trimmedLine: string): boolean {
     return true;
   }
   if (lineMatchesBreadcrumbOrUiNoise(trimmedLine)) {
+    return true;
+  }
+  if (lineMatchesStandaloneUiControl(trimmedLine)) {
     return true;
   }
   if (lineMatchesPhotoCredit(trimmedLine)) {

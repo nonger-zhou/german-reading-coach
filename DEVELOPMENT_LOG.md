@@ -5,6 +5,17 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-10-15 — 高亮大小写回退 + 网页按钮行自动清理（德语 / 英语，分支 `feat/english-language`）
+
+**原因**：Preview 测试英语文章时，AI 推荐的 swarms 没有高亮（原文为引号开头的 “Swarms”，大小写不一致）；手动粘贴的 swissinfo 英文页带入 Listen to the article、Save、Share、发布时间、阅读时长等按钮行。
+**本次完成**
+- `findBestTextOccurrence`（`src/lib/articleReadingModel.ts`）：完全匹配失败时再按不区分大小写匹配（复用已有 `findAllCaseInsensitiveSubstringRanges`，长度会变的字符不回退）。只在原来返回「找不到」时生效，原来能匹配的结果不变；德语、英语都受益（AI 预览定位、未定位提示、保存时 occurrence 定位、拖选映射兜底）。
+- `cleanArticleText`：整行完全是网页按钮 / 元信息时删除——英语（Listen to the article、Toggle language selector、Save、Share、Print、Read more、Advertisement、This content was published on…、「9 minutes」）与德语（Artikel anhören、Vorlesen、Speichern、Merken、Drucken、Link kopieren、Lesezeit / 「4 Minuten」、Dieser Inhalt wurde am …）。整行锚定匹配，正文中含 bemerken / drucken / speichern 的句子不受影响（有测试）。
+- 测试：+4 条（共 132），德语选词快照不变。
+- `docs/USER_MANUAL.md` §1.4、§9.2 补充说明。
+**影响面**：德语导入清理多删上述按钮行；德语高亮可能比以前多（以前因大小写不一致而「暂无高亮」的词）。
+**验证**：`npm test`（132）/ `npm run build` 通过。
+
 ### 2026-10-15 — PRD：社交媒体与手机导入（文档，待开发）
 
 **本次完成**：`docs/PRD.md` 新增 **§1.4.3**（讨论确定的需求，尚未开发）：截图 / 拍照导入（AI 读图、去界面与评论、多图拼接、用户核对、不存原图、张数上限、短内容不出阅读问题）；费用说明（API 每张不到 1 美分，订阅额度不能被第三方软件调用，零费用手动路径）；手机分享菜单（安卓 PWA；iPhone 为系统限制，用快捷指令）；X / Facebook（截图 + 插件平台规则）；YouTube 文稿（插件读已展开文稿面板，不做服务端抓字幕）；过渡办法与开发顺序。§1.4.2「后期（手机端）」与 P3 处加指引。
