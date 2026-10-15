@@ -76,6 +76,38 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-10-15 — 选词 v2：只推用户不认识的词（词频表 + 词库画像）
+
+**问题**：推荐词几乎全是名词、偏简单（很多已掌握），真正不会的词（动词、副词、连接词）反而漏推。原因：
+- 选词完全由 `gpt-4o-mini` 凭感觉完成，只有一个 CEFR 标签可参考；
+- 已掌握剔除要求 `normalized_key` + 词性**完全一致**，而两者都由模型自由生成，常对不上；
+- 手动再次添加已掌握的词时，状态不变，仍被剔除；
+- `vocabularyAllNounRetry.ts` 等防名词代码未接入（死代码，本次未删）。
+
+**本次完成**
+- **新增 `src/lib/vocabSelection/`**：
+  - `germanFrequencyData.ts`：德语词频排名 8 万词（OpenSubtitles 2018 + 德语维基合并，取较常用名次；来源与许可见文件头；生成脚本 `scripts/build-german-frequency.py`）。
+  - `frequency.ts`：`rankOfWord`（含屈折词尾回退、瑞士写法 ss→ß）、`vocabMatchKey`（去冠词 / sich、小写）。
+  - `userVocabProfile.ts`：等级分界线（A1 2 000 … B1 8 000、B2 14 000 …）、自适应校准、已掌握 / 学习中集合。
+  - `articleCandidates.ts`：正文分词、候选生词提取、文中学习中词定位（含变形）。
+  - `selectVocabulary.ts`：生成给模型的【用户词汇画像 / 候选生词 / 必须推荐】段；模型输出后确定性过滤（学习中必留并补全、已掌握剔除、常用单词剔除、保留重要性排序）。
+- **`src/app/api/analyze-article/route.ts`**：接入选词 v2；模型改为 **`gpt-5-mini`**（`reasoning_effort: low`），可用 **`OPENAI_ANALYSIS_MODEL`** 覆盖；新增选词统计日志。
+- **`src/lib/supabase/vocabulary.ts`**：新增 `fetchVocabularyProfileRowsForArticleAnalysis`；`persistManualVocabularyItem` 新增 `reactivateIfMastered`：用户主动添加已掌握 / 暂忽略词时改回 `learning`。
+- **`src/components/InteractiveArticleReader.tsx`**：框选添加、表单添加两处传 `reactivateIfMastered: true`（仅此 2 行）。
+- **`openaiArticleAnalysis.ts`**：SYSTEM_PROMPT 增加【用户词汇画像优先】一段。
+- **未改动**：外部深入解释（`labelValidation.ts` 与阅读页对应 UI）、框选、高亮、保存流程、语法分析、enrich 接口、输出 JSON 结构。
+
+**验证**：`npm test` 76 项通过（新增 14 项）；`npm run build` 通过（沙箱无法访问 Google Fonts，构建时临时去掉字体，已还原）。**未做真实 OpenAI 调用**（无 key），需在 App 内重新分析文章实测。
+
+**已知问题**
+- 词频是近似：行业词、与英语同形词等可能误判，需靠用户标记校准；
+- 复合词多不在词频表内，一律进入候选；
+- 已有的 `grammarV2Acceptance.live.test.ts` 引用不存在的 `ARTICLE_CORE_ANALYSIS_JSON_SCHEMA`（05-17 回退遗留，`tsc` 报错，与本次无关）。
+
+**下一步**：部署后用 2–3 篇文章实测；确认 Vercel 环境可用 `gpt-5-mini`，否则设 `OPENAI_ANALYSIS_MODEL`。
+
+**部署**：待维护者合并分支后 `npm.cmd run vercel:prod`（见 `docs/DEPLOY_VERCEL.md`）。
+
 ### 2026-05-17 — 回退方案 C，恢复 d4aee6e 单次调用 + 完整词汇 Prompt
 
 **本次完成**
