@@ -5,6 +5,14 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-11-21 — 文档：更正「推荐词按重要程度排序」的说法（仅文档与帮助页文案）
+
+**原因**：核对代码发现，整文分析虽让 AI 按重要程度输出（`selectVocabulary.ts`），但阅读页词汇列表（学习中 / 已掌握 / 暂忽略）实际按词在文章中的出现先后排列（`sortArticleVocabItemsByReadingOrder`），用户看不到重要程度排序；帮助页与手册的说法与界面不符。
+**本次完成**：`src/app/help/page.tsx` 删去「按重要程度排序；时间紧时看前面一部分即可」，改为说明列表按文中出现先后排列；`docs/USER_MANUAL.md` §7.2 删去「按重要程度排序（最关键的在前）」。未改任何功能与代码逻辑。
+**同步**：`docs/PRD.md` 第 951 行改为「整文分析时要求 AI 按重要程度输出，但阅读页列表按文中出现先后排列」。维护者决定程序不改，`selectVocabulary.ts` 提示词保持不变。
+**验证**：同步线上最新代码后，在项目的临时副本中 `npm test`（157 条）/ `npm run build` 通过。
+**已知问题**：无新增。
+**下一步**：如需真正按重要程度展示，要另开任务改阅读页排序。
 ### 2026-11-21 — 正式地址改为 reading.nonger.com
 
 - **完成**：正式地址改为 nonger.com 的子域名 `reading.nonger.com`（Cloudflare DNS CNAME → Vercel，灰云）；旧地址 `german-reading-coach.vercel.app` 继续可用。Chrome 插件 0.1.7 改为打开新地址的导入页（旧地址仍能接收草稿）；注册通知触发器 URL 改为新地址（须在 Supabase 重跑 011 的函数部分）。
