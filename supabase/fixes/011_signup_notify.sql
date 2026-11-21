@@ -21,7 +21,7 @@ as $$
 begin
   begin
     perform net.http_post(
-      url := 'https://german-reading-coach.vercel.app/api/hooks/new-user',
+      url := 'https://reading.nonger.com/api/hooks/new-user',
       headers := jsonb_build_object(
         'Content-Type', 'application/json',
         'x-webhook-secret', '把密钥粘贴在这里'

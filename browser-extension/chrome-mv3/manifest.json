@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "German Reading Coach Importer",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Import the currently visible German or English article into German Reading Coach.",
   "permissions": ["activeTab", "contextMenus", "scripting", "storage"],
   "host_permissions": ["http://*/*", "https://*/*"],
@@ -14,6 +14,7 @@
   "content_scripts": [
     {
       "matches": [
+        "https://reading.nonger.com/import*",
         "https://german-reading-coach.vercel.app/import*",
         "http://localhost:3000/import*"
       ],

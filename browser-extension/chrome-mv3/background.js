@@ -1,4 +1,4 @@
-const APP_IMPORT_URL = "https://german-reading-coach.vercel.app/import";
+const APP_IMPORT_URL = "https://reading.nonger.com/import";
 const MENU_ID = "import-to-german-reading-coach";
 const DRAFT_PREFIX = "importDraft:";
 

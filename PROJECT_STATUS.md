@@ -37,7 +37,7 @@ German Reading Coach
 - **英语学习功能**：已上线（2026-10-15）；英语分界线为初始标定，需真实使用后观察
 
 - **Chrome 插件打包发布**（当前已有本地加载版 MVP；见 **`browser-extension/chrome-mv3`**）
-- **Vercel 部署**：Production 已通过 CLI 部署到 [`https://german-reading-coach.vercel.app`](https://german-reading-coach.vercel.app)；Vercel Production 已配置 `NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY`、`OPENAI_API_KEY`。仍需在 Supabase Authentication 中将生产域名加入 Site URL / Redirect URLs 并做登录、重置密码、AI 分析自检。
+- **Vercel 部署**：Production 正式地址 [`https://reading.nonger.com`](https://reading.nonger.com)（2026-11-21 起，旧地址 `german-reading-coach.vercel.app` 仍可用）；Vercel Production 已配置 `NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY`、`OPENAI_API_KEY`。仍需在 Supabase Authentication 中将生产域名加入 Site URL / Redirect URLs 并做登录、重置密码、AI 分析自检。
 - **总词库/总语法**：复习流、编辑与批量状态管理（当前已支持单项状态管理；暂不做总库删除）
 - **`/articles/mock`**：仍为**演示**高亮与交互，**不代表**用户 **`articles`** 库数据
 

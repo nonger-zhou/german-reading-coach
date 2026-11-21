@@ -117,3 +117,13 @@ npm.cmd run vercel:prod:system-ca
 ## 附：新用户注册邮件通知（可选，2026-10-15）
 
 Production 环境变量：`RESEND_API_KEY`（Sensitive）、`SIGNUP_NOTIFY_TO`、`SIGNUP_WEBHOOK_SECRET`（Sensitive），可选 `SIGNUP_NOTIFY_FROM`。部署后在 Supabase SQL Editor 执行 `supabase/fixes/011_signup_notify.sql`（先把其中的占位密钥换成与 `SIGNUP_WEBHOOK_SECRET` 相同的值）。详见 `docs/DATABASE.md` §10.8。
+
+
+## 附：自定义域名 reading.nonger.com（2026-11-21）
+
+1. Vercel → 项目 → Settings → Domains → Add `reading.nonger.com`（分配给 Production）。Vercel 会显示要添加的 CNAME 目标。
+2. Cloudflare → nonger.com → DNS → 添加 `CNAME`，名称 `reading`，目标填 Vercel 显示的值，**代理状态：仅 DNS（灰云）**。灰云下 nonger.com 的 Notion Worker（通配路由）不会拦截此子域名，证书由 Vercel 签发。
+3. Supabase → Authentication → URL Configuration：Site URL 改为 `https://reading.nonger.com`；Redirect URLs 加 `https://reading.nonger.com/**`（保留旧地址条目）。
+4. Supabase SQL Editor 重跑 `supabase/fixes/011_signup_notify.sql` 的函数部分（`create or replace function …`，URL 已改为新域名）。
+5. Chrome 插件升到 0.1.7（打开新域名导入页；旧域名仍能接收草稿），在 `chrome://extensions/` 重新加载。
+6. 旧地址 `german-reading-coach.vercel.app` 保留不跳转。注意浏览器本地设置（当前学习语言、自动生成开关）和登录状态按网址分开，新地址需重新登录一次。

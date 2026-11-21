@@ -5,6 +5,14 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-11-21 — 正式地址改为 reading.nonger.com
+
+- **完成**：正式地址改为 nonger.com 的子域名 `reading.nonger.com`（Cloudflare DNS CNAME → Vercel，灰云）；旧地址 `german-reading-coach.vercel.app` 继续可用。Chrome 插件 0.1.7 改为打开新地址的导入页（旧地址仍能接收草稿）；注册通知触发器 URL 改为新地址（须在 Supabase 重跑 011 的函数部分）。
+- **主要文件**：`browser-extension/chrome-mv3/manifest.json`、`background.js`、`supabase/fixes/011_signup_notify.sql`、`README.md`、`docs/DEPLOY_VERCEL.md`、`docs/DATABASE.md` §10.8、`PROJECT_STATUS.md`。
+- **状态**：代码已改；域名需维护者在 Vercel / Cloudflare / Supabase 后台配置。
+- **已知问题**：浏览器本地设置和登录状态按网址分开，新地址需重新登录、重新选一次学习语言。
+- **下一步**：确认新地址稳定后，可考虑让旧地址自动跳转。
+
 ### 2026-10-15 — 截图 / 拍照导入（PR #8，已上线，PRD §1.4.3 A）
 
 - **完成**：导入页新增第三种方式「截图 / 拍照」：一次最多 10 张（手机可直接拍照），浏览器先压缩（宽 ≤1280 px；长截图按 2000 px 切块并重叠），再由 `POST /api/import-image` 调 OpenAI 视觉模型逐字转写正文（去掉昵称、互动数、按钮、广告、他人评论；多图去重叠；不翻译不改写）。结果填入「正文」，标题 / 来源平台为空时自动填，语言为德 / 英时自动切换；用户核对后照常保存。原图不保存、不写日志。
