@@ -106,7 +106,8 @@ npm.cmd run vercel:prod:system-ca
 
 - Vercel 项目**已连接 GitHub**（`nonger-zhou/german-reading-coach`）：**合并 / 推送到 `main` 即自动部署 Production**；其他分支自动生成 Preview。
 - **不要再从本机 `npm.cmd run vercel:prod` 部署**：它上传的是本机文件（含未提交改动），会让线上与 GitHub 不一致。2026-05 曾因此导致 GitHub 落后线上。
-- 环境变量目前**只配置了 Production**（`OPENAI_API_KEY`、`NEXT_PUBLIC_SUPABASE_*`），所以 Preview 部署无法登录 / 分析；如需在 Preview 测试，在 Vercel → Environment Variables 给 Preview 也勾上。
+- **`NEXT_PUBLIC_SUPABASE_URL`（2026-11-22）**：Production 与 Preview 均为 `https://sb.nonger.com`（大陆访问代理）。anon key 未改。`NEXT_PUBLIC_*` 在构建时写入前端，改值后必须重新部署。说明、回滚与邮件模板见 **[`china-access.md`](./china-access.md)**。
+- 其余环境变量（含 `OPENAI_API_KEY`、anon key）以 Dashboard 为准。若 Preview 未勾选 anon key 或 `OPENAI_API_KEY`，Preview 仍无法登录或分析；需要时在 Vercel → Environment Variables 给 Preview 勾上。
 - 可选：**`OPENAI_ANALYSIS_MODEL`**（默认 `gpt-5-mini`）。
 - **部署前自动测试（2026-10-15）**：`package.json` 有 **`vercel-build`** 脚本（`vitest run && next build`），Vercel 构建时优先用它——**单元测试不通过就不会上线**。
 - **GitHub Actions**（`.github/workflows/vercel-production.yml`，名称 CI）：每次推送 / PR 跑 `npm test` + `npm run build`，只做检查、**不再部署**（原「七、GitHub Actions 自动部署」已停用，部署统一由 Vercel Git 集成完成）。
@@ -127,3 +128,7 @@ Production 环境变量：`RESEND_API_KEY`（Sensitive）、`SIGNUP_NOTIFY_TO`�
 4. Supabase SQL Editor 重跑 `supabase/fixes/011_signup_notify.sql` 的函数部分（`create or replace function …`，URL 已改为新域名）。
 5. Chrome 插件升到 0.1.7（打开新域名导入页；旧域名仍能接收草稿），在 `chrome://extensions/` 重新加载。
 6. 旧地址 `german-reading-coach.vercel.app` 保留不跳转。注意浏览器本地设置（当前学习语言、自动生成开关）和登录状态按网址分开，新地址需重新登录一次。
+
+## 附：中国大陆访问 Supabase（2026-11-22）
+
+`reading.nonger.com` 仍是灰云、直连 Vercel。大陆用户注册时浏览器直连 `*.supabase.co` 会 **Failed to fetch**（请求到不了 Supabase）。现由 Cloudflare Worker `reading-sb-proxy`（自定义域名 `sb.nonger.com`）转发；Vercel 的 `NEXT_PUBLIC_SUPABASE_URL` 已改为该地址。路由为何不能落到 Notion Worker `bold-paper-2243`、找回密码模板，以及回滚部署 `dpl_HC5iZuwsgkP9Hg8F3W4atyzmvVFy`，见 **[`china-access.md`](./china-access.md)**。

@@ -5,6 +5,14 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-11-22 — 文档：中国大陆经 sb.nonger.com 访问 Supabase
+
+- **完成**：记录大陆注册 **Failed to fetch** 的原因（浏览器直连 `https://htetqagtrdoumntvjksy.supabase.co`，请求未到达 Supabase；`reading.nonger.com` 为灰云 CNAME 到 Vercel，不经 Cloudflare）。记录已实施的 Worker `reading-sb-proxy`（自定义域名 `sb.nonger.com`，显式路由以免被 `*nonger.com/*` → `bold-paper-2243` 截走）、Vercel Production/Preview 的 `NEXT_PUBLIC_SUPABASE_URL`、须重新部署（`dpl_FFnykynzY8azFZNE1L9GY1ZCfVf8`，commit `1d1b0e27`）、换主机名会登出一次、注册通知后台链接为空、Reset Password 模板改在 Supabase Dashboard（不在仓库）、以及回滚与未决项（大陆可达性未保证、页面仍直连 Vercel、微信/QQ 内置浏览器）。
+- **主要文件**：`docs/china-access.md`（新建）、`README.md`、`docs/DEPLOY_VERCEL.md`、`docs/BUSINESS_AND_CHINA_NOTES.md`、`docs/PRD.md` §1.3、`docs/DATABASE.md` §10.8、`PROJECT_STATUS.md`。
+- **状态**：仅文档。未改代码、配置或环境变量文件。线上代理与邮件模板已由维护者在 Cloudflare / Vercel / Supabase Dashboard 配置。
+- **已知问题**：Cloudflare 在大陆是否稳定仍须真人测试；页面本身仍直连 Vercel；Confirm signup / Invite / Magic link / Change email 模板仍用 `{{ .ConfirmationURL }}`（指向 `supabase.co`）。
+- **下一步**：大陆用户实测注册、登录、重置密码；页面打不开时再考虑代理 `reading.nonger.com`。可选：注册通知在代理 URL 下仍给出 Dashboard 用户链接。
+
 ### 2026-11-21 — 文档：更正「推荐词按重要程度排序」的说法（仅文档与帮助页文案）
 
 **原因**：核对代码发现，整文分析虽让 AI 按重要程度输出（`selectVocabulary.ts`），但阅读页词汇列表（学习中 / 已掌握 / 暂忽略）实际按词在文章中的出现先后排列（`sortArticleVocabItemsByReadingOrder`），用户看不到重要程度排序；帮助页与手册的说法与界面不符。

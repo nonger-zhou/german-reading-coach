@@ -65,7 +65,7 @@ German Reading Coach 的**核心不是**单一手机 App，也**不是**只做�
 - **免费用户**可有文章数量等额度限制
 - **付费用户**拥有更多文章导入额度、**AI 分析**、长期词库/语法库与复习等能力
 
-**2026-10-15 讨论备忘（暂不执行）**：改名（中文名倾向「读报学外语」，英文名查重结果）、域名、卖什么形态、谁承担 AI 费用（倾向我们承担并按订阅收费；用户自带 OpenAI 密钥对中国用户不可行）、中国大陆可访问性与国内部署方案，见 [`BUSINESS_AND_CHINA_NOTES.md`](./BUSINESS_AND_CHINA_NOTES.md)。收费前注意：Vercel Hobby 免费版禁止商业用途。
+**2026-10-15 讨论备忘（暂不执行）**：改名（中文名倾向「读报学外语」，英文名查重结果）、域名、卖什么形态、谁承担 AI 费用（倾向我们承担并按订阅收费；用户自带 OpenAI 密钥对中国用户不可行）、中国大陆可访问性与国内部署方案，见 [`BUSINESS_AND_CHINA_NOTES.md`](./BUSINESS_AND_CHINA_NOTES.md)。收费前注意：Vercel Hobby 免费版禁止商业用途。**2026-11-22** 起，浏览器经 `https://sb.nonger.com` 访问现有 Supabase（不是国内单独部署），运维记录见 [`china-access.md`](./china-access.md)。
 
 ### 1.4 开发路线调整（当前优先级）
 

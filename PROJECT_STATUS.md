@@ -13,6 +13,7 @@ German Reading Coach
 - **截图 / 拍照导入（2026-10-15，PR #8 已上线）**：`/import` 第三种方式，`POST /api/import-image` 读图转写正文，原图不保存。见 `DEVELOPMENT_LOG.md`。
 - **新用户注册邮件通知（2026-10-15，已上线）**：Supabase 触发器 + `/api/hooks/new-user` + Resend，发到 `SIGNUP_NOTIFY_TO`；变量已配置、`011` 已执行、测试通过。见 `DEVELOPMENT_LOG.md`。
 - **文案更正（2026-11-21）**：帮助页与用户手册不再写「推荐词按重要程度排序」；阅读页词汇列表实际按文中出现先后排列。PRD 已同步说明；`selectVocabulary.ts` 提示词中让 AI 按重要程度输出的要求保留，未改代码。
+- **大陆访问 Supabase（2026-11-22，仅文档）**：浏览器经 `https://sb.nonger.com` 转发，不再直连 `*.supabase.co`。页面 `reading.nonger.com` 仍直连 Vercel。回滚、找回密码模板与未决项见 [`docs/china-access.md`](./docs/china-access.md)。未改应用代码。
 - **阶段**：**Phase 2.5** + **Phase 3.0（Mock 阅读演示）** + **Phase 3.1/3.2（OpenAI）** + **Phase 3.4（摘要与阅读问题入库）** + **Phase 3.5（文章页 AI 区整理）** + **Phase 3.6（删除学习项）** + **Phase 3.7（状态语义 UI）** + **Phase 3.8（全局总库）** + **Phase 3.15（深度笔记）** + **Phase 4.0（URL 自动导入 + 剪贴板读取）** + **Phase 4.1（删除文章 v1）** — **`/import`** 支持「手动粘贴 / 链接导入」：链接导入经 **`POST /api/import-url`** 在服务端抓取网页并提取标题/来源/发布时间文本/正文，清理后填入主编辑区「正文」；用户确认后沿用既有保存逻辑写入 `articles`；该流程**不调用 OpenAI**。当站点拒绝抓取或可能需要登录时，页面在 URL 输入框下方给出轻提示，并引导用户改用手动粘贴；手动粘贴模式支持 **「从剪贴板读取」**，用户复制正文后可一键填入来源稿并整理到主正文，浏览器拒绝权限时回退手动粘贴。**`/articles/[id]`**：**真实 AI** 为主流程（主按钮、状态行、**API 成本**提示）；**Mock 文章分析**仅在 **`development`** 下 **「开发工具」** 折叠区内，**不入库**、不触发「保存 AI 结果」。手动词条与确认保存的真实 AI 写入 **`vocabulary_*` / `grammar_*`**（**`source = ai`** 等）及 **`articles.summary_zh` / `summary_de_simple` / `reading_questions`**（须 **`007_article_analysis_fields.sql`**）；词汇/语法卡支持“我的深度笔记”，用户可粘贴外部 AI 解释或自己的补充笔记保存到 **`008`** 字段，**不调用本应用 AI API**；未执行 **`008_learning_item_deep_notes.sql`** 时，旧的词汇/语法读取与保存仍应可用，保存深度笔记会提示先迁移。学习项删除仍是按本文 occurrence 删除。**Phase 4.1**：文章页支持删除文章，确认后删除本文 `articles` 与本文 `vocabulary_occurrences` / `grammar_occurrences`，并保留长期 `vocabulary_items` / `vocabulary_senses` / `grammar_items`。**Phase 3.7**：UI 默认状态文案显示为**学习中**，`mastered` 条目默认折叠到已掌握分组，可展开与恢复学习。**Phase 3.8**：`/vocabulary` 与 `/grammar` 已读取当前登录用户真实 Supabase 数据，支持搜索、状态筛选、等级筛选、来源文章跳转；状态统一显示 **学习中 / 已掌握 / 暂忽略**。右侧 **摘要 / 阅读问题** Tab **已保存**优先；仍**不**自动保存 OpenAI 预览。**`OPENAI_API_KEY`** 仅服务端。**Chrome 插件 MVP** 暂缓。
 - **Phase 3.4 验证状态**：文章级三字段与阅读页读写、**42703** 规避、Tab 持久化及与词汇/语法回归范围，见 **`DEVELOPMENT_LOG.md`**「**Phase 3.4 验证状态（仅文档）**」表；**前提**为远程库已跑 **007**。
 - **Phase 3.4 学习闭环（文章页）**：真实 **AI** / 保存 / 刷新、手动 **enrich**、摘要三字段、高亮与左右定位、掌握状态、**`/import`** 与 **`/dashboard`** 未在本次任务改动——完整清单与「静态核对 / 实机前提」见 **`DEVELOPMENT_LOG.md`**「**Phase 3.4 学习闭环验证与状态（仅文档）**」。**当前不做**总词库/总语法业务页接库。
@@ -38,7 +39,7 @@ German Reading Coach
 - **英语学习功能**：已上线（2026-10-15）；英语分界线为初始标定，需真实使用后观察
 
 - **Chrome 插件打包发布**（当前已有本地加载版 MVP；见 **`browser-extension/chrome-mv3`**）
-- **Vercel 部署**：Production 正式地址 [`https://reading.nonger.com`](https://reading.nonger.com)（2026-11-21 起，旧地址 `german-reading-coach.vercel.app` 仍可用）；Vercel Production 已配置 `NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY`、`OPENAI_API_KEY`。仍需在 Supabase Authentication 中将生产域名加入 Site URL / Redirect URLs 并做登录、重置密码、AI 分析自检。
+- **Vercel 部署**：Production 正式地址 [`https://reading.nonger.com`](https://reading.nonger.com)（2026-11-21 起，旧地址 `german-reading-coach.vercel.app` 仍可用）；Vercel Production 已配置 `NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY`、`OPENAI_API_KEY`。**2026-11-22**：Production 与 Preview 的 `NEXT_PUBLIC_SUPABASE_URL` 为 `https://sb.nonger.com`（见 [`docs/china-access.md`](./docs/china-access.md)）。仍需在 Supabase Authentication 中将生产域名加入 Site URL / Redirect URLs 并做登录、重置密码、AI 分析自检；大陆网络是否稳定须真人测试。
 - **总词库/总语法**：复习流、编辑与批量状态管理（当前已支持单项状态管理；暂不做总库删除）
 - **`/articles/mock`**：仍为**演示**高亮与交互，**不代表**用户 **`articles`** 库数据
 
@@ -76,7 +77,7 @@ German Reading Coach
 | 方向 | 说明 |
 |------|------|
 | **导入来源路线图（P1–P4）** | **P1**：`/import` 与插件上说明 HTML / PDF / SCORM 适用性。**P2**：网页内可读 PDF 文字层。**P3**：SCREEN/扫描 PDF + OCR。**P4**：SCORM 按屏 OCR（须合规）。详见 **`docs/IMPORT_SOURCES_AND_ROADMAP.md`**。 |
-| **改名 / 商业化 / 中国用户（暂不做）** | 讨论结论与查证事实见 **`docs/BUSINESS_AND_CHINA_NOTES.md`**（中文名倾向「读报学外语」；英文名候选 GlossRead / Newsling / Readmint；我们承担 AI 费用按订阅收费；先做海外华人；国内版须同一套代码两种部署）。 |
+| **改名 / 商业化 / 中国用户（暂不做）** | 讨论结论与查证事实见 **`docs/BUSINESS_AND_CHINA_NOTES.md`**（中文名倾向「读报学外语」；英文名候选 GlossRead / Newsling / Readmint；我们承担 AI 费用按订阅收费；先做海外华人；国内版须同一套代码两种部署）。**2026-11-22** 的 Supabase 代理是连通性处理，不是国内版，见 **`docs/china-access.md`**。 |
 | **`.gitattributes` 统一换行符** | 避免 Windows 上出现上百个只差换行符的「假修改」，减少多工具同时改代码时的冲突。 |
 | **英语推荐可观察性** | 分析结果显示「本篇推荐 X 个词（水平、分界线约 N）」，便于判断英语分界线是否合适。 |
 | ~~**整文 AI：超长正文分块分析**~~ | **2026-10-15 已完成**（默认词汇模式）：最多 4 段 × 1 万字符并行分析并合并词汇。legacy（含 grammar）路径仍只分析第一段。 |
@@ -84,6 +85,7 @@ German Reading Coach
 
 ## 最近更新
 
+- **2026-11-22（文档）**：新增 [`docs/china-access.md`](./docs/china-access.md)。大陆注册 Failed to fetch 是因为浏览器直连 Supabase；现经 `sb.nonger.com` 转发。未改代码。
 - **2026-10-15（需求文档）**：PRD 新增 §1.4.3 社交媒体与手机导入（截图 / 拍照导入、手机分享菜单、X / Facebook / YouTube 文稿），待开发。
 - **2026-10-15（英语学习功能已上线，PR #3 合并到 `main`）**：德语 / 英语两个独立学习空间（顶栏切换）；数据加 `language`（迁移 `010`，已有数据全为德语）；推荐 / 列表 / 复习 / 水平按语言隔离；英语选词引擎（英语词频表、词形还原、分界线）与英语提示词（中文 + 简明英文释义）；导入自动识别语言；英语水平对照表；Chrome 插件 0.1.6。德语选词与提示词由快照测试守护。**`010` 迁移已执行（已有数据：文章 109、词条 1157、语法项 93，全部为 de）。**
 - **2026-10-15（阅读水平对照表）**：手册与 `/help` 加入德语 / 英语水平对照；水平选择处可跳转对照表。

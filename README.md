@@ -18,6 +18,7 @@
 - **导入主卡讨论备忘**：**[`docs/IMPORT_UI_DISCUSSION.md`](./docs/IMPORT_UI_DISCUSSION.md)**（来源稿 / 剪贴板 / 历史「重新整理」取舍）；对照示意 **`/import/mock`**。
 - **导入来源与排期**：**[`docs/IMPORT_SOURCES_AND_ROADMAP.md`](./docs/IMPORT_SOURCES_AND_ROADMAP.md)**（HTML / PDF / SCORM 分类；L-GAV FAQ 等**现在怎么用**；P0–P4 下一步开发）。
 - **用户调研开放问题**（产品未决、可摘题做问卷/访谈）：[`docs/USER_RESEARCH_OPEN_QUESTIONS.md`](./docs/USER_RESEARCH_OPEN_QUESTIONS.md)
+- **中国大陆访问 Supabase（运维记录，2026-11-22）**：[`docs/china-access.md`](./docs/china-access.md)（浏览器改经 `https://sb.nonger.com`；页面仍直连 Vercel）
 - 开发记录：[`DEVELOPMENT_LOG.md`](./DEVELOPMENT_LOG.md)
 - 项目状态：[`PROJECT_STATUS.md`](./PROJECT_STATUS.md)
 
@@ -85,6 +86,8 @@ npm run lint
 ## Vercel 部署（生产）
 
 当前 Production 地址：[`https://reading.nonger.com`](https://reading.nonger.com)（2026-11-21 起；DNS 在 Cloudflare 的 nonger.com，CNAME 指向 Vercel、**仅 DNS / 灰云**）。旧地址 [`https://german-reading-coach.vercel.app`](https://german-reading-coach.vercel.app) 继续可用。本次 CLI 部署已在 Vercel Production 配置 `NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY`、`OPENAI_API_KEY`。完整步骤、环境变量表、Supabase **Redirect URLs** 与 **`maxDuration`** 说明见 **[`docs/DEPLOY_VERCEL.md`](./docs/DEPLOY_VERCEL.md)**。
+
+**中国大陆注册 Failed to fetch（2026-11-22）**：浏览器不再直连 `*.supabase.co`。Vercel 项目 `nonger-zhous-projects/german-reading-coach` 的 `NEXT_PUBLIC_SUPABASE_URL` 在 Production 与 Preview 为 `https://sb.nonger.com`（Cloudflare Worker 转发到 Supabase；anon key 未改）。事实、找回密码邮件模板、回滚与未决项见 **[`docs/china-access.md`](./docs/china-access.md)**。页面 `reading.nonger.com` 仍直连 Vercel。
 
 **新用户注册邮件通知（可选）**：`POST /api/hooks/new-user`（由 Supabase 触发器调用，见 [`supabase/fixes/011_signup_notify.sql`](./supabase/fixes/011_signup_notify.sql)）。需在 Vercel **Production** 配置 `RESEND_API_KEY`、`SIGNUP_NOTIFY_TO`、`SIGNUP_WEBHOOK_SECRET`（可选 `SIGNUP_NOTIFY_FROM`），并在 SQL 中填入相同的 webhook 密钥。未配置时接口返回 503，不影响其他功能。
 
