@@ -291,6 +291,16 @@ Supabase 会收紧 **PostgREST / Data API** 对 **`public` schema** 内表的默
 - 语言隔离：词条本身带 `language`，复习页只读当前语言词条的进度。
 - 未执行 012 时复习页退回浏览器 localStorage；执行后首次打开复习页自动把本机排期搬入并清掉本机副本。
 
+### 10.10 iPhone 分享保存：`import_tokens`、`clip_inbox`（2026-11-22 起，`013_iphone_clip.sql`）
+
+- **`import_tokens`**：`user_id`、`token_hash`（令牌的 SHA-256 十六进制，唯一）、`label`、`created_at`、`last_used_at`、`revoked_at`。令牌原文只在浏览器生成时显示一次，库中不存。RLS 本人可增删改查；**不向 anon 授权**。
+- **`clip_inbox`**（手机收件箱）：`title`、`url`、`source_name`、`published_at_text`、`extracted_text`（已提取部分，可空）、`word_count`、`status`（`partial` / `failed`）、`reasons`（jsonb `[{code, message}]`）、`via`（`page` = Safari 页面提取，`server` = 按网址抓取）、`language`、`created_at`。RLS 本人可查、改、删；**`authenticated` 不能直接插入**，只能经 `clip_ingest` 写入。
+- **函数**（`security definer`，`search_path = public, pg_temp`，只授予 `anon` / `authenticated` / `service_role` 执行）：
+  - `clip_resolve_token(p_token)` → 有效且未作废的令牌对应的 `user_id`，否则 `null`；顺带更新 `last_used_at`。摘要用 PostgreSQL 内置 `sha256()`，不依赖 pgcrypto。
+  - `clip_ingest(p_token, p_kind, …)`：令牌无效抛 `invalid_import_token`（SQLSTATE 28000）。`p_kind = 'article'` 时写 `articles`（正文少于 120 字符拒绝；阅读水平取 `profiles` 对应语言的默认水平，缺省 B1），并删除收件箱里同一 `url` 的旧条目；否则写 `clip_inbox`（同一 `url` 只保留最新一条）。
+- 服务器 `/api/clip` 用公开 anon key 调用这两个函数，**不需要 service role key**；令牌是唯一凭证。
+- 未执行 013 时：`/settings/iphone` 提示执行迁移，`/import` 不显示收件箱，`/api/clip` 返回「需执行 013」的提示；其他功能不受影响。
+
 ## 11. 后续接入 Supabase 的步骤（建议）
 
 1. 在 [Supabase](https://supabase.com) 创建项目，记录 **Project URL** 与 **anon / service_role** key（勿提交到公开仓库）。（**本项目：建库与执行 schema 已完成**，进入客户端与 Auth 配置阶段。）

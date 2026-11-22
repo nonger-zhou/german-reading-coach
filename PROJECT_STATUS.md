@@ -10,6 +10,7 @@ German Reading Coach
 
 ## 当前状态
 
+- **iPhone 分享保存（2026-11-22，分支 `feat/iphone-share-clip`，待 PR 合并）**：快捷指令 + `POST /api/clip` + 个人导入令牌；完整才存为文章，不完整进 `/import` 顶部手机收件箱；链接导入也显示完整性提醒。上线前须在 Supabase 执行 `supabase/fixes/013_iphone_clip.sql`。见 PRD §1.4.4、`DEVELOPMENT_LOG.md`。
 - **截图 / 拍照导入（2026-10-15，PR #8 已上线）**：`/import` 第三种方式，`POST /api/import-image` 读图转写正文，原图不保存。见 `DEVELOPMENT_LOG.md`。
 - **新用户注册邮件通知（2026-10-15，已上线）**：Supabase 触发器 + `/api/hooks/new-user` + Resend，发到 `SIGNUP_NOTIFY_TO`；变量已配置、`011` 已执行、测试通过。见 `DEVELOPMENT_LOG.md`。
 - **文案更正（2026-11-21）**：帮助页与用户手册不再写「推荐词按重要程度排序」；阅读页词汇列表实际按文中出现先后排列。PRD 已同步说明；`selectVocabulary.ts` 提示词中让 AI 按重要程度输出的要求保留，未改代码。
@@ -35,6 +36,7 @@ German Reading Coach
 
 ## 当前仍未完成
 
+- **iPhone 分享保存**：代码完成，待执行 013、真机搭快捷指令验证后合并；完整性判断阈值需按真实使用调整。
 - **英语学习功能**：已上线（2026-10-15）；英语分界线为初始标定，需真实使用后观察
 
 - **Chrome 插件打包发布**（当前已有本地加载版 MVP；见 **`browser-extension/chrome-mv3`**）

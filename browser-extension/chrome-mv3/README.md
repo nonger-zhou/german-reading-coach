@@ -19,6 +19,10 @@
 
 代码更新后，回到 Chrome 的 `chrome://extensions/`，点击「更新」或在本插件卡片上点击**重新加载**，再重新打开目标文章测试。当前版本 **0.1.6**（支持英语文章）。
 
+## 与 iPhone 快捷指令共用提取逻辑（2026-11-22 起）
+
+`background.js` 里的 `collectVisibleArticle()` 也被打包进 iPhone 快捷指令脚本（`src/lib/clip/shortcutScript.generated.ts`）。**修改这个函数后必须在项目根目录运行 `npm run clip:script`**，否则 `npm test` 会失败（Vercel 也不会上线）。该函数须保持自包含（不引用函数外的变量）。完整性线索见 `browser-extension/ios-shortcut/collect-clip-signals.js`。
+
 ## 正文识别规则（摘要）
 
 - **标题**：优先 `og:title` / `twitter:title`（去掉 `| 媒体名` 后缀），并与 URL 路径词匹配校验。

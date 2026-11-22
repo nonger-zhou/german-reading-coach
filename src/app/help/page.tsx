@@ -117,6 +117,16 @@ export default function HelpPage() {
             <strong>手动粘贴</strong>：复制正文后在导入页「从剪贴板读取」。
           </li>
           <li>
+            <strong>iPhone 分享</strong>：在 iPhone 上看文章时点「分享」→「保存到读报学外语」，自动保存标题、正文和原文链接。需要先在
+            <Link href="/settings/iphone" className="mx-0.5 text-emerald-700 hover:underline dark:text-emerald-400">
+              设置 → iPhone 分享保存
+            </Link>
+            里一次性设置快捷指令。从 <strong>Safari</strong> 分享时，读取你屏幕上已经能看到的正文（与 Chrome 插件同一套规则；订阅文章需在 Safari 里登录）；从 Chrome 或邮件 App 分享时只能传网址，由服务器按网址抓取，付费文章通常只拿到开头。
+          </li>
+          <li>
+            <strong>没拿到完整正文时</strong>：不会当作全文保存。iPhone 分享的文章会放进导入页顶部的<strong>手机收件箱</strong>（保留标题、链接和已提取部分），手机上会提示原因；可以「放进编辑区补全」后保存（保存后自动移出收件箱），或登录后重新分享。链接导入发现正文可能被截断时，正文框上方会出现黄色提醒。
+          </li>
+          <li>
             <strong>截图 / 拍照</strong>：适合 X、Facebook 等帖子和报纸。一次最多 10 张，按顺序选好（长帖可截多张，重叠部分会自动去掉；超长截图也可以）。AI 只转写正文，去掉昵称、点赞数、按钮和别人的评论；识别出的文字填进正文框，核对后再保存。原图不保存。每张约花费不到 1 美分；不想花费时，可以把截图发给自己的 ChatGPT 等 App 转成文字，再复制过来用「从剪贴板读取」。
           </li>
         </ul>

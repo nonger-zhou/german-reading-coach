@@ -33,6 +33,9 @@ import {
   type ImageImportResult,
 } from "@/lib/import/imageImport";
 import { compressImageForImport } from "@/lib/import/compressImageForImport";
+import { ClipInbox } from "@/components/ClipInbox";
+import { deleteClipInboxItem, type ClipInboxRow } from "@/lib/clip/clipData";
+import type { CompletenessReason } from "@/lib/clip/completeness";
 
 type ImportMode = "paste" | "url" | "image";
 type UrlImportUiError = { message: string; code: string | null };
@@ -119,6 +122,10 @@ function ImportPageContent() {
   const [validationError, setValidationError] = useState<string | null>(null);
   const defaultLevelLoadedForUserRef = useRef<string | null>(null);
   const importedDraftIdsRef = useRef<Set<string>>(new Set());
+  /** 正文可能不完整的提醒（链接抓取判定不完整、或从手机收件箱放进编辑区时显示） */
+  const [incompleteNotice, setIncompleteNotice] = useState<string | null>(null);
+  /** 当前编辑区内容来自手机收件箱的哪一条：保存成功后把它移出收件箱 */
+  const inboxItemRef = useRef<{ id: string; url: string } | null>(null);
 
   const refreshSession = useCallback(async () => {
     const supabase = getSupabaseBrowserClient();
@@ -477,6 +484,10 @@ function ImportPageContent() {
       setUrlImportError({ message: "请先输入文章链接。", code: "missing_url" });
       return;
     }
+    setIncompleteNotice(null);
+    if (inboxItemRef.current && inboxItemRef.current.url !== target) {
+      inboxItemRef.current = null;
+    }
     setFetchingUrl(true);
     try {
       const res = await fetch("/api/import-url", {
@@ -532,6 +543,22 @@ function ImportPageContent() {
       setPublishedAtText((prev) => (prev.trim() ? prev : nextPublishedAt));
       setRawPastedText(nextRawText);
       setCleanedText(nextCleanedText);
+
+      /** 服务器判定可能不完整（付费墙截断等）：明确提醒，不当作全文 */
+      const completeness = d.completeness as
+        | { status?: unknown; reasons?: unknown }
+        | undefined;
+      if (completeness && completeness.status === "partial") {
+        const reasons = Array.isArray(completeness.reasons)
+          ? (completeness.reasons as CompletenessReason[])
+              .map((r) => r?.message)
+              .filter((m): m is string => typeof m === "string")
+              .join("")
+          : "";
+        setIncompleteNotice(
+          `抓到的正文可能不完整：${reasons || "发现截断迹象。"}服务器按网址抓不到需要订阅或登录的内容；请用电脑插件、iPhone 上 Safari 分享，或手动粘贴全文后再保存。`,
+        );
+      }
     } catch (e: unknown) {
       setUrlImportError({
         message: mapUrlImportError(
@@ -542,6 +569,35 @@ function ImportPageContent() {
       });
     } finally {
       setFetchingUrl(false);
+    }
+  }
+
+  /** 手机收件箱 →「放进编辑区」：带入标题、链接、已提取部分，提醒补全 */
+  function onLoadInboxItem(row: ClipInboxRow) {
+    setValidationError(null);
+    setSaveError(null);
+    setUrlImportError(null);
+    setClipboardMessage(null);
+    setMode("paste");
+    setTitle(row.title ?? "");
+    setUrl(row.url ?? "");
+    setSourceName(row.source_name ?? "");
+    setPublishedAtText(row.published_at_text ?? "");
+    const text = row.extracted_text ?? "";
+    setRawPastedText(text);
+    if (!text.trim()) setCleanedText("");
+    if (row.language && !languageTouchedRef.current) applyArticleLanguage(row.language);
+    inboxItemRef.current = { id: row.id, url: row.url ?? "" };
+    const reasons = row.reasons.map((r) => r.message).join("");
+    setIncompleteNotice(
+      text.trim()
+        ? `这是手机收件箱里没存全的文章：${reasons || "正文可能不完整。"}请把缺的部分补进正文（例如在电脑上用插件导入，或复制全文粘贴到下方来源稿），再保存；按现状保存的话，文章会缺内容。保存后会自动移出收件箱。`
+        : `这篇在手机上没有提取到正文。${reasons}请把全文粘贴到下方来源稿，或在电脑上用插件导入。保存后会自动移出收件箱。`,
+    );
+    if (typeof window !== "undefined") {
+      window.requestAnimationFrame(() =>
+        document.getElementById("import-incomplete-notice")?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      );
     }
   }
 
@@ -591,6 +647,13 @@ function ImportPageContent() {
       }
       if (!data?.id) {
         throw new Error("保存成功但未返回文章 id");
+      }
+
+      /** 内容来自手机收件箱：保存成功后移出收件箱（失败不影响保存） */
+      if (inboxItemRef.current) {
+        const inboxId = inboxItemRef.current.id;
+        inboxItemRef.current = null;
+        await deleteClipInboxItem(supabase, inboxId).catch(() => undefined);
       }
 
       /** 导入了另一种语言的文章：顶栏随之切换，回到列表时能看到它 */
@@ -706,6 +769,11 @@ function ImportPageContent() {
           </p>
         </div>
       ) : null}
+
+      <ClipInbox
+        userId={session.user.id}
+        onLoadIntoEditor={onLoadInboxItem}
+      />
 
       <Card>
         <CardTitle className="text-base">导入方式</CardTitle>
@@ -893,6 +961,16 @@ function ImportPageContent() {
           className="mt-3 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none ring-emerald-500/30 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
         />
       </Card>
+
+      {incompleteNotice ? (
+        <p
+          id="import-incomplete-notice"
+          className="scroll-mt-40 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100"
+          role="status"
+        >
+          {incompleteNotice}
+        </p>
+      ) : null}
 
       <Card>
         <CardTitle className="text-base">正文</CardTitle>

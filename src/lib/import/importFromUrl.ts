@@ -5,6 +5,7 @@ import { load } from "cheerio";
 import { collectBlockParagraphs } from "@/lib/import/articleBodyExtractCheerio";
 import { shouldPreferBlockParagraphs } from "@/lib/import/articleBodyExtractLogic";
 import { parseArticleFromRawInput } from "@/lib/text/parseArticleFromRaw";
+import type { ClipSignals } from "@/lib/clip/completeness";
 
 export type ImportedArticlePreview = {
   title: string;
@@ -14,6 +15,16 @@ export type ImportedArticlePreview = {
   cleaned_text: string;
   raw_text?: string;
   excerpt?: string;
+  /** 判断正文是否完整用的网页线索（付费声明、声明词数、付费墙模块） */
+  signals?: ClipSignals;
+};
+
+/** 抓到了网页、但正文不够时，附带已知的标题等信息（iPhone 收件箱用来保留标题和链接） */
+export type UrlImportErrorMeta = {
+  title: string;
+  source_name: string;
+  published_at_text: string;
+  partial_text: string;
 };
 
 type ImportErrCode =
@@ -28,9 +39,11 @@ type ImportErrCode =
 
 export class UrlImportError extends Error {
   code: ImportErrCode;
-  constructor(message: string, code: ImportErrCode) {
+  meta?: UrlImportErrorMeta;
+  constructor(message: string, code: ImportErrCode, meta?: UrlImportErrorMeta) {
     super(message);
     this.code = code;
+    this.meta = meta;
   }
 }
 
@@ -87,6 +100,50 @@ function pickPublishedFromJsonLd($: ReturnType<typeof load>): string {
     }
   }
   return "";
+}
+
+/** 服务器抓取时的完整性线索（只读 HTML，不判断结论；结论见 src/lib/clip/completeness.ts） */
+function pickServerSignals($: ReturnType<typeof load>): ClipSignals {
+  const signals: ClipSignals = {
+    isAccessibleForFree: null,
+    declaredWordCount: null,
+    contentTier: readMeta($, "article:content_tier").toLowerCase() || null,
+    paywallMarkup: false,
+  };
+  const queue: unknown[] = [];
+  $('script[type="application/ld+json"]').each((_, el) => {
+    try {
+      queue.push(JSON.parse($(el).html() ?? ""));
+    } catch {
+      // 不规范的 JSON-LD 忽略
+    }
+  });
+  let guard = 0;
+  while (queue.length && guard < 400) {
+    guard += 1;
+    const item = queue.shift();
+    if (!item || typeof item !== "object") continue;
+    if (Array.isArray(item)) {
+      queue.push(...item);
+      continue;
+    }
+    const rec = item as Record<string, unknown>;
+    if ("isAccessibleForFree" in rec && signals.isAccessibleForFree === null) {
+      const v = String(rec.isAccessibleForFree).toLowerCase();
+      if (v === "false") signals.isAccessibleForFree = false;
+      else if (v === "true") signals.isAccessibleForFree = true;
+    }
+    if (signals.declaredWordCount === null && rec.wordCount != null) {
+      const n = Number.parseInt(String(rec.wordCount), 10);
+      if (Number.isFinite(n) && n > 0) signals.declaredWordCount = n;
+    }
+    for (const key of ["@graph", "mainEntity", "hasPart"]) {
+      if (rec[key]) queue.push(rec[key]);
+    }
+  }
+  signals.paywallMarkup =
+    $("[class*='paywall' i], [id*='paywall' i], [class*='regwall' i], [class*='abo-wall' i]").length > 0;
+  return signals;
 }
 
 function pickPublishedText($: ReturnType<typeof load>): string {
@@ -593,10 +650,17 @@ export async function importArticleFromUrl(rawUrl: string): Promise<ImportedArti
   const publishedAtText = pickPublishedText($);
   const excerptRaw = readMeta($, "description") || readMeta($, "og:description");
   const bodyText = pickBodyText($);
+  const failureMeta = (partialText: string): UrlImportErrorMeta => ({
+    title: title || "",
+    source_name: sourceName,
+    published_at_text: publishedAtText,
+    partial_text: partialText,
+  });
   if (!bodyText || bodyText.length < 120) {
     throw new UrlImportError(
       "无法提取正文，或内容过短。该网站可能阻止抓取。",
       "content_too_short",
+      failureMeta(bodyText || ""),
     );
   }
 
@@ -612,7 +676,11 @@ export async function importArticleFromUrl(rawUrl: string): Promise<ImportedArti
   });
   const parsed = parseArticleFromRawInput(rawForCleaner);
   if (!parsed.cleanedText || parsed.cleanedText.trim().length < 120) {
-    throw new UrlImportError("正文清理后内容过短，无法导入。", "content_too_short");
+    throw new UrlImportError(
+      "正文清理后内容过短，无法导入。",
+      "content_too_short",
+      failureMeta(parsed.cleanedText || bodyText),
+    );
   }
 
   return {
@@ -623,5 +691,6 @@ export async function importArticleFromUrl(rawUrl: string): Promise<ImportedArti
     cleaned_text: parsed.cleanedText,
     raw_text: rawForCleaner,
     excerpt: safeText(excerptRaw) || undefined,
+    signals: pickServerSignals($),
   };
 }
