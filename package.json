@@ -17,7 +17,8 @@
     "db:cleanup": "node scripts/cleanup-system-grammar-and-summaries.mjs",
     "vercel": "npx vercel",
     "vercel:prod": "npx vercel --prod",
-    "vercel:prod:system-ca": "node scripts/vercel-prod-use-system-ca.cjs"
+    "vercel:prod:system-ca": "node scripts/vercel-prod-use-system-ca.cjs",
+    "clip:script": "node scripts/build-clip-shortcut-script.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.1",
@@ -33,6 +34,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "acorn": "^8.16.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
     "tailwindcss": "^4",

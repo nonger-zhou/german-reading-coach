@@ -371,6 +371,19 @@ export default function SettingsPage() {
           </div>
         </div>
       </Card>
+
+      <Card>
+        <CardTitle className="text-base">iPhone 分享保存</CardTitle>
+        <CardDescription>
+          在 iPhone 上看文章时点「分享」，一键把标题、正文和原文链接存进来。需要一次性设置快捷指令。
+        </CardDescription>
+        <Link
+          href="/settings/iphone"
+          className="mt-3 inline-flex text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+        >
+          去设置 →
+        </Link>
+      </Card>
     </div>
   );
 }

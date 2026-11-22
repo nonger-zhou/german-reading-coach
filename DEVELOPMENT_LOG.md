@@ -5,6 +5,20 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-11-22 — iPhone 分享保存新闻 + 手机收件箱 + 正文完整性判断（分支 `feat/iphone-share-clip`，PRD §1.4.4）
+
+- **完成**：
+  - iPhone 快捷指令「分享 → 保存到读报学外语」：Safari 分享时在页面上运行与 Chrome 插件**同一份** `collectVisibleArticle()`（由 `npm run clip:script` 从 `background.js` 生成，测试校验同步）+ 完整性线索 `collectClipSignals()`；Chrome / 邮件 App 只给网址时由服务器沿用链接导入逻辑抓取。
+  - 接收接口 `POST /api/clip`：个人导入令牌鉴权（先验令牌再抓网页），完整 → 写 `articles`；不完整 / 失败 → 写 `clip_inbox`；返回一句中文提示供快捷指令通知显示（统一 HTTP 200 + `ok`）。Safari 页面几乎没提取到正文时，服务器按网址再试一次。
+  - 完整性判断 `src/lib/clip/completeness.ts`（全文 / 可能不完整 / 失败），iPhone 分享与链接导入共用；链接导入 API 新增 `completeness`，导入页判定截断时显示黄色提醒（不阻止保存）。
+  - 数据库 `013_iphone_clip.sql`：`import_tokens`（只存 SHA-256）、`clip_inbox`、`security definer` 函数 `clip_resolve_token` / `clip_ingest`；服务器用 anon key 调用，**不需要 service role key**；按 2026-10-30 起规则显式 GRANT，不向 anon 授表权限。
+  - 页面：`/settings/iphone`（令牌生成 / 作废、复制提取脚本与接口地址、快捷指令搭建 9 步、各浏览器支持程度）；`/settings` 增加入口；`/import` 顶部「手机收件箱」（放进编辑区补全 / 打开原文 / 删除，补全保存后自动移出）。
+- **主要文件**：`browser-extension/ios-shortcut/collect-clip-signals.js`、`scripts/build-clip-shortcut-script.mjs`、`src/lib/clip/{completeness,handleClip,clipData,shortcutScript.generated}.ts`（+ 3 个测试文件）、`src/app/api/clip/route.ts`、`src/app/api/import-url/route.ts`、`src/lib/import/importFromUrl.ts`（服务端完整性线索、失败时附带标题等 `meta`）、`src/components/ClipInbox.tsx`、`src/app/import/page.tsx`、`src/app/settings/page.tsx`、`src/app/settings/iphone/page.tsx`、`supabase/fixes/013_iphone_clip.sql`、`package.json`（`clip:script`、devDependency `acorn`）；文档：PRD §1.4.4、USER_MANUAL §1.4、`/help`、DATABASE §10.10、IMPORT_SOURCES §1.1、README、插件 README。
+- **影响面**：导入页只新增收件箱区块、完整性提醒与「保存后移出收件箱」；原有粘贴 / 链接 / 截图 / 插件导入流程与保存逻辑不变。Chrome 插件代码未改。阅读页未改。
+- **验证**：`npm test`（184 条）、`npm run build` 通过。013 在 PGlite（嵌入式 PostgreSQL）上执行两遍并验证：令牌解析、无效令牌拒绝、anon 不能读令牌表、短正文拒绝存文章、同一链接收件箱去重与存全后移出、RLS 隔离、authenticated 不能直接插入收件箱。提取脚本在 Chromium（iPhone 13 模拟）上对付费墙页 / 已登录全文页 / 博物馆博客样例实测，再经 `handleClipRequest` 得到预期结果（收件箱 / 文章 / 收件箱）。设置页与收件箱在手机宽度截图检查。
+- **已知问题**：未在真实 iPhone 快捷指令上验证（动作名称按 iOS 18 中文界面撰写）；完整性判断是启发式，可能误判（短讯被判「偏短」、个别站点付费墙 class 不同而漏判）；从收件箱按现状保存的文章不带「不完整」标记；Preview 环境变量目前只配了 Production，Preview 上测试需给 Preview 勾选 Supabase 变量。
+- **下一步**：维护者执行 013 → 在 Preview / 正式环境生成令牌 → 按 `/settings/iphone` 搭快捷指令 → 用 Safari 公开文章、Safari 订阅文章、Chrome 分享、newsletter 各试一次，根据误判情况调整阈值。
+
 ### 2026-11-21 — 文档：更正「推荐词按重要程度排序」的说法（仅文档与帮助页文案）
 
 **原因**：核对代码发现，整文分析虽让 AI 按重要程度输出（`selectVocabulary.ts`），但阅读页词汇列表（学习中 / 已掌握 / 暂忽略）实际按词在文章中的出现先后排列（`sortArticleVocabItemsByReadingOrder`），用户看不到重要程度排序；帮助页与手册的说法与界面不符。

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { importArticleFromUrl, UrlImportError } from "@/lib/import/importFromUrl";
+import { assessCompleteness, type CompletenessResult } from "@/lib/clip/completeness";
 
 /** 链接抓取含网络与解析，避免平台默认短限时过早中断 */
 export const maxDuration = 300;
@@ -15,6 +16,8 @@ type OkBody = {
     raw_text?: string;
     excerpt?: string;
   };
+  /** 正文是否完整（partial 时导入页显示提醒，不当作全文） */
+  completeness: CompletenessResult;
 };
 
 type ErrBody = {
@@ -63,7 +66,12 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
 
   try {
     const article = await importArticleFromUrl(url);
-    return NextResponse.json({ ok: true, article });
+    const completeness = assessCompleteness({
+      text: article.cleaned_text,
+      via: "server",
+      signals: article.signals,
+    });
+    return NextResponse.json({ ok: true, article, completeness });
   } catch (e) {
     if (e instanceof UrlImportError) {
       return NextResponse.json(

@@ -28,6 +28,7 @@
 - **Supabase Auth**；**文章导入** **`/import`**（默认链接导入 + 可切手动粘贴 + Chrome 插件预填草稿）；**正文清理与段落/元信息**（`parseArticleFromRawInput` / `cleanArticleText`）写入 **`articles.original_text`**。导入主卡若需与「草案」对照，可访问静态示意 **`/import/mock`**（无保存、无抓取，不列入顶栏）。
 - **链接导入 API**：**`POST /api/import-url`** 服务端抓取网页并提取标题、来源、发布时间文本与正文；复用现有清理与保存逻辑；不调用 OpenAI。
 - **截图 / 拍照导入 API**（2026-10-15）：**`POST /api/import-image`**（需登录 Bearer）接收浏览器压缩后的图片（JPEG data URL，最多 20 块、合计约 4 MB），调用 OpenAI 视觉模型（默认 `gpt-4o-mini`，可用 **`OPENAI_VISION_MODEL`** 覆盖）逐字转写正文，返回标题 / 正文 / 语言 / 平台；图片不保存。导入页「截图 / 拍照」方式使用。
+- **iPhone 分享保存**（2026-11-22）：**`POST /api/clip`**（凭个人导入令牌 `Authorization: Bearer …`，不用登录会话）接收 iPhone 快捷指令发来的页面提取结果（Safari）或网址（Chrome / 邮件 App），经 **`src/lib/clip/completeness.ts`** 判断正文是否完整：完整 → 存为文章；不完整 / 失败 → 放进 **手机收件箱**（`/import` 顶部）。设置页 **`/settings/iphone`** 生成 / 作废令牌、复制提取脚本、快捷指令搭建步骤。须执行 [`supabase/fixes/013_iphone_clip.sql`](./supabase/fixes/013_iphone_clip.sql)（新表 `import_tokens`、`clip_inbox` 与函数 `clip_resolve_token`、`clip_ingest`）；**不需要**新环境变量。提取脚本由 Chrome 插件 `background.js` 生成：**改插件提取逻辑后须运行 `npm run clip:script`**（否则单元测试失败、Vercel 不上线）。链接导入 `/api/import-url` 也返回 `completeness`，判定可能截断时导入页显示提醒。
 - **阅读页** **`/articles/[id]`**：**左侧原文高亮**；**右侧 Tabs**：词汇 / 语法 / 摘要 / 阅读问题；移动端点击词汇高亮优先打开应用内详情；**语法高亮（蓝 / 紫）内可拖选子串**加入词库，无选区时轻点仍打开语法说明。
 - **阅读页词汇统计**：以**本篇词汇卡片条数**为主（1 短语 / 搭配 = 1 条），展示 AI 保存与手动添加、文中可高亮与暂无高亮，以及学习中 / 已掌握 / 暂忽略；**不再**以拆词 token 作为「生词数」主数字。AI 返回的 `surface_form` 若无法在正文连续匹配，词条仍会保存，卡片标「暂无高亮」，预览标「未定位」。
 - **删除文章 v1**：`/articles/[id]` 支持删除文章；删除 `articles` 与该文章关联的 `vocabulary_occurrences` / `grammar_occurrences`，保留长期 `vocabulary_items` / `vocabulary_senses` / `grammar_items`。
@@ -80,7 +81,7 @@ npm run lint
 
 插件目录：`browser-extension/chrome-mv3`。用途是在桌面 Chrome 中读取当前页面已展示的标题、URL、来源和正文，并打开 `/import` 预填草稿；适合用户已登录新闻站、服务端 URL 抓取拿不到正文的场景。插件会扫描页面可见的大字号 / 粗体文字块，优先选择视觉大标题，并提取正文段落，跳过常见的 newsletter、相关阅读、作者简介、分享与评论区；导入页清理器也会对这些尾部内容做兜底截断。
 
-安装方式：打开 Chrome 的 `chrome://extensions/`，开启「开发者模式」，点击「加载已解压的扩展程序」，选择 `browser-extension/chrome-mv3`。之后可点击工具栏按钮，或在页面右键选择「导入到 German Reading Coach」。如果页面正文识别不准，可先选中文章正文再导入。**0.1.6** 起支持英语网页：把网页 `lang` 传给导入页作文章语言提示，英语页面额外过滤常见按钮与推荐区（德语页面提取逻辑不变）；更新后需在扩展页**重新加载**。
+安装方式：打开 Chrome 的 `chrome://extensions/`，开启「开发者模式」，点击「加载已解压的扩展程序」，选择 `browser-extension/chrome-mv3`。之后可点击工具栏按钮，或在页面右键选择「导入到 German Reading Coach」。如果页面正文识别不准，可先选中文章正文再导入。**改了 `background.js` 的 `collectVisibleArticle()` 后，须运行 `npm run clip:script` 重新生成 iPhone 快捷指令脚本**（同一套提取逻辑）。**0.1.6** 起支持英语网页：把网页 `lang` 传给导入页作文章语言提示，英语页面额外过滤常见按钮与推荐区（德语页面提取逻辑不变）；更新后需在扩展页**重新加载**。
 
 ## Vercel 部署（生产）
 
