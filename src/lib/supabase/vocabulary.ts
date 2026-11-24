@@ -4,7 +4,10 @@ import type {
   VocabOccurrence,
   VocabSense,
 } from "@/lib/articleReadingTypes";
-import { extractSentence } from "@/lib/articleReadingModel";
+import {
+  extractSentence,
+  type AiVocabOffsetFill,
+} from "@/lib/articleReadingModel";
 import type { MasteryStatus } from "@/lib/types";
 import { formatSupabaseOrUnknownError } from "@/lib/supabase/errors";
 import {
@@ -333,6 +336,52 @@ export async function fetchArticleManualVocabulary(
   }
 
   return out;
+}
+
+const VOCAB_OCCURRENCE_UUID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * 把打开文章时补算出的偏移写回已有 occurrence。
+ * 只更新 start_offset 与 end_offset 都为空的行，不覆盖已有偏移，不调用 AI。
+ * 单行失败不影响其它行。
+ */
+export async function persistMissingAiVocabOccurrenceOffsets(
+  supabase: SupabaseClient,
+  userId: string,
+  fills: AiVocabOffsetFill[],
+): Promise<void> {
+  for (const fill of fills) {
+    if (!VOCAB_OCCURRENCE_UUID.test(fill.occurrenceId)) continue;
+    try {
+      const { error } = await supabase
+        .from("vocabulary_occurrences")
+        .update({
+          start_offset: fill.start_offset,
+          end_offset: fill.end_offset,
+          surface_form: fill.surface_form,
+          sentence: fill.sentence,
+          fallback_match_text: fill.fallback_match_text,
+        })
+        .eq("id", fill.occurrenceId)
+        .eq("user_id", userId)
+        .is("start_offset", null)
+        .is("end_offset", null);
+      if (error) {
+        console.warn(
+          "[vocab] 补写缺失高亮偏移失败",
+          fill.occurrenceId,
+          formatSupabaseOrUnknownError(error),
+        );
+      }
+    } catch (e: unknown) {
+      console.warn(
+        "[vocab] 补写缺失高亮偏移失败",
+        fill.occurrenceId,
+        formatSupabaseOrUnknownError(e),
+      );
+    }
+  }
 }
 
 async function ensureDefaultSense(

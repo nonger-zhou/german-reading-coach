@@ -37,9 +37,31 @@ export function normalizeArticleMatchText(s: string): string {
     .trim();
 }
 
+/**
+ * 匹配用不可见字符：BOM（U+FEFF）与软连字符（U+00AD）。
+ * 粘贴导入的正文里常有大量软连字符；阅读页正文已去掉它们。
+ * AI 若把这些字符抄进 surface_form，就会和清洗后的正文对不上。
+ * 不删除、不合并普通空格（OCR / 粘贴多出来的空格仍按原样匹配）。
+ */
+const INVISIBLE_MATCH_CHARS = /[\uFEFF\u00AD]/g;
+
+export function stripInvisibleMatchChars(text: string): string {
+  return text.replace(INVISIBLE_MATCH_CHARS, "");
+}
+
 /** 阅读/高亮用正文：去掉 BOM、软连字符，避免保存偏移与 DOM 切片错位 */
 export function sanitizeArticlePlainForMatching(plain: string): string {
-  return plain.replace(/\uFEFF/g, "").replace(/\u00AD/g, "");
+  return stripInvisibleMatchChars(plain);
+}
+
+/** 忽略 BOM / 软连字符，以及仅大小写不同；不把多出来的空格当成同一个词。 */
+function sameVisibleMatchText(a: string, b: string): boolean {
+  if (a === b) return true;
+  const left = stripInvisibleMatchChars(a);
+  const right = stripInvisibleMatchChars(b);
+  if (left.length > 0 && left === right) return true;
+  if (a.toLowerCase() === b.toLowerCase()) return true;
+  return left.length > 0 && left.toLowerCase() === right.toLowerCase();
 }
 
 /** 用户语法选区：生成多种匹配变体（标点、情态动词、截短尾部词等） */
@@ -238,7 +260,7 @@ export function buildPlainTextArticleLayout(plain: string): {
  * Mock 回归：选中 "angekündigt" 加入词库时，高亮必须落在该词上，不能错位。
  * offset 不可靠时在 articlePlain 上对 selectedText 做精确匹配（距 hint 最近）。
  */
-export function findBestTextOccurrence(
+function searchNeedleInArticle(
   articlePlain: string,
   needle: string,
   hintStart: number,
@@ -273,6 +295,23 @@ export function findBestTextOccurrence(
     }
   }
   return { start: best, end: best + needle.length };
+}
+
+export function findBestTextOccurrence(
+  articlePlain: string,
+  needle: string,
+  hintStart: number,
+): { start: number; end: number } | null {
+  const cleaned = stripInvisibleMatchChars(needle);
+  if (cleaned) {
+    const hit = searchNeedleInArticle(articlePlain, cleaned, hintStart);
+    if (hit) return hit;
+  }
+  // 正文若仍含软连字符，而针也含同样字符，则按原样再找一次（阅读页正文已清洗，通常走不到这里）。
+  if (needle && cleaned !== needle) {
+    return searchNeedleInArticle(articlePlain, needle, hintStart);
+  }
+  return null;
 }
 
 function escapeRegex(s: string): string {
@@ -588,10 +627,8 @@ export function vocabOccurrenceToRanges(
     }
     const slice = articlePlain.slice(occ.start_offset, occ.end_offset);
     return (
-      slice === occ.surface_form ||
-      (needle.length > 0 && slice === needle) ||
-      slice.toLowerCase() === (occ.surface_form || "").toLowerCase() ||
-      (needle.length > 0 && slice.toLowerCase() === needle.toLowerCase())
+      sameVisibleMatchText(slice, occ.surface_form || "") ||
+      (needle.length > 0 && sameVisibleMatchText(slice, needle))
     );
   };
 
@@ -613,7 +650,7 @@ export function vocabOccurrenceToRanges(
         const rel = findBestTextOccurrence(articlePlain, surf, hintStart);
         if (!rel) return null;
         const got = articlePlain.slice(rel.start, rel.end);
-        if (got === surf || got.toLowerCase() === surf.toLowerCase()) return rel;
+        if (sameVisibleMatchText(got, surf)) return rel;
         return null;
       };
       const relHint =
@@ -813,7 +850,7 @@ function tryOccurrenceSentenceWindow(
     const sentRange = findBestTextOccurrence(articlePlain, sentenceTry, h);
     if (!sentRange) continue;
     const got = articlePlain.slice(sentRange.start, sentRange.end);
-    if (got !== sentenceTry && got.toLowerCase() !== sentenceTry.toLowerCase()) {
+    if (!sameVisibleMatchText(got, sentenceTry)) {
       continue;
     }
     const surf = (occ.surface_form ?? "").trim();
@@ -1095,14 +1132,126 @@ export function rebuildUserStyleVocabOccurrencesFromArticle(
   return { ...item, occurrences: [] };
 }
 
+export type AiVocabOffsetFill = {
+  occurrenceId: string;
+  start_offset: number;
+  end_offset: number;
+  surface_form: string;
+  sentence: string;
+  fallback_match_text: string;
+};
+
+function hasStoredVocabOffsets(occ: VocabOccurrence): boolean {
+  return typeof occ.start_offset === "number" && typeof occ.end_offset === "number";
+}
+
+function pickClosestRange(
+  ranges: { start: number; end: number }[],
+  hintStart: number,
+): { start: number; end: number } | null {
+  if (ranges.length === 0) return null;
+  let best = ranges[0]!;
+  let bestDist = Math.abs(best.start - hintStart);
+  for (const range of ranges) {
+    const distance = Math.abs(range.start - hintStart);
+    if (distance < bestDist) {
+      best = range;
+      bestDist = distance;
+    }
+  }
+  return best;
+}
+
 /**
- * 阅读页词汇列表最终形态：用户类全文重建 occurrence；课文 AI 类沿用 indexOf 扩展策略。
+ * AI 词（`ai` / `ai_mock`）里没有偏移的 occurrence，用去掉软连字符后的 surface_form
+ * 在已清洗正文里定位。先精确匹配，再大小写不敏感；不把多出来的空格当成同一个词。
+ * 只填缺失偏移，不覆盖已有数字偏移。对不上则保持无高亮。
+ * 同一词条里已经占用的区间不会分给另一条。
+ */
+export function relocateAiVocabOccurrencesMissingOffsets(
+  items: ArticleVocabItem[],
+  articlePlain: string,
+): { items: ArticleVocabItem[]; fills: AiVocabOffsetFill[] } {
+  const fills: AiVocabOffsetFill[] = [];
+  const nextItems = items.map((item) => {
+    if (item.source !== "ai" && item.source !== "ai_mock") return item;
+    const used = new Set<string>();
+    for (const occ of item.occurrences) {
+      if (
+        hasStoredVocabOffsets(occ) &&
+        occ.start_offset! >= 0 &&
+        occ.end_offset! > occ.start_offset!
+      ) {
+        used.add(`${occ.start_offset}:${occ.end_offset}`);
+      }
+    }
+    let changed = false;
+    const occurrences = item.occurrences.map((occ) => {
+      if (hasStoredVocabOffsets(occ)) return occ;
+      const raw = (occ.surface_form || occ.fallbackMatchText || "").trim();
+      const needle = stripInvisibleMatchChars(raw).trim();
+      if (!needle) return occ;
+      let ranges = findAllExactSubstringRanges(articlePlain, needle);
+      if (ranges.length === 0) {
+        ranges = findAllCaseInsensitiveSubstringRanges(articlePlain, needle);
+      }
+      const free = ranges.filter((range) => !used.has(`${range.start}:${range.end}`));
+      const hit = pickClosestRange(free, 0);
+      if (!hit) return occ;
+      const surface = articlePlain.slice(hit.start, hit.end);
+      if (!sameVisibleMatchText(surface, needle)) return occ;
+      used.add(`${hit.start}:${hit.end}`);
+      changed = true;
+      const sentence = extractSentence(articlePlain, hit.start, hit.end);
+      fills.push({
+        occurrenceId: occ.id,
+        start_offset: hit.start,
+        end_offset: hit.end,
+        surface_form: surface,
+        sentence,
+        fallback_match_text: surface,
+      });
+      return {
+        ...occ,
+        surface_form: surface,
+        fallbackMatchText: surface,
+        sentence,
+        start_offset: hit.start,
+        end_offset: hit.end,
+      };
+    });
+    if (!changed) return item;
+    const strippedDisplay = stripInvisibleMatchChars(item.display_word);
+    const displayAligned = occurrences.some(
+      (occ) =>
+        typeof occ.start_offset === "number" &&
+        sameVisibleMatchText(occ.surface_form, strippedDisplay.trim()),
+    );
+    return {
+      ...item,
+      occurrences,
+      display_word:
+        displayAligned && strippedDisplay !== item.display_word
+          ? strippedDisplay
+          : item.display_word,
+    };
+  });
+  return { items: nextItems, fills };
+}
+
+/**
+ * 阅读页词汇列表最终形态：用户类全文重建 occurrence；
+ * AI 类先补上缺失偏移，再按正文扩展重复出现。
  */
 export function finalizeArticleVocabularyItems(
   items: ArticleVocabItem[],
   articlePlain: string,
 ): ArticleVocabItem[] {
-  return items.map((item) => {
+  const { items: relocated } = relocateAiVocabOccurrencesMissingOffsets(
+    items,
+    articlePlain,
+  );
+  return relocated.map((item) => {
     if (vocabUserStyle(item)) {
       return rebuildUserStyleVocabOccurrencesFromArticle(item, articlePlain);
     }
@@ -1116,7 +1265,7 @@ export function expandVocabItemsWithRepeatedSurface(
   articlePlain: string,
 ): ArticleVocabItem[] {
   return items.map((item) => {
-    const needle = item.display_word;
+    const needle = stripInvisibleMatchChars(item.display_word);
     if (!needle) return item;
     const starts = new Set(
       item.occurrences.map((o) => o.start_offset).filter((x) => x !== undefined),
