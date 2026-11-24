@@ -1,3 +1,4 @@
+import { stripInvisibleMatchChars } from "@/lib/articleReadingModel";
 import type { AnalyzedVocabularyItem } from "./types";
 
 /**
@@ -49,30 +50,36 @@ function find(text: string, needle: string): string | null {
 
 /** 返回原文中的实际写法；找不到返回 null */
 export function locateSurfaceInText(text: string, surface: string): string | null {
-  const s = (surface ?? "").trim();
+  const plain = stripInvisibleMatchChars(text);
+  const s = stripInvisibleMatchChars(surface ?? "").trim();
   if (!s) return null;
   const stripped = s.replace(LEADING_FUNCTION_WORD, "").trim();
   const hasLeadingWord = Boolean(stripped) && stripped !== s;
   // 带冠词 / to 的先找去掉后的（高亮只标名词本身），再找原样
   if (hasLeadingWord) {
-    const hit = find(text, stripped);
+    const hit = find(plain, stripped);
     if (hit) return hit;
   }
-  const direct = find(text, s);
+  const direct = find(plain, s);
   if (direct) return direct;
   const base = hasLeadingWord ? stripped : s;
-  return base.length >= 4 ? findWord(text, base, 3) : null;
+  return base.length >= 4 ? findWord(plain, base, 3) : null;
 }
 
 export function repairVocabularySurfaceForms(
   items: ReadonlyArray<AnalyzedVocabularyItem>,
   text: string,
 ): AnalyzedVocabularyItem[] {
+  const plain = stripInvisibleMatchChars(text);
   return items.map((item) => {
-    const surface = (item.surface_form ?? "").trim();
-    if (surface && text.includes(surface)) return item;
+    const raw = item.surface_form ?? "";
+    const surface = stripInvisibleMatchChars(raw).trim();
+    // 去掉不可见字符后已是正文子串的，保持原样（与以前 text.includes 相同）。
+    // 仍含软连字符时不在这里截断，交给 locate，以便词尾变化（Tradition → Traditionen）仍能修好。
+    if (surface && raw.trim() === surface && plain.includes(surface)) return item;
     const found =
-      locateSurfaceInText(text, surface) ?? locateSurfaceInText(text, item.lemma ?? "");
-    return found && found !== item.surface_form ? { ...item, surface_form: found } : item;
+      locateSurfaceInText(plain, surface) ??
+      locateSurfaceInText(plain, stripInvisibleMatchChars(item.lemma ?? ""));
+    return found && found !== raw ? { ...item, surface_form: found } : item;
   });
 }

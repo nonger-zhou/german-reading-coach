@@ -5,6 +5,14 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-11-24 — 粘贴正文里的软连字符不再让 AI 词显示「暂无高亮」
+
+- **完成**：粘贴导入的正文常含大量软连字符（U+00AD）。以前分析把原始正文送给模型，模型把软连字符抄进 `surface_form`，阅读页却用去掉软连字符后的正文去匹配，于是对不上、卡片显示「暂无高亮」。现在用同一个 `stripInvisibleMatchChars`（BOM U+FEFF 与 U+00AD，与 `sanitizeArticlePlainForMatching` 一致）处理：送给模型的正文、`findBestTextOccurrence` 的查找串、分析结果转词条、以及「对不上」的检查。打开文章时，对还没有偏移的 AI / Mock 词，用清洗后的正文再定位一次（精确，其次大小写不敏感）；能确定才写入内存高亮，并尽力把偏移写回 `vocabulary_occurrences`（只填 `start_offset` 与 `end_offset` 都为空的行，不覆盖已有偏移，不调用 AI，不挡住阅读）。OCR / 粘贴多出来的空格（如「Labor partnerin」）仍按原样比对，对不上继续「暂无高亮」。打开、刷新、返回仍不自动分析（PRD 3.14）。
+- **主要文件**：`src/lib/articleReadingModel.ts`（及 `articleReadingModel.invisibleChars.test.ts`）、`src/lib/articleAnalysis/convertAnalysisToArticleItems.ts`、`src/lib/articleAnalysis/repairSurfaceForms.ts`、`src/app/api/analyze-article/route.ts`、`src/lib/supabase/vocabulary.ts`、`src/app/articles/[id]/page.tsx`、`src/app/help/page.tsx`、`docs/USER_MANUAL.md`、`docs/PRD.md`、`README.md`、`PROJECT_STATUS.md`。
+- **状态**：待审 PR，未合并。未改数据库结构，未跑迁移，未改 Supabase / Vercel 配置。`npx tsc --noEmit` 通过；`npm test` 204 条通过；改动文件 `eslint` 无报错；`npm run build` 通过。
+- **已知问题**：已经写上的错误偏移不会自动改掉。同一词在文中出现多次时，缺偏移的行会各分到一处确定位置；多出来的重复高亮仍只在当次阅读里补，不新增数据库行。本环境没有登录账号，未能在真实粘贴文章上点开核对高亮。
+- **下一步**：在 Vercel Preview 打开一篇以前显示「暂无高亮」的粘贴文章，确认词被标上，刷新后偏移还在；再确认「Labor partnerin」这类多空格词仍然不乱高亮。
+
 ### 2026-11-24 — 阅读页返回后仍停在刚才打开的词
 
 - **完成**：点开词汇或语法后，去外部 AI（或只复制 Prompt 再切走）再回来，详情、列表滚动和移动端抽屉还在。切回标签页、从 bfcache 恢复时仍会重新拉取本篇词汇/语法并更新右侧列表，但不再因此递增 `asideSnapshotVersion`、不再重挂 `InteractiveArticleReader`。只有分析刚写入新词，或开发用 Mock 换了一批数据，才重挂阅读器。当前选中项会 `history.replaceState` 到 `?focus=vocab|grammar&vocabItemId|grammarItemId&occurrenceId`（优先数据库 id，与总库来源链接相同），关掉详情时清掉；整页重载（例如 iOS 丢掉标签页）会按地址栏重新打开。外部 AI 按钮与全文翻译外链改为先 `window.open`、再写剪贴板，复制失败时若网站已打开会说明。打开、刷新、返回仍不自动调用 AI（PRD 3.14）。

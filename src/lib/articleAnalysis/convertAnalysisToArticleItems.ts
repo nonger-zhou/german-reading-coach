@@ -10,6 +10,7 @@ import {
   findBestTextOccurrence,
   newEntityId,
   normalizeTextKey,
+  stripInvisibleMatchChars,
 } from "@/lib/articleReadingModel";
 import type { ArticleAnalysisResult } from "./types";
 
@@ -18,6 +19,8 @@ function buildVocabOccurrence(
   surface: string,
   hints: ArticleAnalysisResult["vocabulary"][0]["occurrences"],
 ): VocabOccurrence | null {
+  const needle = stripInvisibleMatchChars(surface).trim();
+  if (!needle) return null;
   let start: number | undefined;
   let end: number | undefined;
   if (hints?.[0]) {
@@ -27,17 +30,17 @@ function buildVocabOccurrence(
       start >= 0 &&
       end <= articlePlain.length &&
       end > start &&
-      articlePlain.slice(start, end) !== surface
+      articlePlain.slice(start, end) !== needle
     ) {
       const slice = articlePlain.slice(start, end);
-      if (slice.toLowerCase() !== surface.toLowerCase()) {
+      if (slice.toLowerCase() !== needle.toLowerCase()) {
         start = undefined;
         end = undefined;
       }
     }
   }
   if (start === undefined || end === undefined) {
-    const hit = findBestTextOccurrence(articlePlain, surface, 0);
+    const hit = findBestTextOccurrence(articlePlain, needle, 0);
     if (!hit) return null;
     start = hit.start;
     end = hit.end;
@@ -60,6 +63,8 @@ function buildGrammarOccurrence(
   selected: string,
   hints: ArticleAnalysisResult["grammar"][0]["occurrences"],
 ): GrammarOccurrence | null {
+  const needle = stripInvisibleMatchChars(selected).trim();
+  if (!needle) return null;
   let start: number | undefined;
   let end: number | undefined;
   if (hints?.[0]) {
@@ -67,7 +72,7 @@ function buildGrammarOccurrence(
     end = hints[0].end_offset;
   }
   if (start === undefined || end === undefined) {
-    const hit = findBestTextOccurrence(articlePlain, selected, 0);
+    const hit = findBestTextOccurrence(articlePlain, needle, 0);
     if (!hit) return null;
     start = hit.start;
     end = hit.end;
@@ -101,14 +106,15 @@ export function convertAnalysisResultToArticleItems(
       example_sentence: av.example_sentence,
     };
 
+    const display = stripInvisibleMatchChars(av.surface_form).trim();
     const occBuilt = buildVocabOccurrence(
       articlePlain,
-      av.surface_form,
+      display,
       av.occurrences,
     );
     let occ: VocabOccurrence;
     if (!occBuilt) {
-      const surf = av.surface_form.trim();
+      const surf = display;
       if (!surf) continue;
       occ = {
         id: newEntityId("voc-occ"),
@@ -124,13 +130,15 @@ export function convertAnalysisResultToArticleItems(
       occ.sense_id = sense.id;
     }
 
-    const nk = normalizeTextKey(av.normalized_key || av.surface_form);
+    const nk = normalizeTextKey(
+      stripInvisibleMatchChars(av.normalized_key || display),
+    );
 
     vocabulary.push({
       id: newEntityId("v-item"),
       dbItemId: null,
       lemma: av.lemma,
-      display_word: av.surface_form,
+      display_word: display,
       normalized_key: nk,
       part_of_speech: av.part_of_speech || "—",
       grammatical_gender: av.grammatical_gender ?? "na",
@@ -151,7 +159,7 @@ export function convertAnalysisResultToArticleItems(
   for (const ag of result.grammar) {
     const occ = buildGrammarOccurrence(
       articlePlain,
-      ag.selected_text,
+      stripInvisibleMatchChars(ag.selected_text),
       ag.occurrences,
     );
     if (!occ) continue;
@@ -185,14 +193,16 @@ export function listRealAiEntriesWithoutTextMatch(
 ): { vocabulary: string[]; grammar: string[] } {
   const vocabulary: string[] = [];
   for (const av of result.vocabulary) {
-    if (!findBestTextOccurrence(articlePlain, av.surface_form, 0)) {
-      vocabulary.push(av.surface_form);
+    const surface = stripInvisibleMatchChars(av.surface_form).trim();
+    if (!surface || !findBestTextOccurrence(articlePlain, surface, 0)) {
+      vocabulary.push(surface || av.surface_form);
     }
   }
   const grammar: string[] = [];
   for (const ag of result.grammar) {
-    if (!findBestTextOccurrence(articlePlain, ag.selected_text, 0)) {
-      grammar.push(ag.selected_text);
+    const selected = stripInvisibleMatchChars(ag.selected_text).trim();
+    if (!selected || !findBestTextOccurrence(articlePlain, selected, 0)) {
+      grammar.push(selected || ag.selected_text);
     }
   }
   return { vocabulary, grammar };

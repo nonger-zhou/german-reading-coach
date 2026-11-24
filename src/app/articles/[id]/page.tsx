@@ -27,7 +27,9 @@ import {
   expandGrammarItemsWithRepeatedSurface,
   finalizeArticleGrammarItems,
   finalizeArticleVocabularyItems,
+  relocateAiVocabOccurrencesMissingOffsets,
   sanitizeArticlePlainForMatching,
+  stripInvisibleMatchChars,
 } from "@/lib/articleReadingModel";
 import type { CefrLevel } from "@/lib/types";
 import type { ArticleRow } from "@/lib/supabase/articles";
@@ -35,6 +37,7 @@ import { fetchArticleManualGrammar } from "@/lib/supabase/grammar";
 import {
   fetchArticleManualVocabulary,
   persistManualVocabularyItem,
+  persistMissingAiVocabOccurrenceOffsets,
 } from "@/lib/supabase/vocabulary";
 import {
   isValidArticleId,
@@ -359,7 +362,8 @@ function ArticleDetailPageContent() {
       /** 分析刚写入新词时才重挂阅读器。后台刷新不要传。 */
       bumpSnapshot?: boolean;
     }) => {
-      if (!session?.user?.id || !articleId) return;
+      const userId = session?.user?.id;
+      if (!userId || !articleId) return;
       const seq = ++asideFetchSeq.current;
       if (opts.resetBeforeFetch) {
         setAsideData(null);
@@ -372,8 +376,10 @@ function ArticleDetailPageContent() {
           fetchArticleManualGrammar(supabase, articleId),
         ]);
         if (seq !== asideFetchSeq.current) return;
+        const { items: vocabWithOffsets, fills } =
+          relocateAiVocabOccurrencesMissingOffsets(v, articlePlain);
         setAsideData({
-          vocabulary: finalizeArticleVocabularyItems(v, articlePlain),
+          vocabulary: finalizeArticleVocabularyItems(vocabWithOffsets, articlePlain),
           grammar: dedupeGrammarItemsBySurfaceKey(
             finalizeArticleGrammarItems(
               expandGrammarItemsWithRepeatedSurface(g, articlePlain),
@@ -381,6 +387,9 @@ function ArticleDetailPageContent() {
             ),
           ),
         });
+        if (fills.length > 0) {
+          void persistMissingAiVocabOccurrenceOffsets(supabase, userId, fills);
+        }
         setAsideLoadError(null);
         if (opts.bumpSnapshot) {
           setAsideSnapshotVersion((n) => n + 1);
@@ -451,7 +460,7 @@ function ArticleDetailPageContent() {
       const level = articleAnalysisLevel(article.user_level_at_analysis);
       const result = mockAnalyzeArticle({
         title: article.title ?? "",
-        originalText: article.original_text ?? "",
+        originalText: articlePlain,
         userLevel: level,
       });
       setAiAnalysisExtras({
@@ -639,7 +648,7 @@ function ArticleDetailPageContent() {
         body: JSON.stringify({
           articleId: article.id,
           title: article.title ?? "",
-          originalText: article.original_text ?? "",
+          originalText: stripInvisibleMatchChars(article.original_text ?? ""),
           userLevel: level,
           language: normalizeLearningLanguage(article.language),
         }),

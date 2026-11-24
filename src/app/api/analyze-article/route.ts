@@ -38,6 +38,7 @@ import {
   planVocabularySelection,
 } from "@/lib/vocabSelection/selectVocabulary";
 import { splitArticleForAnalysis } from "@/lib/articleAnalysis/splitArticleForAnalysis";
+import { stripInvisibleMatchChars } from "@/lib/articleReadingModel";
 import type { CefrLevel } from "@/lib/types";
 
 /** 整文分析可能接近分钟级，放宽服务端限时（部署平台支持时生效） */
@@ -121,8 +122,9 @@ export async function POST(req: Request): Promise<NextResponse<OkBody | ErrBody>
   const b = body as Record<string, unknown>;
   const articleId = typeof b.articleId === "string" ? b.articleId.trim() : "";
   const title = typeof b.title === "string" ? b.title : "";
-  const originalText =
-    typeof b.originalText === "string" ? b.originalText : "";
+  const originalText = stripInvisibleMatchChars(
+    typeof b.originalText === "string" ? b.originalText : "",
+  );
   const userLevel = b.userLevel;
 
   if (!articleId) {

@@ -35,6 +35,14 @@ describe("repairVocabularySurfaceForms", () => {
   it("does not match inside a longer word or unrelated text", () => {
     expect(locateSurfaceInText("Der Traditionsverein spielt.", "die Tradition")).toBeNull();
     expect(locateSurfaceInText(DE, "das Fahrrad")).toBeNull();
+    expect(locateSurfaceInText("Die Laborpartnerin arbeitet.", "Labor partnerin")).toBeNull();
+  });
+
+  it("finds a surface that only differs by a soft hyphen", () => {
+    const text = "Die Kündigungsfrist ist lang.";
+    expect(locateSurfaceInText(text, "Kün\u00ADdigungsfrist")).toBe("Kündigungsfrist");
+    const out = repairVocabularySurfaceForms([item("Kün\u00ADdigungsfrist")], text);
+    expect(out[0]!.surface_form).toBe("Kündigungsfrist");
   });
 
   it("leaves exact matches untouched and repairs the rest", () => {
