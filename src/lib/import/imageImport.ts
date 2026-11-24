@@ -15,8 +15,12 @@ export const MAX_TOTAL_DATA_URL_CHARS = 4_000_000;
 
 export type ImageImportLanguage = "de" | "en" | "other";
 
+/** headline = 图中原标题；summary = 没有标题时写的短摘要；none = 没有可用标题 */
+export type ImageImportTitleKind = "headline" | "summary" | "none";
+
 export type ImageImportResult = {
   title: string;
+  title_kind: ImageImportTitleKind;
   text: string;
   language: ImageImportLanguage;
   source_platform: string;
@@ -26,12 +30,14 @@ export const IMAGE_IMPORT_SYSTEM_PROMPT = `You transcribe text from screenshots 
 The images are given in order. They may be several screenshots of one long post, thread or article, or vertical slices of one long screenshot; consecutive images may overlap.
 
 Rules:
-- Transcribe the main content (post, thread, article, newspaper text) VERBATIM in its original language. Do not translate, summarize, correct or rewrite. Keep original spelling, umlauts and punctuation.
+- Transcribe the main content (post, thread, article, newspaper text) VERBATIM in its original language. Do not translate, summarize, correct or rewrite the body. Keep original spelling, umlauts and punctuation.
 - Remove interface elements: usernames/handles, avatars, timestamps, like/repost/reply/view counts, buttons such as "Translate post", "Show more", "Follow", menus, navigation, ads, cookie banners, image captions of ads.
 - Remove replies/comments written by other people. For a thread by the same author, keep all of that author's posts in order.
 - Join the images in order. Where two images overlap, keep the overlapping text only once.
 - Separate paragraphs (and separate posts of a thread) with one blank line. Do not keep the line breaks caused by narrow screen width inside a paragraph.
-- title: the headline if there is one; otherwise an empty string (do not invent one).
+- title: if the images contain a real headline (article title, newspaper headline, post title), transcribe that headline VERBATIM in its original language. Do not invent, translate, summarize, correct or rewrite a real headline.
+- If there is no headline, do not leave the title empty and do not invent a headline that was not on the page. Instead write a short summary title of about 4–10 words in the SAME language as the transcribed text, based only on that text. Do not translate the summary and do not add facts that are not in the text.
+- title_kind: "headline" when title is a transcribed headline; "summary" when you wrote a short summary because there was no headline; "none" only when there is no readable text to title.
 - language: "de" for German, "en" for English, otherwise "other".
 - source_platform: e.g. "X", "Facebook", "Instagram", "LinkedIn", "Zeitung", a news site name, or "" if unknown.
 - If there is no readable text, return an empty text.`;
@@ -44,11 +50,12 @@ export const IMAGE_IMPORT_JSON_SCHEMA = {
     additionalProperties: false,
     properties: {
       title: { type: "string" },
+      title_kind: { type: "string", enum: ["headline", "summary", "none"] },
       text: { type: "string" },
       language: { type: "string", enum: ["de", "en", "other"] },
       source_platform: { type: "string" },
     },
-    required: ["title", "text", "language", "source_platform"],
+    required: ["title", "title_kind", "text", "language", "source_platform"],
   },
 } as const;
 
@@ -78,12 +85,19 @@ export function parseImageImportResult(content: string): ImageImportResult | nul
   }
   const lang = o.language;
   const text = typeof o.text === "string" ? normalizeTranscript(o.text) : "";
+  const title = typeof o.title === "string" ? o.title.trim() : "";
   return {
-    title: typeof o.title === "string" ? o.title.trim() : "",
+    title,
+    title_kind: parseTitleKind(o.title_kind, title),
     text,
     language: lang === "de" || lang === "en" ? lang : "other",
     source_platform: typeof o.source_platform === "string" ? o.source_platform.trim() : "",
   };
+}
+
+function parseTitleKind(value: unknown, title: string): ImageImportTitleKind {
+  if (value === "headline" || value === "summary" || value === "none") return value;
+  return title ? "headline" : "none";
 }
 
 /** 统一换行：去掉行尾空白，最多保留一个空行 */

@@ -24,6 +24,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { formatSupabaseOrUnknownError } from "@/lib/supabase/errors";
 import { useAuthEntryHrefs } from "@/lib/auth/use-auth-entry-hrefs";
 import { isBadImportPluginTitle } from "@/lib/import/visibleArticleExtractLogic";
+import { resolveArticleTitle } from "@/lib/text/deriveTitle";
 import { parseArticleFromRawInput } from "@/lib/text/parseArticleFromRaw";
 import type { CefrLevel } from "@/lib/types";
 import {
@@ -73,6 +74,50 @@ function chooseDraftTitle(
   return parsed;
 }
 
+function ImportSaveFeedback({
+  validationError,
+  saveError,
+}: {
+  validationError: string | null;
+  saveError: string | null;
+}) {
+  if (!validationError && !saveError) return null;
+  return (
+    <div className="space-y-3">
+      {validationError ? (
+        <p
+          className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100"
+          role="alert"
+        >
+          {validationError}
+        </p>
+      ) : null}
+      {saveError ? (
+        <div
+          className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100"
+          role="alert"
+        >
+          <p className="font-medium">保存失败</p>
+          <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words font-sans text-xs">
+            {saveError}
+          </pre>
+          <p className="mt-2 text-xs opacity-90">
+            若为权限错误，可在 Supabase 执行{" "}
+            <code className="rounded bg-red-100/80 px-1 dark:bg-red-900/50">
+              supabase/fixes/003_articles_grants_fix.sql
+            </code>
+            ；若 RLS 异常可执行{" "}
+            <code className="rounded bg-red-100/80 px-1 dark:bg-red-900/50">
+              004_articles_rls_fix.sql
+            </code>
+            。
+          </p>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function ImportPageContent() {
   const router = useRouter();
   const { loginHref } = useAuthEntryHrefs();
@@ -117,6 +162,19 @@ function ImportPageContent() {
   } | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
+  /** 截图没有原标题时，说明标题框里的短标题是摘要，不是原文标题 */
+  const [titleAssistNote, setTitleAssistNote] = useState<string | null>(null);
+  const saveAlertRef = useRef<HTMLDivElement>(null);
+  const [saveAlertTick, setSaveAlertTick] = useState(0);
+  const titleRef = useRef(title);
+  useEffect(() => {
+    titleRef.current = title;
+  }, [title]);
+
+  useEffect(() => {
+    if (saveAlertTick === 0) return;
+    saveAlertRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [saveAlertTick]);
   const defaultLevelLoadedForUserRef = useRef<string | null>(null);
   const importedDraftIdsRef = useRef<Set<string>>(new Set());
 
@@ -212,6 +270,7 @@ function ImportPageContent() {
     const p = parseArticleFromRawInput(raw);
     setCleanedText(p.cleanedText);
     setTitle((prev) => (prev.trim() ? prev : p.suggestedTitle ?? ""));
+    setTitleAssistNote(null);
     setPublishedAtText((prev) =>
       prev.trim() ? prev : (p.publishedAtLine ?? ""),
     );
@@ -238,6 +297,7 @@ function ImportPageContent() {
       setValidationError(null);
       setSaveError(null);
       setUrlImportError(null);
+      setTitleAssistNote(null);
 
       if (nextUrl) setUrl(nextUrl);
       if (nextSourceName) setSourceName(nextSourceName);
@@ -422,7 +482,16 @@ function ImportPageContent() {
       const r = data.result;
       setRawPastedText("");
       setCleanedText(r.text);
-      setTitle((prev) => (prev.trim() ? prev : r.title));
+      if (titleRef.current.trim()) {
+        setTitleAssistNote(null);
+      } else {
+        setTitle(r.title);
+        setTitleAssistNote(
+          r.title.trim() && r.title_kind === "summary"
+            ? "截图里没有标题，已按正文写了一句短标题，可以改。"
+            : null,
+        );
+      }
       if (r.source_platform) {
         setSourceName((prev) => (prev.trim() ? prev : r.source_platform));
       }
@@ -527,6 +596,7 @@ function ImportPageContent() {
       }
 
       setTitle((prev) => (prev.trim() ? prev : nextTitle));
+      setTitleAssistNote(null);
       setUrl((prev) => (prev.trim() ? prev : nextSourceUrl));
       setSourceName((prev) => (prev.trim() ? prev : nextSourceName));
       setPublishedAtText((prev) => (prev.trim() ? prev : nextPublishedAt));
@@ -545,24 +615,30 @@ function ImportPageContent() {
     }
   }
 
+  function showSaveValidation(message: string) {
+    setSaveError(null);
+    setValidationError(message);
+    setSaveAlertTick((n) => n + 1);
+  }
+
   async function onSaveArticle() {
     setSaveError(null);
     setValidationError(null);
 
     if (session === undefined || session === null || !session.user) {
-      setValidationError("请先登录后再保存文章。");
+      showSaveValidation("请先登录后再保存文章。");
       return;
     }
 
-    const titleTrim = title.trim();
     const bodyTrim = cleanedText.trim();
-    if (!titleTrim) {
-      setValidationError("请填写标题。");
+    if (!bodyTrim) {
+      showSaveValidation("请先在正文中填写内容，或使用「从剪贴板读取」导入。");
       return;
     }
-    if (!bodyTrim) {
-      setValidationError("请先在正文中填写内容，或使用「从剪贴板读取」导入。");
-      return;
+
+    const titleTrim = resolveArticleTitle(title, bodyTrim);
+    if (titleTrim !== title.trim()) {
+      setTitle(titleTrim);
     }
 
     setSaving(true);
@@ -599,7 +675,9 @@ function ImportPageContent() {
       }
       router.push(`/articles/${data.id}`);
     } catch (e) {
+      setValidationError(null);
       setSaveError(formatSupabaseOrUnknownError(e));
+      setSaveAlertTick((n) => n + 1);
     } finally {
       setSaving(false);
     }
@@ -675,37 +753,7 @@ function ImportPageContent() {
         </p>
       </div>
 
-      {validationError ? (
-        <p
-          className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100"
-          role="alert"
-        >
-          {validationError}
-        </p>
-      ) : null}
-
-      {saveError ? (
-        <div
-          className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100"
-          role="alert"
-        >
-          <p className="font-medium">保存失败</p>
-          <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words font-sans text-xs">
-            {saveError}
-          </pre>
-          <p className="mt-2 text-xs opacity-90">
-            若为权限错误，可在 Supabase 执行{" "}
-            <code className="rounded bg-red-100/80 px-1 dark:bg-red-900/50">
-              supabase/fixes/003_articles_grants_fix.sql
-            </code>
-            ；若 RLS 异常可执行{" "}
-            <code className="rounded bg-red-100/80 px-1 dark:bg-red-900/50">
-              004_articles_rls_fix.sql
-            </code>
-            。
-          </p>
-        </div>
-      ) : null}
+      <ImportSaveFeedback validationError={validationError} saveError={saveError} />
 
       <Card>
         <CardTitle className="text-base">导入方式</CardTitle>
@@ -883,15 +931,23 @@ function ImportPageContent() {
       <Card>
         <CardTitle className="text-base">文章标题（可选手动覆盖）</CardTitle>
         <CardDescription>
-          系统会在链接抓取成功后自动填入标题。您只在“未自动抓取到标题”或想改成自定义标题（例如中文标题）时手动填写。
+          有标题时会自动填入。没有标题也可以直接保存，会用正文开头生成短标题；想改成自己的标题（例如中文）时再填写。
         </CardDescription>
         <input
           type="text"
           value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          onChange={(e) => {
+            setTitle(e.target.value);
+            setTitleAssistNote(null);
+          }}
           placeholder="例如：Die Bundesregierung plant …"
           className="mt-3 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none ring-emerald-500/30 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
         />
+        {titleAssistNote ? (
+          <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400" role="status">
+            {titleAssistNote}
+          </p>
+        ) : null}
       </Card>
 
       <Card>
@@ -934,6 +990,13 @@ function ImportPageContent() {
           >
             {saving ? "保存中…" : "保存文章"}
           </Button>
+        </div>
+        <div ref={saveAlertRef}>
+          {validationError || saveError ? (
+            <div className="mt-3">
+              <ImportSaveFeedback validationError={validationError} saveError={saveError} />
+            </div>
+          ) : null}
         </div>
         {clipboardMessage ? (
           <p
