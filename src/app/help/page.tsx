@@ -277,7 +277,7 @@ export default function HelpPage() {
       <Section id="external" title="外部深入解释与全文翻译">
         <ul className="list-disc space-y-1 pl-5">
           <li>
-            <strong>外部深入解释</strong>：在词汇或语法详情里，会把带上下文的提示词复制好，打开 ChatGPT 等外部 AI，粘贴即可得到更详细的讲解；可把结果存进「我的深度笔记」。不产生本软件的 AI 费用。
+            <strong>外部深入解释</strong>：在词汇或语法详情里，会打开 ChatGPT 等外部 AI，并把带上下文的提示词复制好，粘贴即可得到更详细的讲解；可把结果存进「我的深度笔记」。回到阅读页时，刚才那个词的详情还在；如果手机把页面清掉了，用同一地址重新打开也会回到这个词。不产生本软件的 AI 费用。
           </li>
           <li>
             <strong>全文翻译</strong>：阅读页「全文翻译为中文」同样是复制提示词到外部 AI。

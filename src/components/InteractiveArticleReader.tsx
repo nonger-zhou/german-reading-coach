@@ -74,6 +74,17 @@ import {
   vocabUserStyle,
 } from "@/lib/articleReadingModel";
 import {
+  reconcileAsideItems,
+  sameAsideSelection,
+} from "@/lib/articleReading/reconcileAsideItems";
+import {
+  resolveReaderFocus,
+  writeReaderFocusToCurrentUrl,
+} from "@/lib/articleReading/readerFocusUrl";
+import {
+  openExternalSiteSynchronously,
+} from "@/lib/externalTranslationLinks";
+import {
   formatGrammarExplainForMainField,
 } from "@/lib/articleAnalysis/grammarExplainSelectionSchema";
 import type {
@@ -184,6 +195,34 @@ export type InteractiveArticleReaderProps = {
   };
 };
 
+/** 先打开网站（仍在点击手势内），再复制。成功文案与原来一致。 */
+function copyExternalPrompt(
+  prompt: string,
+  openUrl: string | null,
+  setNotice: (message: string) => void,
+) {
+  const opened = openExternalSiteSynchronously(openUrl);
+  const fail = opened
+    ? "网站已打开，但复制失败，请手动复制 Prompt。"
+    : "复制失败，请手动复制 Prompt。";
+  const write =
+    typeof navigator !== "undefined"
+      ? navigator.clipboard?.writeText?.bind(navigator.clipboard)
+      : undefined;
+  if (!write) {
+    setNotice(fail);
+    return;
+  }
+  void write(prompt).then(
+    () => {
+      setNotice("Prompt 已复制，可直接 Ctrl+V 粘贴并发送。");
+    },
+    () => {
+      setNotice(fail);
+    },
+  );
+}
+
 export function InteractiveArticleReader({
   articlePlain,
   chunkIntervals,
@@ -247,14 +286,6 @@ export function InteractiveArticleReader({
       finalizeArticleGrammarItems(initialGrammarItems, articlePlain),
     ),
   );
-
-  useEffect(() => {
-    setGrammarItems(
-      dedupeGrammarItemsBySurfaceKey(
-        finalizeArticleGrammarItems(initialGrammarItems, articlePlain),
-      ),
-    );
-  }, [initialGrammarItems, articlePlain]);
 
   const [textSelectionUi, setTextSelectionUi] = useState<{
     text: string;
@@ -354,6 +385,44 @@ export function InteractiveArticleReader({
     itemId: string;
     occurrenceId?: string;
   } | null>(null);
+
+  const vocabularyItemsRef = useRef(vocabularyItems);
+  const grammarItemsRef = useRef(grammarItems);
+  const vocabSelectionRef = useRef(vocabSelection);
+  const grammarSelectionRef = useRef(grammarSelection);
+  vocabularyItemsRef.current = vocabularyItems;
+  grammarItemsRef.current = grammarItems;
+  vocabSelectionRef.current = vocabSelection;
+  grammarSelectionRef.current = grammarSelection;
+  /** 本轮会话里详情曾经打开过；避免初次渲染把总库深链从地址栏清掉 */
+  const hadOpenFocusRef = useRef(false);
+
+  /**
+   * 父组件刷新侧栏数据时并入列表，不重挂阅读器，因此选中、滚动和抽屉还在。
+   * 分析写入新词仍由文章页递增 snapshot key 来重挂；这里同样能在不重挂时显示新词。
+   */
+  useEffect(() => {
+    const prev = vocabularyItemsRef.current;
+    const sel = vocabSelectionRef.current;
+    const { items, selection } = reconcileAsideItems(
+      prev,
+      initialVocabularyItems,
+      sel,
+    );
+    if (items !== prev) setVocabularyItems(items);
+    if (!sameAsideSelection(sel, selection)) setVocabSelection(selection);
+  }, [initialVocabularyItems]);
+
+  useEffect(() => {
+    const incoming = dedupeGrammarItemsBySurfaceKey(
+      finalizeArticleGrammarItems(initialGrammarItems, articlePlain),
+    );
+    const prev = grammarItemsRef.current;
+    const sel = grammarSelectionRef.current;
+    const { items, selection } = reconcileAsideItems(prev, incoming, sel);
+    if (items !== prev) setGrammarItems(items);
+    if (!sameAsideSelection(sel, selection)) setGrammarSelection(selection);
+  }, [articlePlain, initialGrammarItems]);
 
   /** 列表项 DOM，用于 scrollIntoView */
   const vocabItemRefs = useRef<Map<string, HTMLLIElement>>(new Map());
@@ -1020,23 +1089,32 @@ export function InteractiveArticleReader({
   );
 
   useEffect(() => {
-    if (!initialFocus) return;
-    const focusKey = `${initialFocus.kind}:${initialFocus.itemId ?? ""}:${
-      initialFocus.occurrenceId ?? ""
+    const focus = resolveReaderFocus(initialFocus);
+    if (!focus) return;
+    const focusKey = `${focus.kind}:${focus.itemId ?? ""}:${
+      focus.occurrenceId ?? ""
     }`;
     if (lastAppliedInitialFocusRef.current === focusKey) return;
 
-    if (initialFocus.kind === "vocab") {
+    if (focus.kind === "vocab") {
       const target = vocabularyItems.find(
         (v) =>
-          v.id === initialFocus.itemId ||
-          v.dbItemId === initialFocus.itemId ||
-          v.occurrences.some((o) => o.id === initialFocus.occurrenceId),
+          v.id === focus.itemId ||
+          v.dbItemId === focus.itemId ||
+          v.occurrences.some((o) => o.id === focus.occurrenceId),
       );
       if (!target) return;
       const occurrence =
-        target.occurrences.find((o) => o.id === initialFocus.occurrenceId) ??
+        target.occurrences.find((o) => o.id === focus.occurrenceId) ??
         target.occurrences[0];
+      const current = vocabSelectionRef.current;
+      if (
+        current?.itemId === target.id &&
+        current.occurrenceId === occurrence?.id
+      ) {
+        lastAppliedInitialFocusRef.current = focusKey;
+        return;
+      }
       selectVocabItem(target.id, occurrence?.id);
       if (occurrence) {
         requestAnimationFrame(() => {
@@ -1051,14 +1129,22 @@ export function InteractiveArticleReader({
 
     const target = grammarItems.find(
       (g) =>
-        g.id === initialFocus.itemId ||
-        g.dbItemId === initialFocus.itemId ||
-        g.occurrences.some((o) => o.id === initialFocus.occurrenceId),
+        g.id === focus.itemId ||
+        g.dbItemId === focus.itemId ||
+        g.occurrences.some((o) => o.id === focus.occurrenceId),
     );
     if (!target) return;
     const occurrence =
-      target.occurrences.find((o) => o.id === initialFocus.occurrenceId) ??
+      target.occurrences.find((o) => o.id === focus.occurrenceId) ??
       target.occurrences[0];
+    const currentGrammar = grammarSelectionRef.current;
+    if (
+      currentGrammar?.itemId === target.id &&
+      currentGrammar.occurrenceId === occurrence?.id
+    ) {
+      lastAppliedInitialFocusRef.current = focusKey;
+      return;
+    }
     selectGrammarItem(target.id, occurrence?.id);
     if (occurrence) {
       requestAnimationFrame(() => {
@@ -1086,6 +1172,31 @@ export function InteractiveArticleReader({
     vocabularyItems,
   ]);
 
+  /** 把当前打开的词写进地址栏。关闭详情时清掉，总库深链在详情打开前不会被清。 */
+  useEffect(() => {
+    if (tab === "questions") return;
+    const kind = tab === "grammar" ? "grammar" : "vocab";
+    const selection = kind === "grammar" ? grammarSelection : vocabSelection;
+    if (!selection) {
+      if (hadOpenFocusRef.current) {
+        writeReaderFocusToCurrentUrl(null);
+        hadOpenFocusRef.current = false;
+      }
+      return;
+    }
+    const item =
+      kind === "grammar"
+        ? grammarById[selection.itemId]
+        : vocabById[selection.itemId];
+    if (!item) return;
+    hadOpenFocusRef.current = true;
+    writeReaderFocusToCurrentUrl({
+      kind,
+      itemId: item.dbItemId ?? item.id,
+      occurrenceId: selection.occurrenceId,
+    });
+  }, [grammarById, grammarSelection, tab, vocabById, vocabSelection]);
+
   useEffect(() => {
     setVocabEnrichError(null);
     setVocabEnrichErrorItemId(null);
@@ -1096,9 +1207,15 @@ export function InteractiveArticleReader({
     setGrammarEnrichErrorItemId(null);
   }, [grammarSelection?.itemId]);
 
-  /** 窄屏打开语法详情抽屉时，把对应高亮滚到抽屉上方，避免蓝/紫条被挡；抽屉遮罩不拦截触摸，便于继续在课文里选词 */
+  const grammarDrawerScrollKeyRef = useRef<string | null>(null);
+  /** 窄屏打开语法详情抽屉时，把对应高亮滚到抽屉上方，避免蓝/紫条被挡；抽屉遮罩不拦截触摸，便于继续在课文里选词。同一选中项的数据刷新不再滚。 */
   useEffect(() => {
-    if (!grammarSelection) return;
+    if (!grammarSelection) {
+      grammarDrawerScrollKeyRef.current = null;
+      return;
+    }
+    const scrollKey = `${grammarSelection.itemId}:${grammarSelection.occurrenceId ?? ""}`;
+    if (grammarDrawerScrollKeyRef.current === scrollKey) return;
     const narrow =
       typeof window !== "undefined" &&
       window.matchMedia("(max-width: 767px)").matches;
@@ -1109,6 +1226,7 @@ export function InteractiveArticleReader({
       item.occurrences.find((o) => o.id === grammarSelection.occurrenceId) ??
       item.occurrences[0];
     if (!occ) return;
+    grammarDrawerScrollKeyRef.current = scrollKey;
     const range =
       occ.start_offset !== undefined && occ.end_offset !== undefined
         ? { start: occ.start_offset, end: occ.end_offset }
@@ -1125,9 +1243,15 @@ export function InteractiveArticleReader({
     return () => window.clearTimeout(tid);
   }, [grammarSelection, grammarById, scrollArticleToOccurrence]);
 
-  /** 词汇详情抽屉同理：滚到抽屉上方留白 */
+  const vocabDrawerScrollKeyRef = useRef<string | null>(null);
+  /** 词汇详情抽屉同理：滚到抽屉上方留白。同一选中项的数据刷新不再滚。 */
   useEffect(() => {
-    if (!vocabSelection) return;
+    if (!vocabSelection) {
+      vocabDrawerScrollKeyRef.current = null;
+      return;
+    }
+    const scrollKey = `${vocabSelection.itemId}:${vocabSelection.occurrenceId ?? ""}`;
+    if (vocabDrawerScrollKeyRef.current === scrollKey) return;
     const narrow =
       typeof window !== "undefined" &&
       window.matchMedia("(max-width: 767px)").matches;
@@ -1138,6 +1262,7 @@ export function InteractiveArticleReader({
       item.occurrences.find((o) => o.id === vocabSelection.occurrenceId) ??
       item.occurrences[0];
     if (!occ) return;
+    vocabDrawerScrollKeyRef.current = scrollKey;
     const tid = window.setTimeout(() => {
       scrollArticleToOccurrence(occ.id, undefined, {
         ensureGapBottom:
@@ -1796,7 +1921,7 @@ export function InteractiveArticleReader({
   }, [selectedVocabItem?.id]);
 
   const runGrammarExternalPrompt = useCallback(
-    async (openUrl: string | null) => {
+    (openUrl: string | null) => {
       if (!selectedGrammarItem || !grammarSelection) return;
       const occ = selectedGrammarOccurrence;
       const nameParts = [
@@ -1822,21 +1947,7 @@ export function InteractiveArticleReader({
         explanationZh: selectedGrammarItem.explanation_zh ?? "",
         explanationDeSimple: selectedGrammarItem.explanation_de_simple ?? "",
       });
-      try {
-        await navigator.clipboard.writeText(prompt);
-        if (openUrl) {
-          window.open(openUrl, "_blank", "noopener,noreferrer");
-          setGrammarExternalPromptNotice(
-            "Prompt 已复制，可直接 Ctrl+V 粘贴并发送。",
-          );
-        } else {
-          setGrammarExternalPromptNotice(
-            "Prompt 已复制，可直接 Ctrl+V 粘贴并发送。",
-          );
-        }
-      } catch {
-        setGrammarExternalPromptNotice("复制失败，请手动复制 Prompt。");
-      }
+      copyExternalPrompt(prompt, openUrl, setGrammarExternalPromptNotice);
     },
     [
       enrichLevelEffective,
@@ -1850,7 +1961,7 @@ export function InteractiveArticleReader({
   );
 
   const runVocabExternalPrompt = useCallback(
-    async (openUrl: string | null) => {
+    (openUrl: string | null) => {
       if (!selectedVocabItem || !vocabSelection) return;
       const occ = selectedVocabOccurrence;
       const displayTerm =
@@ -1888,21 +1999,7 @@ export function InteractiveArticleReader({
         simpleDeExplanation,
         levelEstimate,
       });
-      try {
-        await navigator.clipboard.writeText(prompt);
-        if (openUrl) {
-          window.open(openUrl, "_blank", "noopener,noreferrer");
-          setVocabExternalPromptNotice(
-            "Prompt 已复制，可直接 Ctrl+V 粘贴并发送。",
-          );
-        } else {
-          setVocabExternalPromptNotice(
-            "Prompt 已复制，可直接 Ctrl+V 粘贴并发送。",
-          );
-        }
-      } catch {
-        setVocabExternalPromptNotice("复制失败，请手动复制 Prompt。");
-      }
+      copyExternalPrompt(prompt, openUrl, setVocabExternalPromptNotice);
     },
     [
       enrichLevelEffective,
@@ -2399,7 +2496,7 @@ export function InteractiveArticleReader({
             </summary>
             <div className="space-y-2 border-t border-zinc-200/80 px-2.5 pb-2.5 pt-2 dark:border-zinc-700/80">
               <p className="text-[11px] leading-snug text-zinc-500 dark:text-zinc-400">
-                点击后复制 Prompt，到外部网站粘贴；本应用不调用 API。
+                点击后立刻打开对应网站，并复制 Prompt，到页面里粘贴；本应用不调用 API。
               </p>
               <div className="flex flex-wrap gap-1.5">
                 <Button
@@ -2770,7 +2867,7 @@ export function InteractiveArticleReader({
             </summary>
             <div className="space-y-2 border-t border-zinc-200/80 px-2.5 pb-2.5 pt-2 dark:border-zinc-700/80">
               <p className="text-[11px] leading-snug text-zinc-500 dark:text-zinc-400">
-                点击后复制 Prompt，到外部网站粘贴；本应用不调用 API。
+                点击后立刻打开对应网站，并复制 Prompt，到页面里粘贴；本应用不调用 API。
               </p>
               <div className="flex flex-wrap gap-1.5">
                 <Button
