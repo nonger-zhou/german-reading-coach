@@ -9,6 +9,10 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import { mockAnalyzeArticle } from "@/lib/articleAnalysis/mockAnalyzeArticle";
 import {
+  analysisSaveSucceeded,
+  analysisSaveUserMessage,
+} from "@/lib/articleAnalysis/analysisSaveOutcome";
+import {
   convertAnalysisResultToArticleItems,
   listRealAiEntriesWithoutTextMatch,
 } from "@/lib/articleAnalysis/convertAnalysisToArticleItems";
@@ -23,15 +27,11 @@ import {
   expandGrammarItemsWithRepeatedSurface,
   finalizeArticleGrammarItems,
   finalizeArticleVocabularyItems,
-  findBestTextOccurrence,
   sanitizeArticlePlainForMatching,
 } from "@/lib/articleReadingModel";
-import type { CefrLevel, MasteryStatus } from "@/lib/types";
+import type { CefrLevel } from "@/lib/types";
 import type { ArticleRow } from "@/lib/supabase/articles";
-import {
-  fetchArticleManualGrammar,
-  persistManualGrammarItem,
-} from "@/lib/supabase/grammar";
+import { fetchArticleManualGrammar } from "@/lib/supabase/grammar";
 import {
   fetchArticleManualVocabulary,
   persistManualVocabularyItem,
@@ -40,11 +40,6 @@ import {
   isValidArticleId,
   normalizeReadingQuestionsFromDb,
 } from "@/lib/supabase/articles";
-import {
-  displayGrammaticalGenderLabelZh,
-  shouldShowGrammaticalGenderSubtitle,
-  vocabularyHeadwordDe,
-} from "@/lib/vocabulary/grammaticalGender";
 import { loginPageHref } from "@/lib/auth/post-auth-redirect";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { formatSupabaseOrUnknownError } from "@/lib/supabase/errors";
@@ -55,30 +50,6 @@ const IS_DEV = process.env.NODE_ENV === "development";
 
 const CONFIRM_AI_REGENERATE_ZH =
   "这会再次调用 AI，并可能产生费用。确定重新生成吗？";
-
-function posLabelZh(raw: string | null | undefined): string {
-  const k = (raw ?? "").trim().toLowerCase();
-  const map: Record<string, string> = {
-    noun: "名词",
-    verb: "动词",
-    adjective: "形容词",
-    adverb: "副词",
-    preposition: "介词",
-    conjunction: "连词",
-    pronoun: "代词",
-    number: "数词",
-    numeral: "数词",
-    phrase: "短语",
-    collocation: "搭配",
-    fixed_expression: "固定表达",
-    separable_verb: "可分动词",
-    compound_noun: "复合名词",
-    verb_phrase: "动词短语",
-    prepositional_phrase: "介词短语",
-  };
-  if (!k || k === "unknown" || k === "missing" || k === "—") return "词汇";
-  return map[k] ?? raw?.trim() ?? "词汇";
-}
 
 function articleAnalysisLevel(raw: string | null | undefined): CefrLevel {
   const u = (raw ?? "B1").trim().toUpperCase();
@@ -95,34 +66,24 @@ function articleAnalysisLevel(raw: string | null | undefined): CefrLevel {
   return "B1";
 }
 
-function aiCandidateStatusLabel(status: MasteryStatus): string {
-  if (status === "mastered") return "已掌握";
-  if (status === "ignored") return "暂忽略";
-  return "学习中";
-}
-
-function normalizeAiCandidateKey(value: string): string {
-  return value.trim().toLocaleLowerCase("de-DE").replace(/\s+/g, " ");
-}
-
-function aiVocabularyCandidateKey(item: {
-  normalized_key?: string | null;
-  surface_form?: string | null;
-  display_word?: string | null;
-}): string {
-  return normalizeAiCandidateKey(
-    item.normalized_key || item.surface_form || item.display_word || "",
-  );
-}
-
-function aiGrammarCandidateKey(item: {
-  grammar_key?: string | null;
-  selected_text?: string | null;
-  normalized_key?: string | null;
-}): string {
-  return normalizeAiCandidateKey(
-    item.grammar_key || item.normalized_key || item.selected_text || "",
-  );
+function asArticleAnalysisResult(value: unknown): ArticleAnalysisResult | null {
+  if (!value || typeof value !== "object") return null;
+  const o = value as Record<string, unknown>;
+  if (!Array.isArray(o.vocabulary) || !Array.isArray(o.reading_questions)) {
+    return null;
+  }
+  return {
+    vocabulary: o.vocabulary as ArticleAnalysisResult["vocabulary"],
+    grammar: Array.isArray(o.grammar)
+      ? (o.grammar as ArticleAnalysisResult["grammar"])
+      : [],
+    summary_zh: typeof o.summary_zh === "string" ? o.summary_zh : "",
+    summary_de_simple:
+      typeof o.summary_de_simple === "string" ? o.summary_de_simple : "",
+    reading_questions: o.reading_questions.filter(
+      (q): q is string => typeof q === "string",
+    ),
+  };
 }
 
 function ArticleDetailPageContent() {
@@ -169,44 +130,39 @@ function ArticleDetailPageContent() {
     reading_questions: string[];
   } | null>(null);
 
-  /** Phase 3.1：真实 OpenAI 仅预览，不入库、不覆盖 Mock */
+  /** 分析成功后自动写入。pendingAnalysis 只在写入失败时留下，供「重试保存」，不在页面上展开。 */
   const [realAiRunning, setRealAiRunning] = useState(false);
-  const [realAiPreview, setRealAiPreview] = useState<ArticleAnalysisResult | null>(
-    null,
-  );
+  const [pendingAnalysis, setPendingAnalysis] =
+    useState<ArticleAnalysisResult | null>(null);
   const [realAiWarning, setRealAiWarning] = useState<string | null>(null);
   const [realAiError, setRealAiError] = useState<string | null>(null);
-  const realAiPreviewRef = useRef<HTMLDivElement>(null);
+  const analysisAlertRef = useRef<HTMLDivElement>(null);
+  /** 换文章时递增，丢掉还在飞的分析 / 写入结果，避免写到另一篇的界面上 */
+  const opTicket = useRef(0);
+  const saveLock = useRef(false);
+  const analysisLock = useRef(false);
   const [realAiSaving, setRealAiSaving] = useState(false);
-  const [realAiSavedToLibrary, setRealAiSavedToLibrary] = useState(false);
   const [realAiSaveError, setRealAiSaveError] = useState<string | null>(null);
+  const [realAiSaveErrorDetail, setRealAiSaveErrorDetail] = useState<
+    string | null
+  >(null);
   const [realAiSaveInfo, setRealAiSaveInfo] = useState<string | null>(null);
-  const [realAiRemovedVocabularyIndexes, setRealAiRemovedVocabularyIndexes] =
-    useState<Set<number>>(() => new Set());
-  const [realAiRemovedGrammarIndexes, setRealAiRemovedGrammarIndexes] = useState<
-    Set<number>
-  >(() => new Set());
-  const [realAiVocabularyStatusByIndex, setRealAiVocabularyStatusByIndex] =
-    useState<Record<number, MasteryStatus>>({});
-  const [realAiGrammarStatusByIndex, setRealAiGrammarStatusByIndex] = useState<
-    Record<number, MasteryStatus>
-  >({});
 
   useEffect(() => {
+    opTicket.current += 1;
+    saveLock.current = false;
+    analysisLock.current = false;
     setMockStaging(null);
     setAiAnalysisExtras(null);
     setMockRunning(false);
-    setRealAiPreview(null);
-    setRealAiSavedToLibrary(false);
+    setPendingAnalysis(null);
     setRealAiError(null);
     setRealAiWarning(null);
     setRealAiSaveError(null);
+    setRealAiSaveErrorDetail(null);
     setRealAiSaveInfo(null);
     setRealAiRunning(false);
-    setRealAiRemovedVocabularyIndexes(new Set());
-    setRealAiRemovedGrammarIndexes(new Set());
-    setRealAiVocabularyStatusByIndex({});
-    setRealAiGrammarStatusByIndex({});
+    setRealAiSaving(false);
   }, [id]);
 
   const refreshSession = useCallback(async () => {
@@ -363,10 +319,7 @@ function ArticleDetailPageContent() {
     );
   }, [asideData, hasPersistedAiArticleFields]);
 
-  const showRealAiSavedStatus =
-    realAiSavedToLibrary || hasPersistedAiArticleFields;
-
-  /** 摘要 / 阅读问题 Tab：已保存 AI 结果 > 当前预览 > Mock */
+  /** 阅读问题 Tab：已写入文章的结果 > 开发用 Mock。分析过程中的结果不在这里预览。 */
   const summaryAndQuestionsForTabs = useMemo(() => {
     if (!article) return null;
     const qsDb = normalizeReadingQuestionsFromDb(article.reading_questions);
@@ -382,14 +335,6 @@ function ArticleDetailPageContent() {
         footerNote: null as string | null,
       };
     }
-    if (realAiPreview) {
-      return {
-        summaryZh: "",
-        summaryDe: "",
-        questions: [...realAiPreview.reading_questions],
-        footerNote: null as string | null,
-      };
-    }
     if (aiAnalysisExtras) {
       return {
         summaryZh: aiAnalysisExtras.summary_zh,
@@ -400,11 +345,13 @@ function ArticleDetailPageContent() {
       };
     }
     return null;
-  }, [article, realAiPreview, aiAnalysisExtras]);
+  }, [article, aiAnalysisExtras]);
+
+  const articleId = article?.id ?? null;
 
   const loadAsideLearningData = useCallback(
     async (opts: { resetBeforeFetch: boolean; allowClearOnError: boolean }) => {
-      if (!session?.user?.id || !article?.id) return;
+      if (!session?.user?.id || !articleId) return;
       const seq = ++asideFetchSeq.current;
       if (opts.resetBeforeFetch) {
         setAsideData(null);
@@ -413,8 +360,8 @@ function ArticleDetailPageContent() {
       try {
         const supabase = getSupabaseBrowserClient();
         const [v, g] = await Promise.all([
-          fetchArticleManualVocabulary(supabase, article.id),
-          fetchArticleManualGrammar(supabase, article.id),
+          fetchArticleManualVocabulary(supabase, articleId),
+          fetchArticleManualGrammar(supabase, articleId),
         ]);
         if (seq !== asideFetchSeq.current) return;
         setAsideData({
@@ -436,11 +383,11 @@ function ArticleDetailPageContent() {
         }
       }
     },
-    [article, articlePlain, session?.user?.id],
+    [articleId, articlePlain, session?.user?.id],
   );
 
   useEffect(() => {
-    if (!session?.user?.id || !article?.id) {
+    if (!session?.user?.id || !articleId) {
       setAsideData(null);
       setAsideLoadError(null);
       return;
@@ -449,11 +396,11 @@ function ArticleDetailPageContent() {
       resetBeforeFetch: true,
       allowClearOnError: true,
     });
-  }, [session?.user?.id, article?.id, articlePlain, loadAsideLearningData]);
+  }, [session?.user?.id, articleId, articlePlain, loadAsideLearningData]);
 
   /** 重新进入标签页、从 bfcache 恢复或窗口聚焦时后台刷新本篇词汇/语法（失败仅提示，不清空已有 UI） */
   useEffect(() => {
-    if (!session?.user?.id || !article?.id) return;
+    if (!session?.user?.id || !articleId) return;
 
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     const scheduleReload = () => {
@@ -485,7 +432,7 @@ function ArticleDetailPageContent() {
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("pageshow", onPageShow);
     };
-  }, [article?.id, session?.user?.id, loadAsideLearningData]);
+  }, [articleId, session?.user?.id, loadAsideLearningData]);
 
   const handleMockAnalyze = useCallback(async () => {
     if (!IS_DEV || !session?.user?.id || !article?.id || mockRunning) return;
@@ -513,16 +460,163 @@ function ArticleDetailPageContent() {
     }
   }, [article, articlePlain, mockRunning, session?.user?.id]);
 
+  const saveAnalysisResult = useCallback(
+    async (analysis: ArticleAnalysisResult) => {
+      if (!session?.user?.id || !article?.id) {
+        setPendingAnalysis(analysis);
+        setRealAiSaveError(
+          "登录已过期，这次结果还在。重新登录后点「重试保存」，不会再次调用 AI。",
+        );
+        return;
+      }
+      if (saveLock.current) return;
+      saveLock.current = true;
+      const ticket = opTicket.current;
+      const userId = session.user.id;
+      const savedArticleId = article.id;
+      const language = normalizeLearningLanguage(article.language);
+      setRealAiSaving(true);
+      setRealAiSaveError(null);
+      setRealAiSaveErrorDetail(null);
+      setRealAiSaveInfo(null);
+
+      let unmatchedNote: string | null = null;
+      let fv: ReturnType<typeof finalizeArticleVocabularyItems> = [];
+      let vocabSaved = 0;
+      let firstDetail: string | null = null;
+      let questionsSaved = false;
+      const stillHere = () => opTicket.current === ticket;
+
+      try {
+        const unmatched = listRealAiEntriesWithoutTextMatch(
+          analysis,
+          articlePlain,
+        );
+        unmatchedNote = unmatched.vocabulary.length
+          ? `下列词在原文里对不上，已写入右侧列表，但正文里暂时没有高亮：${unmatched.vocabulary.join("、")}`
+          : null;
+
+        const { vocabulary: v0 } = convertAnalysisResultToArticleItems(
+          analysis,
+          articlePlain,
+          { itemSource: "ai" },
+        );
+        fv = finalizeArticleVocabularyItems(v0, articlePlain);
+
+        const sb = getSupabaseBrowserClient();
+        /**
+         * 只写入这次推荐的词。不删除以前写入、这次没再推荐的词。
+         * 不传 reactivateIfMastered：已掌握 / 暂忽略保持原样。
+         */
+        for (const item of fv) {
+          const { error } = await persistManualVocabularyItem(sb, {
+            userId,
+            articleId: savedArticleId,
+            articlePlain,
+            language,
+            item,
+          });
+          if (error) {
+            firstDetail =
+              firstDetail ?? `词汇「${item.display_word}」：${error}`;
+          } else {
+            vocabSaved += 1;
+          }
+        }
+
+        if (vocabSaved > 0 && stillHere()) {
+          await loadAsideLearningData({
+            resetBeforeFetch: false,
+            allowClearOnError: false,
+          });
+        }
+
+        const { error: artUpdErr } = await sb
+          .from("articles")
+          .update({
+            reading_questions: analysis.reading_questions,
+          })
+          .eq("id", savedArticleId)
+          .eq("user_id", userId);
+
+        if (artUpdErr) {
+          firstDetail =
+            firstDetail ??
+            `阅读问题：${formatSupabaseOrUnknownError(artUpdErr)}`;
+        } else {
+          questionsSaved = true;
+          if (stillHere()) {
+            setArticle((prev) =>
+              prev && prev.id === savedArticleId
+                ? {
+                    ...prev,
+                    reading_questions: analysis.reading_questions,
+                  }
+                : prev,
+            );
+          }
+        }
+
+        if (!stillHere()) return;
+
+        const tally = {
+          vocabAttempted: fv.length,
+          vocabSaved,
+          questionsSaved,
+        };
+        const message = analysisSaveUserMessage(tally);
+        if (analysisSaveSucceeded(tally)) {
+          setPendingAnalysis(null);
+          setRealAiSaveError(null);
+          setRealAiSaveErrorDetail(null);
+          setRealAiSaveInfo(
+            [message, unmatchedNote].filter(Boolean).join("\n"),
+          );
+        } else {
+          setPendingAnalysis(analysis);
+          setRealAiSaveError(message);
+          setRealAiSaveErrorDetail(firstDetail);
+          setRealAiSaveInfo(unmatchedNote);
+        }
+      } catch (e: unknown) {
+        if (!stillHere()) return;
+        setPendingAnalysis(analysis);
+        setRealAiSaveError(
+          analysisSaveUserMessage({
+            vocabAttempted: fv.length,
+            vocabSaved,
+            questionsSaved,
+          }),
+        );
+        setRealAiSaveErrorDetail(
+          firstDetail ?? formatSupabaseOrUnknownError(e),
+        );
+        setRealAiSaveInfo(unmatchedNote);
+      } finally {
+        if (stillHere()) {
+          saveLock.current = false;
+          setRealAiSaving(false);
+        }
+      }
+    },
+    [article, articlePlain, loadAsideLearningData, session],
+  );
+
   const runRealAiAnalysis = useCallback(async () => {
-    if (!session?.user?.id || !article?.id || realAiRunning) return;
+    if (!session?.user?.id || !article?.id) return;
+    if (analysisLock.current || saveLock.current) return;
     const token = session.access_token?.trim();
     if (!token) {
-      setRealAiError("登录已过期，请重新登录后再使用真实 AI 分析。");
+      setRealAiError("登录已过期，请重新登录后再分析。");
       return;
     }
+    analysisLock.current = true;
+    const ticket = opTicket.current;
+    const stillHere = () => opTicket.current === ticket;
     setRealAiRunning(true);
     setRealAiError(null);
     setRealAiWarning(null);
+    setRealAiSaveInfo(null);
     try {
       const level = articleAnalysisLevel(article.user_level_at_analysis);
       const res = await fetch("/api/analyze-article", {
@@ -540,25 +634,26 @@ function ArticleDetailPageContent() {
         }),
       });
       const data: unknown = await res.json().catch(() => null);
+      if (!stillHere()) return;
       if (!data || typeof data !== "object") {
         setRealAiError("无法解析服务器响应");
         return;
       }
       const o = data as Record<string, unknown>;
       if (o.ok === true && o.analysis && typeof o.analysis === "object") {
-        setRealAiPreview(o.analysis as ArticleAnalysisResult);
-        setRealAiSavedToLibrary(false);
-        setRealAiSaveError(null);
-        setRealAiSaveInfo(null);
-        setRealAiRemovedVocabularyIndexes(new Set());
-        setRealAiRemovedGrammarIndexes(new Set());
-        setRealAiVocabularyStatusByIndex({});
-        setRealAiGrammarStatusByIndex({});
+        const analysis = asArticleAnalysisResult(o.analysis);
+        if (!analysis) {
+          setRealAiError("分析结果不完整，没有写入。");
+          return;
+        }
+        setPendingAnalysis(analysis);
         setRealAiWarning(
           typeof o.warning === "string" && o.warning.trim()
             ? o.warning.trim()
             : null,
         );
+        setRealAiRunning(false);
+        await saveAnalysisResult(analysis);
         return;
       }
       if (o.ok === false) {
@@ -581,20 +676,17 @@ function ArticleDetailPageContent() {
       }
       setRealAiError(`请求失败（HTTP ${res.status}）`);
     } catch (e: unknown) {
-      setRealAiError(formatSupabaseOrUnknownError(e));
+      if (stillHere()) setRealAiError(formatSupabaseOrUnknownError(e));
     } finally {
-      setRealAiRunning(false);
+      if (stillHere()) {
+        analysisLock.current = false;
+        setRealAiRunning(false);
+      }
     }
-  }, [article, realAiRunning, session]);
+  }, [article, saveAnalysisResult, session]);
 
   const handlePrimaryRealAiClick = useCallback(() => {
-    if (realAiPreview) {
-      realAiPreviewRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-      });
-      return;
-    }
+    if (realAiRunning || realAiSaving) return;
     if (
       hasSavedArticleAiBaseline &&
       typeof window !== "undefined" &&
@@ -603,212 +695,25 @@ function ArticleDetailPageContent() {
       return;
     }
     void runRealAiAnalysis();
-  }, [hasSavedArticleAiBaseline, realAiPreview, runRealAiAnalysis]);
-
-  const handleRealAiReanalyze = useCallback(() => {
-    if (
-      typeof window !== "undefined" &&
-      !window.confirm(CONFIRM_AI_REGENERATE_ZH)
-    ) {
-      return;
-    }
-    void runRealAiAnalysis();
-  }, [runRealAiAnalysis]);
-
-  const editableRealAiVocabulary = useMemo(() => {
-    if (!realAiPreview) return [];
-    return realAiPreview.vocabulary
-      .map((item, index) => ({
-        item,
-        index,
-        status: realAiVocabularyStatusByIndex[index] ?? "new" as MasteryStatus,
-      }))
-      .filter(({ index }) => !realAiRemovedVocabularyIndexes.has(index));
   }, [
-    realAiPreview,
-    realAiRemovedVocabularyIndexes,
-    realAiVocabularyStatusByIndex,
-  ]);
-
-  const editableRealAiGrammar = useMemo(() => {
-    if (!realAiPreview) return [];
-    return realAiPreview.grammar
-      .map((item, index) => ({
-        item,
-        index,
-        status: realAiGrammarStatusByIndex[index] ?? "new" as MasteryStatus,
-      }))
-      .filter(({ index }) => !realAiRemovedGrammarIndexes.has(index));
-  }, [realAiGrammarStatusByIndex, realAiPreview, realAiRemovedGrammarIndexes]);
-
-  const filteredRealAiPreview = useMemo<ArticleAnalysisResult | null>(() => {
-    if (!realAiPreview) return null;
-    return {
-      ...realAiPreview,
-      vocabulary: editableRealAiVocabulary.map(({ item }) => item),
-      grammar: editableRealAiGrammar.map(({ item }) => item),
-    };
-  }, [editableRealAiGrammar, editableRealAiVocabulary, realAiPreview]);
-
-  const handleRemoveRealAiVocabularyCandidate = useCallback((index: number) => {
-    setRealAiRemovedVocabularyIndexes((prev) => {
-      const next = new Set(prev);
-      next.add(index);
-      return next;
-    });
-  }, []);
-
-  const handleRemoveRealAiGrammarCandidate = useCallback((index: number) => {
-    setRealAiRemovedGrammarIndexes((prev) => {
-      const next = new Set(prev);
-      next.add(index);
-      return next;
-    });
-  }, []);
-
-  const handleRealAiVocabularyStatusChange = useCallback(
-    (index: number, status: MasteryStatus) => {
-      setRealAiVocabularyStatusByIndex((prev) => ({ ...prev, [index]: status }));
-    },
-    [],
-  );
-
-  const handleRealAiGrammarStatusChange = useCallback(
-    (index: number, status: MasteryStatus) => {
-      setRealAiGrammarStatusByIndex((prev) => ({ ...prev, [index]: status }));
-    },
-    [],
-  );
-
-  const handleSaveRealAiPreview = useCallback(async () => {
-    if (
-      !session?.user?.id ||
-      !article?.id ||
-      !realAiPreview ||
-      !filteredRealAiPreview ||
-      realAiSaving
-    ) {
-      return;
-    }
-    setRealAiSaving(true);
-    setRealAiSaveError(null);
-    setRealAiSaveInfo(null);
-    const unmatched = listRealAiEntriesWithoutTextMatch(
-      filteredRealAiPreview,
-      articlePlain,
-    );
-    const skipParts: string[] = [];
-    if (unmatched.vocabulary.length) {
-      skipParts.push(
-        `下列词汇 surface 未在原文中精确匹配，仍将保存为本篇词条（文中暂无高亮；请核对）：${unmatched.vocabulary.join("、")}`,
-      );
-    }
-    const skipMessage = skipParts.length ? skipParts.join("\n") : null;
-
-    const vocabStatusByKey = new Map(
-      editableRealAiVocabulary.map(({ item, status }) => [
-        aiVocabularyCandidateKey(item),
-        status,
-      ]),
-    );
-
-    const { vocabulary: v0 } = convertAnalysisResultToArticleItems(
-      filteredRealAiPreview,
-      articlePlain,
-      {
-        itemSource: "ai",
-      },
-    );
-    const fv = finalizeArticleVocabularyItems(v0, articlePlain).map((item) => ({
-      ...item,
-      mastery_status:
-        vocabStatusByKey.get(aiVocabularyCandidateKey(item)) ??
-        item.mastery_status,
-    }));
-
-    let firstError: string | null = null;
-    try {
-      const sb = getSupabaseBrowserClient();
-      /** 每次保存都同步当前预览中的词汇（含重新分析后） */
-      if (fv.length > 0) {
-        for (const item of fv) {
-          const { error } = await persistManualVocabularyItem(sb, {
-            userId: session.user.id,
-            articleId: article.id,
-            articlePlain,
-            language: normalizeLearningLanguage(article.language),
-            item,
-          });
-          if (error) {
-            firstError = firstError ?? `词汇「${item.display_word}」：${error}`;
-          }
-        }
-
-        if (firstError) {
-          setRealAiSaveError(firstError);
-          return;
-        }
-
-        await loadAsideLearningData({
-          resetBeforeFetch: false,
-          allowClearOnError: false,
-        });
-        setAsideSnapshotVersion((n) => n + 1);
-        if (skipMessage) {
-          setRealAiSaveInfo(skipMessage);
-        }
-      } else if (!realAiSavedToLibrary) {
-        await loadAsideLearningData({
-          resetBeforeFetch: false,
-          allowClearOnError: false,
-        });
-        setAsideSnapshotVersion((n) => n + 1);
-        if (skipMessage) {
-          setRealAiSaveInfo(skipMessage);
-        }
-      }
-
-      setRealAiSavedToLibrary(true);
-
-      const { error: artUpdErr } = await sb
-        .from("articles")
-        .update({
-          reading_questions: realAiPreview.reading_questions,
-        })
-        .eq("id", article.id)
-        .eq("user_id", session.user.id);
-
-      if (artUpdErr) {
-        setRealAiSaveError(
-          `保存阅读问题失败：${formatSupabaseOrUnknownError(artUpdErr)}`,
-        );
-        return;
-      }
-
-      setArticle((prev) =>
-        prev
-          ? {
-              ...prev,
-              reading_questions: realAiPreview.reading_questions,
-            }
-          : prev,
-      );
-    } catch (e: unknown) {
-      setRealAiSaveError(formatSupabaseOrUnknownError(e));
-    } finally {
-      setRealAiSaving(false);
-    }
-  }, [
-    article,
-    articlePlain,
-    editableRealAiVocabulary,
-    filteredRealAiPreview,
-    loadAsideLearningData,
-    realAiPreview,
-    realAiSavedToLibrary,
+    hasSavedArticleAiBaseline,
+    realAiRunning,
     realAiSaving,
-    session,
+    runRealAiAnalysis,
   ]);
+
+  const handleRetrySave = useCallback(() => {
+    if (!pendingAnalysis || realAiRunning || realAiSaving) return;
+    void saveAnalysisResult(pendingAnalysis);
+  }, [pendingAnalysis, realAiRunning, realAiSaving, saveAnalysisResult]);
+
+  useEffect(() => {
+    if (!realAiError && !realAiSaveError) return;
+    analysisAlertRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+  }, [realAiError, realAiSaveError]);
 
   const handleDeleteArticle = useCallback(async () => {
     if (!session?.user?.id || !article?.id || deleteRunning) return;
@@ -875,7 +780,7 @@ function ArticleDetailPageContent() {
       </ol>
     ) : (
       <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-        运行 AI 分析并保存后，阅读问题会显示在这里。
+        分析完成并写入后，阅读问题会显示在这里。
       </p>
     );
 
@@ -887,29 +792,38 @@ function ArticleDetailPageContent() {
     : "";
 
   const aiStatusLabel = useMemo(() => {
-    if (realAiSaving) return "保存中…";
-    if (realAiError) return "分析失败";
-    if (realAiRunning && realAiPreview) return "重新分析中…";
+    if (realAiSaving) return "正在写入词汇与阅读问题…";
+    if (realAiRunning && hasSavedArticleAiBaseline) return "重新分析中…";
     if (realAiRunning) return "分析中…";
-    if (realAiPreview) return "有预览，尚未保存";
-    if (showRealAiSavedStatus) return "已保存";
+    if (realAiError) return "分析失败";
+    if (realAiSaveError) return "写入未完成";
+    if (hasPersistedAiArticleFields || realAiSaveInfo) return "已写入本篇";
     return "尚未分析";
   }, [
+    hasPersistedAiArticleFields,
+    hasSavedArticleAiBaseline,
     realAiError,
-    realAiPreview,
     realAiRunning,
+    realAiSaveError,
+    realAiSaveInfo,
     realAiSaving,
-    showRealAiSavedStatus,
   ]);
 
-  const primaryRealAiButtonLabel =
-    realAiRunning && !realAiPreview
-      ? "分析中…"
-      : realAiPreview
-        ? "查看 AI 预览"
-        : hasSavedArticleAiBaseline
-          ? "重新分析"
-          : "AI 分析本文";
+  const primaryRealAiButtonLabel = realAiSaving
+    ? "写入中…"
+    : realAiRunning
+      ? hasSavedArticleAiBaseline
+        ? "重新分析中…"
+        : "分析中…"
+      : hasSavedArticleAiBaseline
+        ? "重新分析"
+        : "AI 分析本文";
+
+  const analysisProgressHint = realAiSaving
+    ? "正在把词汇和阅读问题写入本篇，请稍候。"
+    : realAiRunning
+      ? "正在调用 AI。完成后会自动写入本篇词汇与阅读问题。"
+      : null;
 
   if (session === undefined) {
     return (
@@ -1127,7 +1041,7 @@ function ArticleDetailPageContent() {
           readingHelpExtra={
             <>
               <p>
-                阅读水平 {analysisLevel}：整文分析生成词汇与阅读问题；语法请拖选后标记。保存后写入本篇。
+                阅读水平 {analysisLevel}：点「AI 分析本文」后，分析完成即自动写入本篇词汇与阅读问题。语法请拖选后标记。不想要的词在右侧列表删除。
               </p>
               <p>
                 AI 只推你多半不认识的词：词库里「学习中」的必推，「已掌握 / 暂忽略」不推，其余按词频与水平判断；没推但不会的词，拖选「添加为词汇」即可。
@@ -1148,25 +1062,31 @@ function ArticleDetailPageContent() {
                 <p
                   className="text-sm font-medium text-zinc-800 dark:text-zinc-200"
                   aria-live="polite"
+                  aria-busy={realAiRunning || realAiSaving}
                 >
                   {aiStatusLabel}
                 </p>
+                {analysisProgressHint ? (
+                  <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+                    {analysisProgressHint}
+                  </p>
+                ) : null}
                 <div className="mt-2 flex flex-wrap items-center gap-3">
                   <Button
                     type="button"
-                    disabled={realAiRunning}
+                    disabled={realAiRunning || realAiSaving}
                     onClick={handlePrimaryRealAiClick}
                   >
                     {primaryRealAiButtonLabel}
                   </Button>
-                  {realAiPreview ? (
+                  {pendingAnalysis && realAiSaveError && !realAiRunning ? (
                     <Button
                       type="button"
                       variant="secondary"
-                      disabled={realAiRunning}
-                      onClick={() => void handleRealAiReanalyze()}
+                      disabled={realAiRunning || realAiSaving}
+                      onClick={handleRetrySave}
                     >
-                      {realAiRunning ? "重新分析中…" : "重新分析"}
+                      重试保存
                     </Button>
                   ) : null}
                 </div>
@@ -1185,8 +1105,7 @@ function ArticleDetailPageContent() {
                     </summary>
                     <div className="mt-2 space-y-2 border-t border-zinc-200 pt-2 dark:border-zinc-700">
                       <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                        不调用 OpenAI，仅用于开发测试 UI。Mock 结果仅存于本页内存，不会写入云端，也不会覆盖真实
-                        AI 预览或已保存的阅读问题。
+                        不调用 OpenAI，仅用于开发测试 UI。Mock 结果仅存于本页内存，不会写入云端，也不会覆盖已保存的阅读问题。
                       </p>
                       <Button
                         type="button"
@@ -1201,222 +1120,62 @@ function ArticleDetailPageContent() {
                 ) : null}
               </div>
 
-              {realAiError ? (
-                <div
-                  className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100"
-                  role="status"
-                >
-                  <p className="font-medium">分析失败</p>
-                  <p className="mt-1 text-xs">
-                    请稍后再试。若持续失败，请检查网络或 API 配置。
-                  </p>
-                  <details className="mt-2 text-xs">
-                    <summary className="cursor-pointer text-amber-900/80 dark:text-amber-100/80">
-                      详情
-                    </summary>
-                    <p className="mt-1 whitespace-pre-wrap break-words opacity-90">
-                      {realAiError}
-                    </p>
-                  </details>
-                  <button
-                    type="button"
-                    className="mt-2 text-xs underline"
-                    onClick={() => setRealAiError(null)}
-                  >
-                    关闭
-                  </button>
-                </div>
-              ) : null}
-
-              {realAiPreview ? (
-                <div
-                  ref={realAiPreviewRef}
-                  className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4 text-sm dark:border-emerald-900/40 dark:bg-emerald-950/25"
-                >
-                  <p className="font-medium text-emerald-900 dark:text-emerald-100">
-                    {realAiSavedToLibrary ? "AI 分析结果" : "AI 预览"}
-                  </p>
-                  <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
-                    {realAiSavedToLibrary
-                      ? "已写入本篇词汇与阅读问题；可展开查看或再次保存以同步更新。"
-                      : "保存后写入本篇词汇与阅读问题，并在正文中高亮可定位的词。"}
-                  </p>
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <Button
-                      type="button"
-                      disabled={realAiSaving || !session?.user?.id}
-                      onClick={() => void handleSaveRealAiPreview()}
-                    >
-                      {realAiSaving
-                        ? "保存中…"
-                        : realAiSavedToLibrary
-                          ? "保存预览并更新阅读问题"
-                          : "保存 AI 词汇与阅读问题"}
-                    </Button>
-                  </div>
-                  {realAiSaveError ? (
+              {realAiError ||
+              (realAiSaveError && !realAiRunning) ||
+              realAiSaveInfo ||
+              realAiWarning ? (
+                <div ref={analysisAlertRef} className="scroll-mt-24 space-y-2">
+                  {realAiError ? (
                     <div
-                      className="mt-3 rounded-md border border-red-200 bg-red-50/90 p-2 text-xs text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100"
+                      className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-950 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-100"
                       role="alert"
                     >
-                      <p className="font-medium">保存失败</p>
-                      <p className="mt-1">请稍后再试。</p>
-                      <details className="mt-1 text-[11px]">
-                        <summary className="cursor-pointer">详情</summary>
-                        <pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap break-words font-sans">
-                          {realAiSaveError}
-                        </pre>
-                      </details>
+                      <p className="font-medium">分析失败</p>
+                      <p className="mt-1">
+                        没有写入新内容。已有的词和阅读问题还在。
+                      </p>
+                      <p className="mt-1 whitespace-pre-wrap break-words text-xs opacity-90">
+                        {realAiError}
+                      </p>
                       <button
                         type="button"
                         className="mt-2 text-xs underline"
-                        onClick={() => setRealAiSaveError(null)}
+                        onClick={() => setRealAiError(null)}
                       >
                         关闭
                       </button>
                     </div>
                   ) : null}
+                  {realAiSaveError && !realAiRunning ? (
+                    <div
+                      className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-950 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-100"
+                      role="alert"
+                    >
+                      <p className="font-medium">写入未完成</p>
+                      <p className="mt-1 whitespace-pre-wrap">{realAiSaveError}</p>
+                      {realAiSaveErrorDetail ? (
+                        <details className="mt-2 text-xs">
+                          <summary className="cursor-pointer">详情</summary>
+                          <p className="mt-1 whitespace-pre-wrap break-words opacity-90">
+                            {realAiSaveErrorDetail}
+                          </p>
+                        </details>
+                      ) : null}
+                    </div>
+                  ) : null}
                   {realAiSaveInfo ? (
-                    <p className="mt-3 text-xs text-amber-800 dark:text-amber-200 whitespace-pre-wrap">
+                    <p
+                      className="whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300"
+                      role="status"
+                    >
                       {realAiSaveInfo}
                     </p>
                   ) : null}
                   {realAiWarning ? (
-                    <p className="mt-2 text-xs text-amber-800 dark:text-amber-200">
+                    <p className="text-xs text-amber-800 dark:text-amber-200">
                       {realAiWarning}
                     </p>
                   ) : null}
-
-                  <details
-                    className="mt-4 text-zinc-800 dark:text-zinc-200"
-                    open={!realAiSavedToLibrary}
-                  >
-                    <summary className="cursor-pointer select-none text-xs font-medium text-zinc-700 marker:hidden dark:text-zinc-300 [&::-webkit-details-marker]:hidden">
-                      {realAiSavedToLibrary
-                        ? `查看详情（${editableRealAiVocabulary.length} 个词 · ${realAiPreview.reading_questions.length} 条问题）`
-                        : `词汇与阅读问题（${editableRealAiVocabulary.length} 个词）`}
-                    </summary>
-                    <div className="mt-3 space-y-4">
-                    <section>
-                      <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                        词汇（{editableRealAiVocabulary.length}）
-                      </h3>
-                      <ul className="mt-2 max-h-48 space-y-2 overflow-y-auto text-xs">
-                        {editableRealAiVocabulary.map(({ item: v, index, status }) => (
-                          <li
-                            key={`${v.normalized_key}-${index}`}
-                            className="rounded border border-zinc-200/80 bg-white/80 p-2 dark:border-zinc-700 dark:bg-zinc-900/50"
-                          >
-                            <div className="flex flex-wrap items-start justify-between gap-2">
-                              <p>
-                                <span className="font-medium">
-                                  {vocabularyHeadwordDe(
-                                    v.surface_form,
-                                    v.lemma,
-                                    v.grammatical_gender,
-                                  )}
-                                </span>
-                                <span className="text-zinc-500">
-                                  {" "}
-                                  · {posLabelZh(v.part_of_speech)} · {v.level_estimate}
-                                </span>
-                              </p>
-                              <div className="flex flex-wrap items-center justify-end gap-1.5">
-                                {!findBestTextOccurrence(
-                                  articlePlain,
-                                  v.surface_form.trim(),
-                                  0,
-                                ) ? (
-                                  <span className="rounded bg-zinc-200 px-1.5 py-0.5 text-[10px] font-medium text-zinc-800 dark:bg-zinc-700 dark:text-zinc-100">
-                                    未定位
-                                  </span>
-                                ) : null}
-                                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-900 dark:bg-amber-950/70 dark:text-amber-100">
-                                  AI 候选 · {aiCandidateStatusLabel(status)}
-                                </span>
-                              </div>
-                            </div>
-                            <p className="mt-0.5 text-[11px] text-zinc-500 dark:text-zinc-400">
-                              词典形：
-                              <span className="ml-1 font-medium text-zinc-700 dark:text-zinc-200">
-                                {v.lemma.trim() || "—"}
-                              </span>
-                            </p>
-                            {normalizeLearningLanguage(article?.language) === "de" &&
-                            shouldShowGrammaticalGenderSubtitle(
-                              v.part_of_speech,
-                              v.lemma,
-                              v.grammatical_gender,
-                              v.surface_form,
-                            ) ? (
-                              <p className="mt-0.5 text-[11px] text-zinc-500 dark:text-zinc-400">
-                                名词性：
-                                <span className="ml-1 font-medium text-zinc-700 dark:text-zinc-200">
-                                  {displayGrammaticalGenderLabelZh(
-                                    v.lemma,
-                                    v.grammatical_gender,
-                                  )}
-                                </span>
-                              </p>
-                            ) : null}
-                            <p className="mt-1 text-zinc-700 dark:text-zinc-300">
-                              {v.zh_meaning}
-                            </p>
-                            <p className="mt-0.5 text-zinc-600 dark:text-zinc-400">
-                              {v.simple_de_explanation}
-                            </p>
-                            {!realAiSavedToLibrary ? (
-                              <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-zinc-200/70 pt-2 dark:border-zinc-700/70">
-                                <label className="text-xs text-zinc-600 dark:text-zinc-400">
-                                  状态{" "}
-                                  <select
-                                    value={status}
-                                    onChange={(e) =>
-                                      handleRealAiVocabularyStatusChange(
-                                        index,
-                                        e.currentTarget.value as MasteryStatus,
-                                      )
-                                    }
-                                    className="h-7 rounded-md border border-zinc-300 bg-white px-2 text-xs font-medium text-zinc-800 shadow-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-                                  >
-                                    <option value="new">学习中</option>
-                                    <option value="mastered">已掌握</option>
-                                    <option value="ignored">暂忽略</option>
-                                  </select>
-                                </label>
-                                <button
-                                  type="button"
-                                  className="h-7 rounded-md border border-zinc-300 px-2 text-xs text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
-                                  onClick={() =>
-                                    handleRemoveRealAiVocabularyCandidate(index)
-                                  }
-                                >
-                                  删除候选
-                                </button>
-                              </div>
-                            ) : null}
-                          </li>
-                        ))}
-                        {editableRealAiVocabulary.length === 0 ? (
-                          <li className="rounded border border-dashed border-zinc-300 p-2 text-xs text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-                            词汇候选已全部删除；仍可保存阅读问题。
-                          </li>
-                        ) : null}
-                      </ul>
-                    </section>
-
-                    <section>
-                      <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                        阅读问题
-                      </h3>
-                      <ol className="mt-2 list-inside list-decimal space-y-1 text-xs">
-                        {realAiPreview.reading_questions.map((q, j) => (
-                          <li key={j}>{q}</li>
-                        ))}
-                      </ol>
-                    </section>
-                    </div>
-                  </details>
                 </div>
               ) : null}
             </div>

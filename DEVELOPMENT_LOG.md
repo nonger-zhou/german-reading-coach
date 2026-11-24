@@ -5,6 +5,14 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-11-24 — 分析完成即自动写入本篇词汇与阅读问题
+
+- **完成**：阅读页仍须手动点「AI 分析本文」（打开、导入、刷新都不自动分析）。分析成功后立刻走原来的保存：词汇写入 `vocabulary_*`（`source = ai`，不传 `reactivateIfMastered`，不改已掌握 / 暂忽略），阅读问题写入 `articles.reading_questions`，然后刷新右侧列表。去掉左侧 AI 预览卡、「查看 AI 预览」、「有预览，尚未保存」和「保存 AI 词汇与阅读问题」。重新分析仍先弹出费用确认；这次没再推荐的旧词不删除。写入只成功一部分时，按钮旁说明写上了几个，并可「重试保存」（用内存里的上次结果，不再调用 AI）。分析或写入失败会在按钮附近显示，并滚进视口。右侧列表原本就有「删除」，AI 词和手动词走同一条 occurrence 删除，未另做一套。
+- **主要文件**：`src/app/articles/[id]/page.tsx`、`src/lib/articleAnalysis/analysisSaveOutcome.ts`（及测试）、`src/lib/supabase/vocabulary.ts`（注释）、`docs/PRD.md`、`docs/USER_MANUAL.md`、`src/app/help/page.tsx`、`README.md`、`PROJECT_STATUS.md`。
+- **状态**：待审 PR，未合并，未改 Supabase / Vercel 配置。`npx tsc --noEmit`、`npm test`（162）与 `npm run build` 通过。本次改动的文件 `eslint` 无报错；全库 `npm run lint` 仍是原有的脚本 `require` 与文章库/仪表盘依赖提示。
+- **已知问题**：整文分析仍不写语法、不写摘要（与改前的保存范围一致）。重试保存会把这次结果里的词再写一遍，已有状态不被覆盖。
+- **下一步**：在 Vercel Preview 用手机走一遍：分析 → 右侧出词且不用点保存 → 删除一词 → 重新分析（确认框，旧词还在）。
+
 ### 2026-11-21 — 文档：更正「推荐词按重要程度排序」的说法（仅文档与帮助页文案）
 
 **原因**：核对代码发现，整文分析虽让 AI 按重要程度输出（`selectVocabulary.ts`），但阅读页词汇列表（学习中 / 已掌握 / 暂忽略）实际按词在文章中的出现先后排列（`sortArticleVocabItemsByReadingOrder`），用户看不到重要程度排序；帮助页与手册的说法与界面不符。
