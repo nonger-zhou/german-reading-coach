@@ -379,7 +379,7 @@ export async function persistManualVocabularyItem(
     /**
      * 用户在阅读页**主动**框选/表单添加时传 true：若词库中该词已是「已掌握 / 暂忽略」，
      * 改回「学习中」（learning），之后整文分析可再次推荐；直到用户再次标为已掌握。
-     * AI 预览保存不传（不得改动用户已标的状态）。
+     * 整文分析自动写入不传（不得改动用户已标的状态；也不删除这次没再推荐的旧词）。
      */
     reactivateIfMastered?: boolean;
     /** 文章语言；词条按 (语言, 词) 归档，德语 "die" 与英语 "die" 互不合并。缺省德语。 */

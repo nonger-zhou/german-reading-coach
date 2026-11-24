@@ -5,6 +5,14 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-11-24 — 分析完成即自动写入本篇词汇与阅读问题
+
+- **完成**：阅读页仍须手动点「AI 分析本文」（打开、导入、刷新都不自动分析）。分析成功后立刻走原来的保存：词汇写入 `vocabulary_*`（`source = ai`，不传 `reactivateIfMastered`，不改已掌握 / 暂忽略），阅读问题写入 `articles.reading_questions`，然后刷新右侧列表。去掉左侧 AI 预览卡、「查看 AI 预览」、「有预览，尚未保存」和「保存 AI 词汇与阅读问题」。重新分析仍先弹出费用确认；这次没再推荐的旧词不删除。写入只成功一部分时，按钮旁说明写上了几个，并可「重试保存」（用内存里的上次结果，不再调用 AI）。分析或写入失败会在按钮附近显示，并滚进视口。右侧列表原本就有「删除」，AI 词和手动词走同一条 occurrence 删除，未另做一套。
+- **主要文件**：`src/app/articles/[id]/page.tsx`、`src/lib/articleAnalysis/analysisSaveOutcome.ts`（及测试）、`src/lib/supabase/vocabulary.ts`（注释）、`docs/PRD.md`、`docs/USER_MANUAL.md`、`src/app/help/page.tsx`、`README.md`、`PROJECT_STATUS.md`。
+- **状态**：待审 PR，未合并，未改 Supabase / Vercel 配置。`npx tsc --noEmit`、`npm test`（162）与 `npm run build` 通过。本次改动的文件 `eslint` 无报错；全库 `npm run lint` 仍是原有的脚本 `require` 与文章库/仪表盘依赖提示。
+- **已知问题**：整文分析仍不写语法、不写摘要（与改前的保存范围一致）。重试保存会把这次结果里的词再写一遍，已有状态不被覆盖。
+- **下一步**：在 Vercel Preview 用手机走一遍：分析 → 右侧出词且不用点保存 → 删除一词 → 重新分析（确认框，旧词还在）。
+
 ### 2026-11-24 — 导入页标题可留空，保存错误贴在按钮旁
 
 - **完成**：`/import` 不再因为标题为空而拦住保存。截图 / 拍照没有原标题时，读图提示词改为用文章语言写一句短摘要标题（`title_kind = summary`），真标题仍逐字照抄。粘贴、链接、以及截图仍返回空标题时，保存当场用正文第一句或约前 10 个词生成标题（最长 80 字，超出加 …），最后才是「未命名文章」（`src/lib/text/deriveTitle.ts`）。正文为空、保存失败等提示仍留在页顶，并在「保存文章」按钮旁再显示一份，出现时 `scrollIntoView({ behavior: "smooth" })`，手机上不用滚回顶部。
