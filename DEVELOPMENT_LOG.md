@@ -13,6 +13,15 @@
 - **已知问题**：整文分析仍不写语法、不写摘要（与改前的保存范围一致）。重试保存会把这次结果里的词再写一遍，已有状态不被覆盖。
 - **下一步**：在 Vercel Preview 用手机走一遍：分析 → 右侧出词且不用点保存 → 删除一词 → 重新分析（确认框，旧词还在）。
 
+### 2026-11-24 — 导入页标题可留空，保存错误贴在按钮旁
+
+- **完成**：`/import` 不再因为标题为空而拦住保存。截图 / 拍照没有原标题时，读图提示词改为用文章语言写一句短摘要标题（`title_kind = summary`），真标题仍逐字照抄。粘贴、链接、以及截图仍返回空标题时，保存当场用正文第一句或约前 10 个词生成标题（最长 80 字，超出加 …），最后才是「未命名文章」（`src/lib/text/deriveTitle.ts`）。正文为空、保存失败等提示仍留在页顶，并在「保存文章」按钮旁再显示一份，出现时 `scrollIntoView({ behavior: "smooth" })`，手机上不用滚回顶部。
+- **主要文件**：`src/lib/text/deriveTitle.ts`（+ 测试）、`src/lib/import/imageImport.ts`（+ 测试）、`src/app/import/page.tsx`、`src/app/help/page.tsx`、`docs/PRD.md`（§1.4.3、Phase 2.3）、`docs/USER_MANUAL.md` §1.4、`docs/DATABASE.md`、`README.md`、`PROJECT_STATUS.md`。
+- **状态**：未改数据库（`articles.title` 本来可空），未改 Supabase / Vercel 配置。未改 PR #9 的 `feat/iphone-share-clip`。
+- **已知问题**：iPhone 分享分支保存标题仍是 `candidate.title || 网址主机名 || "未命名文章"`，两边都合并后应改为先用 `deriveTitle`（正文第一句优先于主机名）。
+- **验证**：`npm test` 168 条通过；改动文件 `eslint` 无新问题；`tsc --noEmit` 与 `npm run build` 通过。全仓库 `npm run lint` 仍有既有错误（scripts 的 `require()`、文章库/仪表盘 memo、实验目录警告），与本次无关。本环境没有 Supabase 登录，未能在手机上点保存做实机验证。
+- **下一步**：在 Vercel Preview 用手机验证：无标题截图能保存出自动标题；正文为空时，错误出现在保存按钮旁边。
+
 ### 2026-11-21 — 文档：更正「推荐词按重要程度排序」的说法（仅文档与帮助页文案）
 
 **原因**：核对代码发现，整文分析虽让 AI 按重要程度输出（`selectVocabulary.ts`），但阅读页词汇列表（学习中 / 已掌握 / 暂忽略）实际按词在文章中的出现先后排列（`sortArticleVocabItemsByReadingOrder`），用户看不到重要程度排序；帮助页与手册的说法与界面不符。
