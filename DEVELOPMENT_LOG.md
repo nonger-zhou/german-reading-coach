@@ -5,6 +5,14 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-11-24 — 阅读页返回后仍停在刚才打开的词
+
+- **完成**：点开词汇或语法后，去外部 AI（或只复制 Prompt 再切走）再回来，详情、列表滚动和移动端抽屉还在。切回标签页、从 bfcache 恢复时仍会重新拉取本篇词汇/语法并更新右侧列表，但不再因此递增 `asideSnapshotVersion`、不再重挂 `InteractiveArticleReader`。只有分析刚写入新词，或开发用 Mock 换了一批数据，才重挂阅读器。当前选中项会 `history.replaceState` 到 `?focus=vocab|grammar&vocabItemId|grammarItemId&occurrenceId`（优先数据库 id，与总库来源链接相同），关掉详情时清掉；整页重载（例如 iOS 丢掉标签页）会按地址栏重新打开。外部 AI 按钮与全文翻译外链改为先 `window.open`、再写剪贴板，复制失败时若网站已打开会说明。打开、刷新、返回仍不自动调用 AI（PRD 3.14）。
+- **主要文件**：`src/app/articles/[id]/page.tsx`、`src/components/InteractiveArticleReader.tsx`、`src/lib/articleReading/reconcileAsideItems.ts`、`src/lib/articleReading/readerFocusUrl.ts`、`src/lib/externalTranslationLinks.ts`、`docs/PRD.md`、`docs/USER_MANUAL.md`、`src/app/help/page.tsx`、`PROJECT_STATUS.md`。
+- **状态**：待审 PR，未合并。未改 Supabase / Vercel 配置。`npx tsc --noEmit`、`npm test`（190）与 `npm run build` 通过。本次改动的文件 `eslint` 无报错；全库 `npm run lint` 仍是原有的脚本 `require` 与文章库/仪表盘依赖提示。本机用 `/articles/mock` 点了「Maßnahmen」：地址栏变成 `?focus=vocab&vocabItemId=…`，`history.length` 不变；点 ChatGPT 新开标签，关掉后详情还在；窄屏点「关闭」后查询参数被清掉。真实文章页的「切回标签不重挂」和 iPhone 丢页恢复未在本环境登录验证。
+- **已知问题**：分析完成时仍会重挂阅读器（为了立刻换上新词）；地址栏里若已记下当前词，重挂后会按地址栏再打开。语法 Tab 上没有选中项时，地址栏会清掉词汇焦点，切回词汇 Tab 会再写上。
+- **下一步**：用 iPhone 实机走一遍：点词 → ChatGPT → 返回，抽屉还在；把标签页丢掉再打开同一地址，词还在；复制被拒绝时网站仍打开并有失败提示。
+
 ### 2026-11-24 — 分析完成即自动写入本篇词汇与阅读问题
 
 - **完成**：阅读页仍须手动点「AI 分析本文」（打开、导入、刷新都不自动分析）。分析成功后立刻走原来的保存：词汇写入 `vocabulary_*`（`source = ai`，不传 `reactivateIfMastered`，不改已掌握 / 暂忽略），阅读问题写入 `articles.reading_questions`，然后刷新右侧列表。去掉左侧 AI 预览卡、「查看 AI 预览」、「有预览，尚未保存」和「保存 AI 词汇与阅读问题」。重新分析仍先弹出费用确认；这次没再推荐的旧词不删除。写入只成功一部分时，按钮旁说明写上了几个，并可「重试保存」（用内存里的上次结果，不再调用 AI）。分析或写入失败会在按钮附近显示，并滚进视口。右侧列表原本就有「删除」，AI 词和手动词走同一条 occurrence 删除，未另做一套。

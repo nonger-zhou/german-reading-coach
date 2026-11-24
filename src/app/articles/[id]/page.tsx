@@ -111,7 +111,10 @@ function ArticleDetailPageContent() {
     grammar: ArticleGrammarItem[];
   } | null>(null);
   const [asideLoadError, setAsideLoadError] = useState<string | null>(null);
-  /** 每次成功从 Supabase 合并本篇词汇/语法后递增，用于强制阅读器 remount 以同步 props（内部 state 仅用 initial 一次） */
+  /**
+   * 只在分析刚写入新词、或开发用 Mock 换了一批侧栏数据时递增，用来重挂阅读器。
+   * 切回标签页 / bfcache 的后台刷新不递增：阅读器靠 props 更新列表，避免清掉当前选中的词。
+   */
   const [asideSnapshotVersion, setAsideSnapshotVersion] = useState(0);
   const asideFetchSeq = useRef(0);
   const [persistMessage, setPersistMessage] = useState<string | null>(null);
@@ -350,7 +353,12 @@ function ArticleDetailPageContent() {
   const articleId = article?.id ?? null;
 
   const loadAsideLearningData = useCallback(
-    async (opts: { resetBeforeFetch: boolean; allowClearOnError: boolean }) => {
+    async (opts: {
+      resetBeforeFetch: boolean;
+      allowClearOnError: boolean;
+      /** 分析刚写入新词时才重挂阅读器。后台刷新不要传。 */
+      bumpSnapshot?: boolean;
+    }) => {
       if (!session?.user?.id || !articleId) return;
       const seq = ++asideFetchSeq.current;
       if (opts.resetBeforeFetch) {
@@ -374,7 +382,9 @@ function ArticleDetailPageContent() {
           ),
         });
         setAsideLoadError(null);
-        setAsideSnapshotVersion((n) => n + 1);
+        if (opts.bumpSnapshot) {
+          setAsideSnapshotVersion((n) => n + 1);
+        }
       } catch (e) {
         if (seq !== asideFetchSeq.current) return;
         setAsideLoadError(formatSupabaseOrUnknownError(e));
@@ -528,6 +538,7 @@ function ArticleDetailPageContent() {
           await loadAsideLearningData({
             resetBeforeFetch: false,
             allowClearOnError: false,
+            bumpSnapshot: true,
           });
         }
 
