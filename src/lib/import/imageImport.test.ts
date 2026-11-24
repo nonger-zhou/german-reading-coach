@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  IMAGE_IMPORT_JSON_SCHEMA,
+  IMAGE_IMPORT_SYSTEM_PROMPT,
   MAX_IMPORT_TILES,
   normalizeTranscript,
   parseImageImportResult,
@@ -22,9 +24,35 @@ describe("imageImport", () => {
     const r = parseImageImportResult(
       JSON.stringify({ title: " T ", text: "a  \n\n\n\nb", language: "de", source_platform: "X" }),
     );
-    expect(r).toEqual({ title: "T", text: "a\n\nb", language: "de", source_platform: "X" });
+    expect(r).toEqual({
+      title: "T",
+      title_kind: "headline",
+      text: "a\n\nb",
+      language: "de",
+      source_platform: "X",
+    });
     expect(parseImageImportResult("not json")).toBeNull();
     expect(parseImageImportResult(JSON.stringify({ text: "x", language: "fr" }))?.language).toBe("other");
+    expect(
+      parseImageImportResult(
+        JSON.stringify({
+          title: "Kurz gesagt",
+          title_kind: "summary",
+          text: "Ein Post ohne Überschrift.",
+          language: "de",
+          source_platform: "",
+        }),
+      )?.title_kind,
+    ).toBe("summary");
+  });
+
+  it("asks for a verbatim headline, and a same-language summary when there is none", () => {
+    expect(IMAGE_IMPORT_SYSTEM_PROMPT).toMatch(/transcribe that headline VERBATIM/i);
+    expect(IMAGE_IMPORT_SYSTEM_PROMPT).toMatch(/Do not invent, translate, summarize, correct or rewrite a real headline/);
+    expect(IMAGE_IMPORT_SYSTEM_PROMPT).toMatch(/short summary title/i);
+    expect(IMAGE_IMPORT_SYSTEM_PROMPT).toMatch(/SAME language/i);
+    expect(IMAGE_IMPORT_SYSTEM_PROMPT).not.toMatch(/otherwise an empty string/i);
+    expect(IMAGE_IMPORT_JSON_SCHEMA.schema.required).toContain("title_kind");
   });
 
   it("normalizes line endings", () => {
