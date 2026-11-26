@@ -1,8 +1,15 @@
 @import "tailwindcss";
 
+/* 外观：报纸风（暖白纸底 + 墨黑 + 深红强调）。只改样式令牌，不涉及任何功能。
+   - 固定为浅色纸面，不再跟随系统深色（dark: 样式因此不会触发）。
+   - 用 @theme 重定义 Tailwind 的 zinc（灰）、emerald（强调色）、white 与圆角/阴影，
+     所有组件无需改动即可换肤。 */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f3eee3;
+  --foreground: #1b1a17;
+  color-scheme: light;
 }
 
 @theme inline {
@@ -10,19 +17,58 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-serif-body), "Noto Serif SC", "Source Han Serif SC",
+    "Songti SC", "STSong", Georgia, serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@theme {
+  --color-white: #fbf8f1;
+  /* 灰阶 → 暖纸与墨 */
+  --color-zinc-50: #f3eee3;
+  --color-zinc-100: #ebe5d7;
+  --color-zinc-200: #ddd5c3;
+  --color-zinc-300: #cfc6b3;
+  --color-zinc-400: #a39b88;
+  --color-zinc-500: #70695a;
+  --color-zinc-600: #5e5849;
+  --color-zinc-700: #46413a;
+  --color-zinc-800: #2e2b25;
+  --color-zinc-900: #1b1a17;
+  --color-zinc-950: #14130f;
+  /* 强调色：原绿色 → 深红 */
+  --color-emerald-50: #f8e9e5;
+  --color-emerald-100: #f0d3cc;
+  --color-emerald-200: #e2afa4;
+  --color-emerald-300: #d08779;
+  --color-emerald-400: #be6252;
+  --color-emerald-500: #b03f30;
+  --color-emerald-600: #a32a1e;
+  --color-emerald-700: #8e2418;
+  --color-emerald-800: #741e14;
+  --color-emerald-900: #5b1810;
+  --color-emerald-950: #3a0f0a;
+  /* 报纸版面：小圆角、无阴影 */
+  --radius-md: 0.2rem;
+  --radius-lg: 0.25rem;
+  --radius-xl: 0.25rem;
+  --radius-2xl: 0.25rem;
+  --shadow-sm: 0 0 #0000;
+  --shadow-md: 0 0 #0000;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui,
+    Arial, Helvetica, sans-serif;
+}
+
+/* 标题与阅读正文用衬线体（德语 / 英语正文更像报纸） */
+h1,
+h2,
+h3,
+.article-reading-body {
+  font-family: var(--font-serif);
 }
 
 /* 阅读正文：桌面端原生选区底色（手机端另用 JS 浮层矩形补强） */

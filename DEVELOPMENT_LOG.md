@@ -5,6 +5,14 @@
 
 ## 更新记录（按任务追加）
 
+### 2026-11-26 — 界面换成「报纸」外观（纯外观，不改功能）
+
+- **完成**：暖白纸底 + 墨黑 + 深红强调色；标题和阅读正文用衬线体（Source Serif 4）；页头加粗线 + 双线，首页由 10 张卡片改为细线分隔的列表（链接和文案不变）；圆角缩小、去掉阴影。做法是在 `globals.css` 里重定义 Tailwind 的 zinc / emerald / white 令牌，并把 `dark` 变体改为仅在 `.dark` 类下生效（因此固定浅色纸面，不再跟随系统深色）；组件逻辑一行未动。
+- **主要文件**：`src/app/globals.css`、`src/app/layout.tsx`（只加字体）、`src/components/AppShell.tsx`（只改样式类）、`src/app/page.tsx`（首页排版）。
+- **状态**：待审 PR，未合并。`npm test`（204）与 `npm run build` 通过。未改数据库、Supabase / Vercel 配置。
+- **已知问题**：原绿色强调现为深红，与红色错误提示的色相相近（错误提示仍是红底框）；AI 词高亮由绿变为浅红，用户词琥珀、语法蓝 / 紫不变；不再有深色模式。未在真机 / 浏览器里逐页看过，需在 Vercel Preview 检查。
+- **下一步**：在 Preview 看首页、演示课文、文章库、词库、复习、设置；确认阅读页高亮四种颜色能分清；满意再合并。
+
 ### 2026-11-24 — 粘贴正文里的软连字符不再让 AI 词显示「暂无高亮」
 
 - **完成**：粘贴导入的正文常含大量软连字符（U+00AD）。以前分析把原始正文送给模型，模型把软连字符抄进 `surface_form`，阅读页却用去掉软连字符后的正文去匹配，于是对不上、卡片显示「暂无高亮」。现在用同一个 `stripInvisibleMatchChars`（BOM U+FEFF 与 U+00AD，与 `sanitizeArticlePlainForMatching` 一致）处理：送给模型的正文、`findBestTextOccurrence` 的查找串、分析结果转词条、以及「对不上」的检查。打开文章时，对还没有偏移的 AI / Mock 词，用清洗后的正文再定位一次（精确，其次大小写不敏感）；能确定才写入内存高亮，并尽力把偏移写回 `vocabulary_occurrences`（只填 `start_offset` 与 `end_offset` 都为空的行，不覆盖已有偏移，不调用 AI，不挡住阅读）。OCR / 粘贴多出来的空格（如「Labor partnerin」）仍按原样比对，对不上继续「暂无高亮」。打开、刷新、返回仍不自动分析（PRD 3.14）。

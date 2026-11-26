@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 
 const links = [
   { href: "/dashboard", title: "仪表盘", desc: "查看学习概览和最近保存的文章。" },
@@ -15,25 +14,29 @@ const links = [
 
 export default function Home() {
   return (
-    <div className="space-y-8">
-      <section className="rounded-2xl border border-zinc-200 bg-gradient-to-br from-emerald-50/80 to-white p-6 dark:border-zinc-800 dark:from-emerald-950/40 dark:to-zinc-950 sm:p-8">
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-3xl">
+    <div className="space-y-10">
+      <section className="border-b border-zinc-900 pb-8 dark:border-zinc-800">
+        <h1 className="font-serif text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-5xl">
           German Reading Coach
         </h1>
-        <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">
+        <p className="mt-4 max-w-3xl font-serif text-lg leading-relaxed text-zinc-700 dark:text-zinc-300 sm:text-xl">
           用真实德语 / 英语文章学词：导入文章 → AI 只推你不认识的词 → 读前过一遍、读时随手标 → 定期复习。
-          <Link href="/help" className="ml-1 font-medium text-emerald-700 hover:underline dark:text-emerald-400">
+          <Link href="/help" className="ml-1 whitespace-nowrap font-sans text-base font-medium text-emerald-600 underline underline-offset-4 hover:text-emerald-800 dark:text-emerald-400">
             使用说明 →
           </Link>
         </p>
       </section>
-      <section className="grid gap-4 sm:grid-cols-2">
+      <section className="grid gap-x-12 sm:grid-cols-2">
         {links.map((item) => (
-          <Link key={item.href} href={item.href} className="block">
-            <Card className="h-full transition hover:border-emerald-300/80 hover:shadow-md dark:hover:border-emerald-800/60">
-              <CardTitle className="text-base">{item.title}</CardTitle>
-              <CardDescription>{item.desc}</CardDescription>
-            </Card>
+          <Link
+            key={item.href}
+            href={item.href}
+            className="group block border-b border-zinc-300 py-4 dark:border-zinc-800"
+          >
+            <h2 className="font-serif text-xl font-semibold text-zinc-900 group-hover:text-emerald-600 dark:text-zinc-50 dark:group-hover:text-emerald-400">
+              {item.title}
+            </h2>
+            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{item.desc}</p>
           </Link>
         ))}
       </section>
