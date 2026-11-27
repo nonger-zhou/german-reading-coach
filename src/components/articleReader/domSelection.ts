@@ -93,9 +93,31 @@ export function scrollRectIntoScrollContainer(
 
 /** 选区各行矩形（过滤空 rect）；用于浮层锚点，避免用整块 bounding box 盖住整句 */
 export function getSelectionLineRects(range: Range): DOMRect[] {
-  return Array.from(range.getClientRects()).filter(
-    (r) => r.width > 0 && r.height > 0,
-  );
+  /**
+   * 不直接用 range.getClientRects()：选区若包含已高亮的词，会把高亮旁
+   * aria-hidden 的发音提示框（隐藏但有布局）也算进去，选区下方就会多出蓝框，
+   * 浮层也会被挤到更下面。这里只取选区内「可见正文文字节点」的矩形。
+   */
+  const root =
+    range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
+      ? (range.commonAncestorContainer as Element)
+      : range.commonAncestorContainer.parentElement;
+  if (!root) return [];
+  const rects: DOMRect[] = [];
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let n: Node | null;
+  while ((n = walker.nextNode())) {
+    if (!range.intersectsNode(n)) continue;
+    if ((n as Text).parentElement?.closest('[aria-hidden="true"]')) continue;
+    const part = document.createRange();
+    part.selectNodeContents(n);
+    if (n === range.startContainer) part.setStart(n, range.startOffset);
+    if (n === range.endContainer) part.setEnd(n, range.endOffset);
+    for (const r of Array.from(part.getClientRects())) {
+      if (r.width > 0 && r.height > 0) rects.push(r);
+    }
+  }
+  return rects;
 }
 
 /** 浮层锚在线条：单行用词本身；多行用最后一行（工具栏在选区下方） */
